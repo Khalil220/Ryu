@@ -14,11 +14,56 @@
     }
   ],
   "buildPresets": [
-    { "name": "debug", "configurePreset": "windows", "configuration": "Debug" },
-    { "name": "release", "configurePreset": "windows", "configuration": "Release" }
+    {
+      "name": "debug",
+      "configurePreset": "windows",
+      "configuration": "Debug"
+    },
+    {
+      "name": "release",
+      "configurePreset": "windows",
+      "configuration": "Release"
+    }
   ],
   "testPresets": [
-    { "name": "unit", "configurePreset": "windows", "configuration": "Debug", "filter": { "include": { "label": "unit" } }, "output": { "outputOnFailure": true } },
-    { "name": "live", "configurePreset": "windows", "configuration": "Debug", "filter": { "include": { "label": "live" } }, "output": { "outputOnFailure": true } }
+    {
+      "name": "unit",
+      "configurePreset": "windows",
+      "configuration": "Debug",
+      "filter": {
+        "include": {
+          "label": "unit"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "live",
+      "configurePreset": "windows",
+      "configuration": "Debug",
+      "filter": {
+        "include": {
+          "label": "live"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "ui",
+      "configurePreset": "windows",
+      "configuration": "Debug",
+      "filter": {
+        "include": {
+          "label": "ui"
+        }
+      },
+      "output": {
+        "outputOnFailure": true
+      }
+    }
   ]
 }
