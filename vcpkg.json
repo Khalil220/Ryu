@@ -1,0 +1,10 @@
+{
+  "name": "ryu",
+  "version": "0.1.0",
+  "dependencies": [
+    "curl",
+    "doctest",
+    "lexbor",
+    "nlohmann-json"
+  ]
+}
