@@ -1,0 +1,10 @@
+#pragma once
+
+class wxString;
+class wxWindow;
+
+namespace ryu {
+
+void setAccessibleName(wxWindow* window, const wxString& name);
+
+}

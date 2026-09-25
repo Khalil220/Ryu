@@ -5,11 +5,13 @@ target_link_libraries(ryu_test_main PUBLIC doctest::doctest)
 
 add_executable(ryu_unit_tests
     unit/test_encoding.cpp
+    unit/test_format.cpp
     unit/test_html.cpp
     unit/test_hianime.cpp
     unit/test_registry.cpp
+    unit/test_settings.cpp
 )
-target_link_libraries(ryu_unit_tests PRIVATE ryu_core ryu_test_main)
+target_link_libraries(ryu_unit_tests PRIVATE ryu_core ryu_ui_support ryu_test_main)
 target_compile_definitions(ryu_unit_tests PRIVATE RYU_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME unit COMMAND ryu_unit_tests)
 set_tests_properties(unit PROPERTIES LABELS unit)
@@ -20,3 +22,9 @@ add_executable(ryu_live_tests
 target_link_libraries(ryu_live_tests PRIVATE ryu_core ryu_test_main)
 add_test(NAME live COMMAND ryu_live_tests)
 set_tests_properties(live PROPERTIES LABELS live)
+
+set(RYU_UI_TEST_PYTHON "" CACHE FILEPATH "Python interpreter with pywinauto installed; enables the ui test")
+if(RYU_UI_TEST_PYTHON)
+    add_test(NAME ui COMMAND "${RYU_UI_TEST_PYTHON}" "${CMAKE_CURRENT_SOURCE_DIR}/ui/test_ui.py" $<TARGET_FILE:ryu>)
+    set_tests_properties(ui PROPERTIES LABELS ui TIMEOUT 300)
+endif()
