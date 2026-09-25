@@ -1,0 +1,57 @@
+#pragma once
+
+#include "http.hpp"
+
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <vector>
+
+namespace ryu {
+
+enum class Audio { Sub, Dub };
+
+struct Show {
+    std::string id;
+    std::string title;
+    std::string altTitle;
+    std::string format;
+    int subEpisodes = 0;
+    int dubEpisodes = 0;
+};
+
+struct Episode {
+    std::string id;
+    std::string number;
+    std::string title;
+};
+
+struct Subtitle {
+    std::string url;
+    std::string language;
+    std::string label;
+    bool isDefault = false;
+};
+
+struct Stream {
+    std::string url;
+    std::string server;
+    Audio audio = Audio::Sub;
+    Headers headers;
+    std::vector<Subtitle> subtitles;
+};
+
+class ProviderError : public std::runtime_error {
+public:
+    explicit ProviderError(const std::string& message) : std::runtime_error(message) {}
+};
+
+class Provider {
+public:
+    virtual ~Provider() = default;
+    virtual std::vector<Show> search(std::string_view query) = 0;
+    virtual std::vector<Episode> episodes(std::string_view showId) = 0;
+    virtual std::vector<Stream> streams(std::string_view episodeId, Audio audio) = 0;
+};
+
+}
