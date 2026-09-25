@@ -12,6 +12,8 @@ endif()
 find_package(CURL CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(lexbor CONFIG REQUIRED)
+find_package(wxWidgets CONFIG REQUIRED)
+include(cmake/Libmpv.cmake)
 
 if(TARGET lexbor::lexbor_static)
     set(RYU_LEXBOR lexbor::lexbor_static)
@@ -20,6 +22,7 @@ else()
 endif()
 
 add_subdirectory(src/core)
+add_subdirectory(src/app)
 add_subdirectory(tools)
 
 include(CTest)

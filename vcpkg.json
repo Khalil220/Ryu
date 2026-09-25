@@ -5,6 +5,7 @@
     "curl",
     "doctest",
     "lexbor",
-    "nlohmann-json"
+    "nlohmann-json",
+    "wxwidgets"
   ]
 }
