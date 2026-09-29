@@ -52,8 +52,8 @@ def spoken(log_path):
 
 
 def run(app, speech_log):
-    main = app.window(title_re="Ryu.*")
-    main.wait("visible", timeout=20)
+    app.window(title_re="Ryu.*").wait("visible", timeout=20)
+    main = app.window(handle=app.window(title_re="Ryu.*").handle)
     check(main.window_text() == "Ryu - HiAnime", f"main window title names the provider ({main.window_text()})")
 
     search = main.child_window(title="Search", control_type="Edit")
@@ -90,12 +90,14 @@ def run(app, speech_log):
     check(audio.selected_text() == "Dubbed", f"audio choice switches to Dubbed ({audio.selected_text()})")
 
     main.child_window(title="Play", control_type="Button").invoke()
-    player = app.window(title_re="Episode 1.*")
-    check(wait_for(player.exists, 45) is not None, "Play opens the player window")
-    if not player.exists():
+    player = main
+    playing_one = wait_for(lambda: re.match(r"Episode 1: The Journey's End - Frieren.* - Ryu$", main.window_text()), 45)
+    check(playing_one is not None, f"Play switches the window to the player and names the episode ({main.window_text()})")
+    if playing_one is None:
         return
-    check(re.match(r"Episode 1: The Journey's End - Frieren.* - Ryu$", player.window_text()) is not None,
-          f"player title names the episode ({player.window_text()})")
+    check(len(app.windows()) == 1, f"playing keeps Ryu to one window ({len(app.windows())})")
+    check(wait_for(lambda: main.child_window(title="Pause", control_type="Button").has_keyboard_focus(), 10)
+          is not None, "focus lands on Pause")
 
     time_box = player.child_window(title="Time", control_type="Edit")
     check(wait_for(lambda: seconds(time_box.get_value()) >= 3, 60) is not None,
@@ -145,13 +147,35 @@ def run(app, speech_log):
     send_keys("{DOWN}")
     check(wait_for(lambda: "Volume 95" in spoken(speech_log), 5) is not None, "Down arrow lowers and announces the volume")
 
+    pause_button.set_focus()
+    send_keys("p", vk_packet=False)
+    check(wait_for(lambda: "This is the first episode" in spoken(speech_log), 5) is not None,
+          "P on the first episode says it is the first")
+    check(main.window_text().startswith("Episode 1:"), f"P on the first episode stays put ({main.window_text()})")
+
+    send_keys("n", vk_packet=False)
+    check(wait_for(lambda: main.window_text().startswith("Episode 2:"), 45) is not None,
+          f"N plays the next episode ({main.window_text()})")
+    outcome = wait_for(lambda: "plays" if 1 <= seconds(time_box.get_value()) < 60 else
+                       ("reported" if "The video is not loading. Its host may be down." in spoken(speech_log) else None), 60)
+    check(outcome is not None, f"the next episode plays or Ryu says it is not loading ({outcome}, {time_box.get_value()})")
+
     check(player.child_window(title="Close", control_type="Button", class_name="Button").exists(),
           "player has a Close button")
+    main.child_window(title="Pause", control_type="Button").set_focus()
     send_keys("{ESC}")
-    check(wait_for(lambda: not player.exists(), 15) is not None, "Escape closes the player")
+    check(wait_for(lambda: main.window_text() == "Ryu - HiAnime", 15) is not None,
+          f"Escape goes back to browsing ({main.window_text()})")
+    episode_two = items(episodes)[1]
+    check(wait_for(lambda: episode_two.has_keyboard_focus() or episodes.has_keyboard_focus(), 5) is not None,
+          "focus returns to the episode list")
+    check(episode_two.is_selected(), f"the episode that was playing is selected ({episode_two.window_text()})")
 
-    main.set_focus()
     search.set_focus()
+    send_keys("{END}tnp", vk_packet=False)
+    check(search.get_value() == "frierentnp", f"player keys do not fire while typing a search ({search.get_value()})")
+    search.set_edit_text("frieren")
+
     send_keys("^,")
     preferences = main.child_window(title="Preferences", control_type="Window")
     check(wait_for(preferences.exists, 10) is not None, "Ctrl+comma opens Preferences")
@@ -164,8 +188,9 @@ def run(app, speech_log):
         check(wait_for(lambda: not preferences.exists(), 10) is not None, "Cancel closes Preferences")
 
     lines = spoken(speech_log)
-    for expected in ["Searching for frieren", "4 results", "Loading episodes", "28 episodes", "Loading episode",
-                     "Playing", "Paused"]:
+    for expected in ["Searching for frieren", "4 results", "Loading episodes", "28 episodes",
+                     "Loading Episode 1: The Journey's End", "Playing", "Paused", "This is the first episode",
+                     "Loading Episode 2: It Didn't Have to Be Magic..."]:
         check(expected in lines, f"announced: {expected}")
     backend = [line for line in lines if line.startswith("[backend] ")]
     print(f"INFO: speech backend {backend[0][10:] if backend else 'none (no screen reader running)'}")

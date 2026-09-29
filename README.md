@@ -24,21 +24,24 @@ The main window has a search box, a results list, an episode list, an audio choi
 
 1. Type a title in the search box and press Enter. Ryu says "Searching", then moves focus to the results list and says how many results it found.
 2. Press Enter on a result to load its episodes. Focus moves to the episode list and Ryu says how many episodes there are.
-3. Press Enter on an episode, or use the Play button, to start playing it in the player window. Ryu says "Playing" once the video starts.
+3. Press Enter on an episode, or use the Play button, to start playing it. The window switches to the player, focus lands on Pause, the title names the episode, and Ryu says "Playing" once the video starts.
 
 Alt+S, Alt+R, Alt+E, Alt+A and Alt+P jump to the search box, results, episodes, audio choice and Play button. Ctrl+comma opens Preferences.
 
-In the player window:
+Ryu stays in one window. The player replaces the search box and lists while an episode plays, and leaving the player brings them back.
+
+In the player:
 
 1. Space pauses and resumes, and Ryu says "Paused" or "Playing". When focus is on a button, Space presses that button instead.
 2. Left and Right arrows seek 10 seconds, and Ryu speaks the new position. Shift with Left or Right seeks 60 seconds.
 3. Up and Down arrows change the volume by 5, and Ryu speaks the new volume.
 4. T speaks the current time, for example "3:21 of 24:10", without moving focus.
-5. Escape closes the player.
-6. Alt+P is Pause or Play, Alt+B goes back 10 seconds, Alt+F goes forward 10 seconds and Alt+C closes the player.
-7. Alt+T moves to the position slider, Alt+M to the time field, Alt+V to the volume slider and Alt+S to the subtitles choice. Arrow keys move the sliders and change the subtitle track when those have focus, and move the cursor in the time field.
+5. N plays the next episode and P plays the previous one. On the last or first episode, Ryu says so instead.
+6. Escape stops playback and goes back to the episode list, with the episode you were watching selected.
+7. Alt+P is Pause or Play, Alt+B goes back 10 seconds, Alt+F goes forward 10 seconds, Alt+R and Alt+N press Previous episode and Next episode, and Alt+C closes the player.
+8. Alt+T moves to the position slider, Alt+M to the time field, Alt+V to the volume slider and Alt+S to the subtitles choice. Arrow keys move the sliders and change the subtitle track when those have focus, and move the cursor in the time field.
 
-The time field reads like "3:21 of 24:10" and updates once a second. The subtitles choice lists every track that loaded, with the site's default selected, plus Off. Ryu says "End of episode" when playback reaches the end.
+The time field reads like "3:21 of 24:10" and updates once a second. The subtitles choice lists every track that loaded, with the site's default selected, plus Off. Ryu says "End of episode" when playback reaches the end. If the clock hasn't moved for 15 seconds while you're not paused, Ryu says the video is not loading and the time field reads "Not loading". That usually means the site's video host for that episode is down, so try the other audio or another episode.
 
 ## Preferences
 
