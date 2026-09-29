@@ -457,11 +457,7 @@ void PlayerPanel::announceIntro() {
 }
 
 void PlayerPanel::skipIntro() {
-    if (!active_) {
-        return;
-    }
-    if (!intro_) {
-        announce("This episode has no intro information");
+    if (!active_ || !intro_) {
         return;
     }
     if (position_ >= intro_->end) {

@@ -281,6 +281,29 @@ def run(app, speech_log):
         check(first_kaa is not None and first_kaa.window_text() ==
               "Frieren: Beyond Journey's End, TV, 2023, subbed and dubbed",
               f"KickAssAnime results read well ({first_kaa.window_text() if first_kaa else None})")
+        if first_kaa is not None:
+            results.set_focus()
+            first_kaa.select()
+            send_keys("{ENTER}")
+            wait_for(lambda: items(episodes) or None, 30)
+            items(episodes)[0].select()
+            main.child_window(title="Play", control_type="Button").invoke()
+            check(wait_for(lambda: seconds(time_box.get_value()) >= 3, 60) is not None,
+                  f"a KickAssAnime episode plays ({time_box.get_value()})")
+            check(not main.child_window(title="Skip intro", control_type="Button").exists(),
+                  "Skip intro is hidden for an episode without intro data")
+            main.child_window(title="Pause", control_type="Button").set_focus()
+            mark = len(spoken(speech_log))
+            before_skip = seconds(time_box.get_value())
+            send_keys("i", vk_packet=False)
+            time.sleep(2)
+            check(not any("intro" in line.lower() for line in spoken(speech_log)[mark:]),
+                  "I says nothing when there is no intro")
+            check(seconds(time_box.get_value()) < before_skip + 10,
+                  f"I does not seek without an intro ({before_skip} to {time_box.get_value()})")
+            send_keys("{ESC}")
+            check(wait_for(lambda: main.window_text() == "Ryu - KickAssAnime", 15) is not None,
+                  "Escape leaves the KickAssAnime episode")
 
     lines = spoken(speech_log)
     for expected in ["Loading episodes", "Loading Episode 1: The Journey's End", "Paused", "Playing",

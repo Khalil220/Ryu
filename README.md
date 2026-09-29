@@ -40,7 +40,7 @@ In the player:
 2. Left and Right arrows seek 10 seconds, and Ryu speaks the new position. Shift with Left or Right seeks 60 seconds.
 3. Up and Down arrows change the volume by 5, and Ryu speaks the new volume.
 4. T speaks the current time, for example "3:21 of 24:10", without moving focus.
-5. I skips the intro when the site says where it ends, and Ryu says "Intro" when the intro starts.
+5. I skips the intro when the site says where it ends, and Ryu says "Intro" when the intro starts. Episodes without intro information have no Skip intro button, and I does nothing on them.
 6. R turns reading subtitles aloud on or off.
 7. N plays the next episode and P plays the previous one. On the last or first episode, Ryu says so instead.
 8. Escape stops playback and goes back to the episode list, with the episode you were watching selected.
