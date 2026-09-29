@@ -3,3 +3,4 @@
 /vcpkg_installed/
 /.vs/
 CMakeUserPresets.json
+__pycache__/
