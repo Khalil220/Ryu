@@ -84,7 +84,7 @@ MainFrame::MainFrame()
 
 void MainFrame::createMenu() {
     auto* file = new wxMenu;
-    file->Append(wxID_PREFERENCES, "&Preferences...\tCtrl+,");
+    file->Append(wxID_PREFERENCES, "&Preferences...\tCtrl+P");
     file->AppendSeparator();
     file->Append(wxID_EXIT, "E&xit");
     auto* bar = new wxMenuBar;

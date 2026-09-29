@@ -28,7 +28,7 @@ The main window has a search box, a results list, an episode list, an audio choi
 2. Press Enter on a result to load its episodes. Focus moves to the episode list and Ryu says how many episodes there are.
 3. Press Enter on an episode, or use the Play button, to start playing it. The window switches to the player, focus lands on Pause, the title names the episode, and Ryu says "Playing" once the video starts.
 
-Alt+S, Alt+R, Alt+E, Alt+A and Alt+P jump to the search box, results, episodes, audio choice and Play button. Ctrl+comma opens Preferences.
+Alt+S, Alt+R, Alt+E, Alt+A and Alt+P jump to the search box, results, episodes, audio choice and Play button. Ctrl+P opens Preferences, from the player too.
 
 Ryu stays in one window. The player replaces the search box and lists while an episode plays, and leaving the player brings them back.
 

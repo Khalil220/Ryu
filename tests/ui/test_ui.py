@@ -201,6 +201,15 @@ def run(app, speech_log):
           "P on the first episode says it is the first")
     check(main.window_text().startswith("Episode 1:"), f"P on the first episode stays put ({main.window_text()})")
 
+    send_keys("^p", vk_packet=False)
+    player_preferences = main.child_window(title="Preferences", control_type="Window")
+    check(wait_for(player_preferences.exists, 10) is not None, "Ctrl+P opens Preferences from the player")
+    if player_preferences.exists():
+        player_preferences.child_window(title="Cancel", control_type="Button").invoke()
+        wait_for(lambda: not player_preferences.exists(), 10)
+    check(main.window_text().startswith("Episode 1:"), "Ctrl+P does not step to the previous episode")
+    pause_button.set_focus()
+
     send_keys("n", vk_packet=False)
     check(wait_for(lambda: main.window_text().startswith("Episode 2:"), 45) is not None,
           f"N plays the next episode ({main.window_text()})")
@@ -241,9 +250,9 @@ def run(app, speech_log):
     check(wait_for(lambda: main.window_text() == "Ryu - HiAnime", 15) is not None, "Escape leaves the subbed episode")
     search.set_focus()
 
-    send_keys("^,")
+    send_keys("^p", vk_packet=False)
     preferences = main.child_window(title="Preferences", control_type="Window")
-    check(wait_for(preferences.exists, 10) is not None, "Ctrl+comma opens Preferences")
+    check(wait_for(preferences.exists, 10) is not None, "Ctrl+P opens Preferences")
     if preferences.exists():
         base_url = preferences.child_window(title="Base URL", control_type="Edit")
         check(base_url.get_value() == "https://hianime.at", f"base URL shows the default ({base_url.get_value()})")
@@ -256,7 +265,7 @@ def run(app, speech_log):
         check(wait_for(lambda: not preferences.exists(), 10) is not None, "Cancel closes Preferences")
 
     search.set_focus()
-    send_keys("^,")
+    send_keys("^p", vk_packet=False)
     check(wait_for(preferences.exists, 10) is not None, "Preferences opens again")
     if preferences.exists():
         provider = preferences.child_window(title="Provider", control_type="ComboBox")
