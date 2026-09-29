@@ -30,6 +30,15 @@ TEST_CASE("formatClock switches to hours only when needed") {
     CHECK(formatClock(std::numeric_limits<double>::quiet_NaN()) == "0:00");
 }
 
+TEST_CASE("speakableSubtitle joins lines, tidies spacing and drops watermark lines") {
+    CHECK(speakableSubtitle("At the northernmost end\nof the continent,", {}) ==
+          "At the northernmost end of the continent,");
+    CHECK(speakableSubtitle("  Frieren.  \r\n ", {}) == "Frieren.");
+    CHECK(speakableSubtitle("KAA.lt", {"kaa.lt"}).empty());
+    CHECK(speakableSubtitle("Visit kaa.lt later", {"kaa.lt"}) == "Visit kaa.lt later");
+    CHECK(speakableSubtitle("\n", {}).empty());
+}
+
 TEST_CASE("timeLabel includes the duration once it is known") {
     CHECK(timeLabel(201, 1450) == "3:21 of 24:10");
     CHECK(timeLabel(201, 0) == "3:21");

@@ -1,5 +1,7 @@
 #include "format.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdio>
 
@@ -54,6 +56,32 @@ std::string formatClock(double seconds) {
         std::snprintf(buffer, sizeof buffer, "%lld:%02lld", minutes, secs);
     }
     return buffer;
+}
+
+std::string speakableSubtitle(std::string_view raw, const std::vector<std::string>& noise) {
+    std::string text;
+    bool pendingSpace = false;
+    for (const char ch : raw) {
+        if (std::isspace(static_cast<unsigned char>(ch))) {
+            pendingSpace = !text.empty();
+            continue;
+        }
+        if (pendingSpace) {
+            text.push_back(' ');
+            pendingSpace = false;
+        }
+        text.push_back(ch);
+    }
+    const auto lower = [](std::string value) {
+        std::ranges::transform(value, value.begin(),
+                               [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return value;
+    };
+    const auto folded = lower(text);
+    if (std::ranges::any_of(noise, [&](const std::string& line) { return lower(line) == folded; })) {
+        return {};
+    }
+    return text;
 }
 
 std::string timeLabel(double position, double duration) {

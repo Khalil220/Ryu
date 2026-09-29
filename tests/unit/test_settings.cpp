@@ -25,6 +25,8 @@ TEST_CASE("empty settings fall back to HiAnime, subs and the default base URL") 
     CHECK(settings.audio == Audio::Sub);
     CHECK(settings.baseUrl() == "https://hianime.at");
     CHECK(settings.useFallback);
+    CHECK(settings.readSubtitlesFor(Audio::Sub));
+    CHECK_FALSE(settings.readSubtitlesFor(Audio::Dub));
 }
 
 TEST_CASE("saved settings load back unchanged") {
@@ -33,6 +35,8 @@ TEST_CASE("saved settings load back unchanged") {
     Settings settings;
     settings.audio = Audio::Dub;
     settings.useFallback = false;
+    settings.readSubtitlesSubbed = false;
+    settings.readSubtitlesDubbed = true;
     settings.providerId = "kickassanime";
     settings.baseUrlOverrides["hianime"] = "https://mirror.example";
     saveSettings(config, settings);
@@ -40,6 +44,8 @@ TEST_CASE("saved settings load back unchanged") {
     const auto loaded = loadSettings(config);
     CHECK(loaded.audio == Audio::Dub);
     CHECK_FALSE(loaded.useFallback);
+    CHECK_FALSE(loaded.readSubtitlesFor(Audio::Sub));
+    CHECK(loaded.readSubtitlesFor(Audio::Dub));
     CHECK(loaded.providerId == "kickassanime");
     CHECK(loaded.baseUrl() == "https://kaa.lt");
     CHECK(loaded.baseUrlFor(*findProvider("hianime")) == "https://mirror.example");

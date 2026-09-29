@@ -51,6 +51,7 @@ private:
     std::vector<Episode> episodes_;
     ryu::Show currentShow_;
     size_t currentEpisode_ = 0;
+    Audio playingAudio_ = Audio::Sub;
     unsigned searchGeneration_ = 0;
     unsigned episodeGeneration_ = 0;
     unsigned streamGeneration_ = 0;

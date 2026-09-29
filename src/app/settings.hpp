@@ -15,6 +15,10 @@ struct Settings {
     std::map<std::string, std::string> baseUrlOverrides;
     Audio audio = Audio::Sub;
     bool useFallback = true;
+    bool readSubtitlesSubbed = true;
+    bool readSubtitlesDubbed = false;
+
+    bool readSubtitlesFor(Audio kind) const { return kind == Audio::Dub ? readSubtitlesDubbed : readSubtitlesSubbed; }
 
     const ProviderInfo& provider() const;
     std::string baseUrl() const;

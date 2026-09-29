@@ -94,7 +94,12 @@ void MainFrame::createControls() {
 
     panel->SetSizer(sizer);
 
-    player_ = new PlayerPanel(book_, [this] { showBrowser(); }, [this](int delta) { stepEpisode(delta); });
+    player_ = new PlayerPanel(
+        book_, [this] { showBrowser(); }, [this](int delta) { stepEpisode(delta); },
+        [this](bool read) {
+            (playingAudio_ == Audio::Dub ? settings_.readSubtitlesDubbed : settings_.readSubtitlesSubbed) = read;
+            saveSettings(*wxConfigBase::Get(), settings_);
+        });
     book_->AddPage(browsePage_, "Browse", true);
     book_->AddPage(player_, "Player");
 
@@ -275,7 +280,8 @@ void MainFrame::playEpisode(size_t index) {
                 return;
             }
             try {
-                player_->play(found.stream);
+                playingAudio_ = found.stream.audio;
+                player_->play(found.stream, settings_.readSubtitlesFor(found.stream.audio));
                 currentEpisode_ = index;
                 showPlayer(title);
                 if (found.fromFallback) {

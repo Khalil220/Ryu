@@ -9,6 +9,7 @@
 
 #include <wx/accel.h>
 #include <wx/button.h>
+#include <wx/checkbox.h>
 #include <wx/choice.h>
 #include <wx/msgdlg.h>
 #include <wx/sizer.h>
@@ -34,7 +35,7 @@ public:
     bool AcceptsFocusFromKeyboard() const override { return false; }
 };
 
-enum PropertyId : uint64_t { TimePos = 1, Duration, Pause, Volume, TrackList, EndReached };
+enum PropertyId : uint64_t { TimePos = 1, Duration, Pause, Volume, TrackList, EndReached, SubText };
 
 const mpv_node* field(const mpv_node& map, const char* key) {
     if (map.format != MPV_FORMAT_NODE_MAP) {
@@ -54,8 +55,10 @@ std::string text(const mpv_node* node) {
 
 }
 
-PlayerPanel::PlayerPanel(wxWindow* parent, std::function<void()> onLeave, std::function<void(int)> onStep)
-    : wxPanel(parent), onLeave_(std::move(onLeave)), onStep_(std::move(onStep)) {
+PlayerPanel::PlayerPanel(wxWindow* parent, std::function<void()> onLeave, std::function<void(int)> onStep,
+                         std::function<void(bool)> onReadSubtitlesChanged)
+    : wxPanel(parent), onLeave_(std::move(onLeave)), onStep_(std::move(onStep)),
+      onReadSubtitlesChanged_(std::move(onReadSubtitlesChanged)) {
     createControls();
     Bind(wxEVT_CHAR_HOOK, &PlayerPanel::onCharHook, this);
     stallTimer_.SetOwner(this);
@@ -64,16 +67,22 @@ PlayerPanel::PlayerPanel(wxWindow* parent, std::function<void()> onLeave, std::f
     const int speakTimeId = wxWindow::NewControlId();
     const int nextId = wxWindow::NewControlId();
     const int previousId = wxWindow::NewControlId();
+    const int skipIntroId = wxWindow::NewControlId();
+    const int readId = wxWindow::NewControlId();
     wxAcceleratorEntry keys[] = {
         {wxACCEL_NORMAL, 'T', speakTimeId},
         {wxACCEL_NORMAL, 'N', nextId},
         {wxACCEL_NORMAL, 'P', previousId},
+        {wxACCEL_NORMAL, 'I', skipIntroId},
+        {wxACCEL_NORMAL, 'R', readId},
     };
     SetAcceleratorTable(wxAcceleratorTable(static_cast<int>(std::size(keys)), keys));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { announce(wxString::FromUTF8(timeLabel(position_, duration_))); },
          speakTimeId);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { onStep_(1); }, nextId);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { onStep_(-1); }, previousId);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { skipIntro(); }, skipIntroId);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { toggleReadSubtitles(); }, readId);
 }
 
 PlayerPanel::~PlayerPanel() {
@@ -93,10 +102,11 @@ void PlayerPanel::createControls() {
     pauseButton_ = new wxButton(this, wxID_ANY, "&Pause");
     auto* back = new wxButton(this, wxID_ANY, "&Back 10 seconds");
     auto* forward = new wxButton(this, wxID_ANY, "&Forward 10 seconds");
+    skipIntroButton_ = new wxButton(this, wxID_ANY, "Skip &intro");
     auto* previous = new wxButton(this, wxID_ANY, "P&revious episode");
     auto* next = new wxButton(this, wxID_ANY, "&Next episode");
     auto* close = new wxButton(this, wxID_ANY, "&Close");
-    for (auto* button : {pauseButton_, back, forward, previous, next, close}) {
+    for (auto* button : {pauseButton_, back, forward, skipIntroButton_, previous, next, close}) {
         buttons->Add(button, 0, wxRIGHT, 6);
     }
     sizer->Add(buttons, 0, wxALL, 8);
@@ -119,7 +129,9 @@ void PlayerPanel::createControls() {
     subtitleChoice_ = new wxChoice(this, wxID_ANY);
     subtitleChoice_->Append("Off");
     subtitleChoice_->SetSelection(0);
-    info->Add(subtitleChoice_, 0, wxALIGN_CENTER_VERTICAL);
+    info->Add(subtitleChoice_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 12);
+    readCheck_ = new wxCheckBox(this, wxID_ANY, "Read subtitles alou&d");
+    info->Add(readCheck_, 0, wxALIGN_CENTER_VERTICAL);
     sizer->Add(info, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 8);
 
     SetSizer(sizer);
@@ -131,6 +143,11 @@ void PlayerPanel::createControls() {
     pauseButton_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { togglePause(); });
     back->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { seek(-10); });
     forward->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { seek(10); });
+    skipIntroButton_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { skipIntro(); });
+    readCheck_->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent&) {
+        readSubtitles_ = readCheck_->GetValue();
+        onReadSubtitlesChanged_(readSubtitles_);
+    });
     previous->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { onStep_(-1); });
     next->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { onStep_(1); });
     close->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { onLeave_(); });
@@ -194,6 +211,7 @@ void PlayerPanel::startMpv() {
     mpv_observe_property(mpv_, Volume, "volume", MPV_FORMAT_DOUBLE);
     mpv_observe_property(mpv_, TrackList, "track-list", MPV_FORMAT_NODE);
     mpv_observe_property(mpv_, EndReached, "eof-reached", MPV_FORMAT_FLAG);
+    mpv_observe_property(mpv_, SubText, "sub-text", MPV_FORMAT_STRING);
     mpv_request_log_messages(mpv_, "error");
     mpv_set_wakeup_callback(
         mpv_, [](void* panel) { static_cast<PlayerPanel*>(panel)->CallAfter(&PlayerPanel::processEvents); }, this);
@@ -208,7 +226,7 @@ void PlayerPanel::stopMpv() {
     mpv_ = nullptr;
 }
 
-void PlayerPanel::play(const Stream& stream) {
+void PlayerPanel::play(const Stream& stream, bool readSubtitles) {
     if (!mpv_) {
         startMpv();
     }
@@ -234,6 +252,12 @@ void PlayerPanel::play(const Stream& stream) {
 
     resetState("Loading");
     pendingSubtitles_ = stream.subtitles;
+    subtitleNoise_ = stream.subtitleNoise;
+    intro_ = stream.intro;
+    readSubtitles_ = readSubtitles;
+    readCheck_->SetValue(readSubtitles);
+    skipIntroButton_->Show(intro_.has_value());
+    Layout();
     active_ = true;
     command({"loadfile", stream.url, "replace"});
     stallTimer_.Start(1000);
@@ -265,6 +289,8 @@ void PlayerPanel::resetState(const wxString& timeText) {
     shownSecond_ = -1;
     paused_ = -1;
     ended_ = false;
+    introAnnounced_ = false;
+    lastSubtitle_.clear();
     lastProgress_ = -1;
     stalledSeconds_ = 0;
     stallReported_ = false;
@@ -323,6 +349,7 @@ void PlayerPanel::onPropertyChange(uint64_t id, const mpv_event_property& proper
     case TimePos:
         position_ = isDouble ? *static_cast<double*>(property.data) : 0;
         updateTime();
+        announceIntro();
         break;
     case Duration:
         duration_ = isDouble ? *static_cast<double*>(property.data) : 0;
@@ -352,6 +379,9 @@ void PlayerPanel::onPropertyChange(uint64_t id, const mpv_event_property& proper
         if (property.format == MPV_FORMAT_NODE) {
             refreshSubtitles(*static_cast<const mpv_node*>(property.data));
         }
+        break;
+    case SubText:
+        speakSubtitle(property.format == MPV_FORMAT_STRING ? *static_cast<char**>(property.data) : "");
         break;
     case EndReached:
         ended_ = isFlag && *static_cast<int*>(property.data);
@@ -402,6 +432,53 @@ void PlayerPanel::refreshSubtitles(const mpv_node& tracks) {
     subtitleChoice_->Append("Off");
     subtitleChoice_->Append(labels);
     subtitleChoice_->SetSelection(selected);
+}
+
+void PlayerPanel::speakSubtitle(const char* raw) {
+    const auto text = speakableSubtitle(raw ? raw : "", subtitleNoise_);
+    if (text.empty()) {
+        lastSubtitle_.clear();
+        return;
+    }
+    if (text == lastSubtitle_) {
+        return;
+    }
+    lastSubtitle_ = text;
+    if (readSubtitles_) {
+        announce(wxString::FromUTF8(text), false);
+    }
+}
+
+void PlayerPanel::announceIntro() {
+    if (!intro_ || introAnnounced_ || position_ < intro_->start || position_ >= intro_->end) {
+        return;
+    }
+    introAnnounced_ = true;
+    announce("Intro. Press I to skip.", false);
+}
+
+void PlayerPanel::skipIntro() {
+    if (!active_) {
+        return;
+    }
+    if (!intro_) {
+        announce("This episode has no intro information");
+        return;
+    }
+    if (position_ >= intro_->end) {
+        announce("The intro is already over");
+        return;
+    }
+    introAnnounced_ = true;
+    announce("Skipped intro");
+    command({"seek", std::to_string(intro_->end), "absolute"});
+}
+
+void PlayerPanel::toggleReadSubtitles() {
+    readSubtitles_ = !readSubtitles_;
+    readCheck_->SetValue(readSubtitles_);
+    announce(readSubtitles_ ? "Reading subtitles" : "Not reading subtitles");
+    onReadSubtitlesChanged_(readSubtitles_);
 }
 
 void PlayerPanel::checkForStall() {
@@ -486,7 +563,7 @@ void PlayerPanel::onCharHook(wxKeyEvent& event) {
         onLeave_();
         return;
     }
-    if (key == WXK_SPACE && plain && !dynamic_cast<wxButton*>(focus)) {
+    if (key == WXK_SPACE && plain && !dynamic_cast<wxButton*>(focus) && !dynamic_cast<wxCheckBox*>(focus)) {
         togglePause();
         return;
     }

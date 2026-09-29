@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <functional>
 #include <initializer_list>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -15,6 +16,7 @@ struct mpv_handle;
 struct mpv_event_property;
 struct mpv_node;
 class wxButton;
+class wxCheckBox;
 class wxChoice;
 class wxSlider;
 class wxTextCtrl;
@@ -23,10 +25,11 @@ namespace ryu {
 
 class PlayerPanel : public wxPanel {
 public:
-    PlayerPanel(wxWindow* parent, std::function<void()> onLeave, std::function<void(int)> onStep);
+    PlayerPanel(wxWindow* parent, std::function<void()> onLeave, std::function<void(int)> onStep,
+                std::function<void(bool)> onReadSubtitlesChanged);
     ~PlayerPanel() override;
 
-    void play(const Stream& stream);
+    void play(const Stream& stream, bool readSubtitles);
     void stop();
     void focusControls();
 
@@ -46,9 +49,14 @@ private:
     void resetState(const wxString& timeText);
     void onCharHook(wxKeyEvent& event);
     void checkForStall();
+    void skipIntro();
+    void toggleReadSubtitles();
+    void speakSubtitle(const char* raw);
+    void announceIntro();
 
     std::function<void()> onLeave_;
     std::function<void(int)> onStep_;
+    std::function<void(bool)> onReadSubtitlesChanged_;
     mpv_handle* mpv_ = nullptr;
     std::vector<Subtitle> pendingSubtitles_;
     std::vector<int64_t> subtitleTracks_;
@@ -59,6 +67,11 @@ private:
     long shownSecond_ = -1;
     int paused_ = -1;
     bool active_ = false;
+    bool readSubtitles_ = false;
+    std::string lastSubtitle_;
+    std::vector<std::string> subtitleNoise_;
+    std::optional<TimeRange> intro_;
+    bool introAnnounced_ = false;
     bool ended_ = false;
     double lastProgress_ = -1;
     int stalledSeconds_ = 0;
@@ -71,6 +84,8 @@ private:
     wxTextCtrl* timeText_ = nullptr;
     wxSlider* volumeSlider_ = nullptr;
     wxChoice* subtitleChoice_ = nullptr;
+    wxButton* skipIntroButton_ = nullptr;
+    wxCheckBox* readCheck_ = nullptr;
 };
 
 }
