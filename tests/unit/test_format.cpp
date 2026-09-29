@@ -21,6 +21,16 @@ TEST_CASE("episodeLabel combines number and title") {
     CHECK(episodeLabel({"9", "", "Special"}) == "Special");
 }
 
+TEST_CASE("episodeLabel leaves out a title that only repeats the number") {
+    CHECK(episodeLabel({"1", "1", "Episode 1"}) == "Episode 1");
+    CHECK(episodeLabel({"1", "1180", "episode 1180"}) == "Episode 1180");
+    CHECK(episodeLabel({"1", "7", "Episode 07"}) == "Episode 7");
+    CHECK(episodeLabel({"1", "12.5", "Episode 12.5"}) == "Episode 12.5");
+    CHECK(episodeLabel({"1", "5", "Episode 5: The Return"}) == "Episode 5: Episode 5: The Return");
+    CHECK(episodeLabel({"1", "2", "Episode 1"}) == "Episode 2: Episode 1");
+    CHECK(episodeLabel({"1", "3", "Episodes"}) == "Episode 3: Episodes");
+}
+
 TEST_CASE("formatClock switches to hours only when needed") {
     CHECK(formatClock(0) == "0:00");
     CHECK(formatClock(5.9) == "0:05");

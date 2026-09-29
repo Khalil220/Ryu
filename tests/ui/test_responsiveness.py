@@ -9,6 +9,7 @@ import time
 
 from pywinauto import Application
 from pywinauto.keyboard import send_keys
+from pywinauto.uia_defines import IUIA
 
 from test_ui import check, items, spoken, wait_for
 import test_ui
@@ -83,6 +84,9 @@ def run(app, pid, speech_log):
         send_keys("{END}")
         subbed = item_count(episodes_hwnd)
         wait_for(lambda: selected_row(episodes_hwnd) == subbed - 1 or None, 5)
+        focused = wait_for(lambda: IUIA().iuia.GetFocusedElement().CurrentName.startswith("Episode ") and
+                           IUIA().iuia.GetFocusedElement().CurrentName, 5)
+        check(focused == f"Episode {subbed}", f"an untitled episode is named once ({focused})")
         check(selected_row(episodes_hwnd) == subbed - 1, f"End selects the last subbed episode ({selected_row(episodes_hwnd)})")
 
         audio = window.child_window(title="Audio", control_type="ComboBox")

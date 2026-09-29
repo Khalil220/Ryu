@@ -1,11 +1,26 @@
 #include "format.hpp"
 
+#include "stream_finder.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <cmath>
 #include <cstdio>
 
 namespace ryu {
+
+namespace {
+
+bool titleOnlyRepeatsNumber(const Episode& episode) {
+    constexpr std::string_view prefix = "episode ";
+    const std::string_view title = episode.title;
+    return title.size() > prefix.size() &&
+           std::ranges::equal(title.substr(0, prefix.size()), prefix,
+                              [](char a, char b) { return std::tolower(static_cast<unsigned char>(a)) == b; }) &&
+           sameEpisodeNumber(title.substr(prefix.size()), episode.number);
+}
+
+}
 
 std::string showLabel(const Show& show) {
     std::string label = show.title;
@@ -38,7 +53,7 @@ std::string episodeLabel(const Episode& episode) {
         return episode.title;
     }
     std::string label = "Episode " + episode.number;
-    if (!episode.title.empty()) {
+    if (!episode.title.empty() && !titleOnlyRepeatsNumber(episode)) {
         label += ": " + episode.title;
     }
     return label;
