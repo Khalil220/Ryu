@@ -14,6 +14,7 @@ add_executable(ryu_unit_tests
     unit/test_megaplay.cpp
     unit/test_registry.cpp
     unit/test_settings.cpp
+    unit/test_stall_watch.cpp
     unit/test_stream_finder.cpp
 )
 target_link_libraries(ryu_unit_tests PRIVATE ryu_core ryu_ui_support ryu_test_main)

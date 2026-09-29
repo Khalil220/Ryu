@@ -292,9 +292,7 @@ void PlayerPanel::resetState(const wxString& timeText) {
     ended_ = false;
     introAnnounced_ = false;
     lastSubtitle_.clear();
-    lastProgress_ = -1;
-    stalledSeconds_ = 0;
-    stallReported_ = false;
+    stallWatch_.reset();
     positionSlider_->SetValue(0);
     pauseButton_->SetLabel("&Pause");
     timeText_->ChangeValue(timeText);
@@ -491,18 +489,7 @@ void PlayerPanel::toggleReadSubtitles() {
 }
 
 void PlayerPanel::checkForStall() {
-    if (!active_ || ended_ || paused_ == 1) {
-        stalledSeconds_ = 0;
-        return;
-    }
-    if (position_ > lastProgress_ + 0.2) {
-        lastProgress_ = position_;
-        stalledSeconds_ = 0;
-        stallReported_ = false;
-        return;
-    }
-    if (++stalledSeconds_ >= 15 && !stallReported_) {
-        stallReported_ = true;
+    if (stallWatch_.tick(position_, active_ && !ended_ && paused_ != 1)) {
         timeText_->ChangeValue("Not loading");
         announce("The video is not loading. Its host may be down.");
     }

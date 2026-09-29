@@ -1,6 +1,7 @@
 #pragma once
 
 #include "provider.hpp"
+#include "stall_watch.hpp"
 
 #include <wx/panel.h>
 #include <wx/timer.h>
@@ -75,9 +76,7 @@ private:
     std::optional<TimeRange> intro_;
     bool introAnnounced_ = false;
     bool ended_ = false;
-    double lastProgress_ = -1;
-    int stalledSeconds_ = 0;
-    bool stallReported_ = false;
+    StallWatch stallWatch_;
     wxTimer stallTimer_;
 
     wxWindow* video_ = nullptr;

@@ -210,6 +210,17 @@ def run(app, speech_log):
     check(wait_for(pause_button.exists, 10) is not None, "Space resumes")
 
     pause_button.set_focus()
+    furthest = seconds(time_box.get_value())
+    mark = len(spoken(speech_log))
+    send_keys("+{LEFT}")
+    check(wait_for(lambda: seconds(time_box.get_value()) < furthest - 30, 15) is not None,
+          f"Shift+Left goes back a minute ({furthest} to {time_box.get_value()})")
+    time.sleep(17)
+    check(time_box.get_value() != "Not loading" and
+          not any("not loading" in line for line in spoken(speech_log)[mark:]),
+          f"playing on after seeking back is not taken for a stall ({time_box.get_value()})")
+
+    pause_button.set_focus()
     send_keys("t", vk_packet=False)
     check(wait_for(lambda: any(re.match(r"^\d+:\d\d of \d+:\d\d$", line) for line in spoken(speech_log)), 5)
           is not None, "T announces the time")
