@@ -9,13 +9,24 @@ namespace ryu {
 
 namespace {
 
+constexpr size_t probeBytes = 16;
+
 void ensureGlobalInit() {
     static std::once_flag flag;
     std::call_once(flag, [] { curl_global_init(CURL_GLOBAL_DEFAULT); });
 }
 
+struct Sink {
+    std::string* body;
+    size_t limit;
+};
+
 size_t appendBody(char* data, size_t size, size_t count, void* userData) {
-    static_cast<std::string*>(userData)->append(data, size * count);
+    auto* sink = static_cast<Sink*>(userData);
+    sink->body->append(data, size * count);
+    if (sink->limit && sink->body->size() >= sink->limit) {
+        return 0;
+    }
     return size * count;
 }
 
@@ -35,6 +46,19 @@ CurlHttpClient::CurlHttpClient(std::string userAgent, std::chrono::seconds timeo
 }
 
 HttpResponse CurlHttpClient::get(const std::string& url, const Headers& headers) {
+    return perform(Mode::Get, url, nullptr, headers);
+}
+
+HttpResponse CurlHttpClient::post(const std::string& url, const std::string& body, const Headers& headers) {
+    return perform(Mode::Post, url, &body, headers);
+}
+
+HttpResponse CurlHttpClient::probe(const std::string& url, const Headers& headers) {
+    return perform(Mode::Probe, url, nullptr, headers);
+}
+
+HttpResponse CurlHttpClient::perform(Mode mode, const std::string& url, const std::string* body,
+                                     const Headers& headers) {
     std::unique_ptr<CURL, EasyDeleter> handle(curl_easy_init());
     if (!handle) {
         throw HttpError("Could not create an HTTP handle");
@@ -47,20 +71,26 @@ HttpResponse CurlHttpClient::get(const std::string& url, const Headers& headers)
     }
 
     HttpResponse response;
+    Sink sink{&response.body, mode == Mode::Probe ? probeBytes : 0};
     CURL* easy = handle.get();
     curl_easy_setopt(easy, CURLOPT_URL, url.c_str());
     curl_easy_setopt(easy, CURLOPT_USERAGENT, userAgent_.c_str());
     curl_easy_setopt(easy, CURLOPT_HTTPHEADER, headerList.get());
-    curl_easy_setopt(easy, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(easy, CURLOPT_FOLLOWLOCATION, mode == Mode::Probe ? 0L : 1L);
     curl_easy_setopt(easy, CURLOPT_MAXREDIRS, 10L);
     curl_easy_setopt(easy, CURLOPT_ACCEPT_ENCODING, "");
     curl_easy_setopt(easy, CURLOPT_TIMEOUT, static_cast<long>(timeout_.count()));
     curl_easy_setopt(easy, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(easy, CURLOPT_WRITEFUNCTION, appendBody);
-    curl_easy_setopt(easy, CURLOPT_WRITEDATA, &response.body);
+    curl_easy_setopt(easy, CURLOPT_WRITEDATA, &sink);
+    if (mode == Mode::Post) {
+        curl_easy_setopt(easy, CURLOPT_POSTFIELDS, body->c_str());
+        curl_easy_setopt(easy, CURLOPT_POSTFIELDSIZE, static_cast<long>(body->size()));
+    }
 
     const CURLcode code = curl_easy_perform(easy);
-    if (code != CURLE_OK) {
+    const bool stoppedEarly = code == CURLE_WRITE_ERROR && sink.limit && response.body.size() >= sink.limit;
+    if (code != CURLE_OK && !stoppedEarly) {
         throw HttpError("Request to " + url + " failed: " + curl_easy_strerror(code));
     }
 
@@ -68,6 +98,9 @@ HttpResponse CurlHttpClient::get(const std::string& url, const Headers& headers)
     char* effective = nullptr;
     curl_easy_getinfo(easy, CURLINFO_EFFECTIVE_URL, &effective);
     response.effectiveUrl = effective ? effective : url;
+    char* location = nullptr;
+    curl_easy_getinfo(easy, CURLINFO_REDIRECT_URL, &location);
+    response.location = location ? location : "";
     return response;
 }
 

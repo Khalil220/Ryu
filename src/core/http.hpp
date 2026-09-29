@@ -14,6 +14,7 @@ struct HttpResponse {
     long status = 0;
     std::string body;
     std::string effectiveUrl;
+    std::string location;
 };
 
 class HttpError : public std::runtime_error {
@@ -25,6 +26,8 @@ class HttpClient {
 public:
     virtual ~HttpClient() = default;
     virtual HttpResponse get(const std::string& url, const Headers& headers = {}) = 0;
+    virtual HttpResponse post(const std::string& url, const std::string& body, const Headers& headers = {}) = 0;
+    virtual HttpResponse probe(const std::string& url, const Headers& headers = {}) = 0;
 };
 
 class CurlHttpClient : public HttpClient {
@@ -36,8 +39,13 @@ public:
                             std::chrono::seconds timeout = std::chrono::seconds(15));
 
     HttpResponse get(const std::string& url, const Headers& headers = {}) override;
+    HttpResponse post(const std::string& url, const std::string& body, const Headers& headers = {}) override;
+    HttpResponse probe(const std::string& url, const Headers& headers = {}) override;
 
 private:
+    enum class Mode { Get, Post, Probe };
+    HttpResponse perform(Mode mode, const std::string& url, const std::string* body, const Headers& headers);
+
     std::string userAgent_;
     std::chrono::seconds timeout_;
 };
