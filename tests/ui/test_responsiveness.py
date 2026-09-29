@@ -77,10 +77,12 @@ def run(app, pid, speech_log):
         check(count is not None, f"over a thousand episodes load ({loaded})")
         check(stall < LONGEST_ACCEPTABLE_STALL, f"loading them never freezes the window for long ({stall * 1000:.0f} ms)")
 
-        window.child_window(title="Episodes", control_type="List").set_focus()
+        episode_list = window.child_window(title="Episodes", control_type="List")
+        episode_list.set_focus()
+        wait_for(lambda: episode_list.has_keyboard_focus() or None, 5)
         send_keys("{END}")
-        time.sleep(0.5)
         subbed = item_count(episodes_hwnd)
+        wait_for(lambda: selected_row(episodes_hwnd) == subbed - 1 or None, 5)
         check(selected_row(episodes_hwnd) == subbed - 1, f"End selects the last subbed episode ({selected_row(episodes_hwnd)})")
 
         audio = window.child_window(title="Audio", control_type="ComboBox")
