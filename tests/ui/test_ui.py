@@ -139,7 +139,7 @@ def run(app, speech_log):
 
     check(player.child_window(title="Skip intro", control_type="Button").exists(),
           "Skip intro is offered for an episode with intro data")
-    check(wait_for(lambda: "Intro. Press I to skip." in spoken(speech_log), 10) is not None, "the intro is announced")
+    check(wait_for(lambda: "Intro" in spoken(speech_log), 10) is not None, "the intro is announced")
     player.child_window(title="Pause", control_type="Button").set_focus()
     before_skip = seconds(time_box.get_value())
     send_keys("i", vk_packet=False)
@@ -240,7 +240,7 @@ def run(app, speech_log):
     check(read.get_toggle_state() == 1, "subtitles are read aloud by default for a subbed episode")
     mark = len(spoken(speech_log))
     known = re.compile(r"^(\d+:\d\d( of \d+:\d\d)?|Volume \d+|Paused|Playing|Reading subtitles|Not reading subtitles|"
-                       r"Skipped intro|Intro\. Press I to skip\.|End of episode|Loading .*|From .*|\[backend\].*)$")
+                       r"Skipped intro|Intro|End of episode|Loading .*|From .*|\[backend\].*)$")
     subtitle_line = wait_for(lambda: next((line for line in spoken(speech_log)[mark:] if not known.match(line)), None),
                              60)
     check(subtitle_line is not None, f"a subtitle line is read aloud ({subtitle_line})")
@@ -283,10 +283,11 @@ def run(app, speech_log):
               f"KickAssAnime results read well ({first_kaa.window_text() if first_kaa else None})")
 
     lines = spoken(speech_log)
-    for expected in ["Searching for frieren", "4 results", "Loading episodes", "28 episodes",
-                     "Loading Episode 1: The Journey's End", "Playing", "Paused", "This is the first episode",
-                     "Loading Episode 2: It Didn't Have to Be Magic..."]:
+    for expected in ["Loading episodes", "Loading Episode 1: The Journey's End", "Paused", "Playing",
+                     "This is the first episode", "Loading Episode 2: It Didn't Have to Be Magic..."]:
         check(expected in lines, f"announced: {expected}")
+    for unexpected in ["Searching for frieren", "4 results", "28 episodes"]:
+        check(unexpected not in lines, f"not announced: {unexpected}")
     backend = [line for line in lines if line.startswith("[backend] ")]
     print(f"INFO: speech backend {backend[0][10:] if backend else 'none (no screen reader running)'}")
 

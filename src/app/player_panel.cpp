@@ -317,7 +317,6 @@ void PlayerPanel::processEvents() {
                               subtitle.language});
             }
             pendingSubtitles_.clear();
-            announce("Playing");
             break;
         case MPV_EVENT_LOG_MESSAGE: {
             wxString line = wxString::FromUTF8(static_cast<const mpv_event_log_message*>(event->data)->text);
@@ -454,7 +453,7 @@ void PlayerPanel::announceIntro() {
         return;
     }
     introAnnounced_ = true;
-    announce("Intro. Press I to skip.", false);
+    announce("Intro", false);
 }
 
 void PlayerPanel::skipIntro() {

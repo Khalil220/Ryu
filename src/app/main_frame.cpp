@@ -163,7 +163,6 @@ void MainFrame::startSearch() {
     results_->setItems({});
     episodeList_->setItems({});
     setStatus("Searching for " + query + "...");
-    announce("Searching for " + query);
 
     auto session = session_;
     runInBackground<std::vector<ryu::Show>>(
@@ -189,10 +188,6 @@ void MainFrame::startSearch() {
                 return;
             }
             results_->SetFocus();
-            if (!shows_.empty()) {
-                announce(shows_.size() == 1 ? wxString("1 result") : wxString::Format("%zu results", shows_.size()),
-                         false);
-            }
         },
         [this, generation](const std::string& message) {
             if (generation == searchGeneration_) {
@@ -231,9 +226,6 @@ void MainFrame::loadEpisodes() {
                 return;
             }
             episodeList_->SetFocus();
-            if (!episodes_.empty()) {
-                announce(episodeCountLabel(false), false);
-            }
         },
         [this, generation](const std::string& message) {
             if (generation == episodeGeneration_) {

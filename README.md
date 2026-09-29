@@ -24,9 +24,9 @@ The first configure builds wxWidgets, libcurl, lexbor and nlohmann-json through 
 
 The main window has a search box, a results list, an episode list, an audio choice and a Play button.
 
-1. Type a title in the search box and press Enter. Ryu says "Searching", then moves focus to the results list and says how many results it found.
-2. Press Enter on a result to load its episodes. Focus moves to the episode list and Ryu says how many episodes there are.
-3. Press Enter on an episode, or use the Play button, to start playing it. The window switches to the player, focus lands on Pause, the title names the episode, and Ryu says "Playing" once the video starts.
+1. Type a title in the search box and press Enter. Focus moves to the results list when the search finishes.
+2. Press Enter on a result to load its episodes. Ryu says "Loading episodes", and focus moves to the episode list once they're in.
+3. Press Enter on an episode, or use the Play button, to start playing it. Ryu says which episode it's loading, then the window switches to the player, focus lands on Pause, and the title names the episode.
 
 The episode list only shows episodes that exist in the audio you picked. One Piece, for example, lists 1180 episodes when Subbed is chosen and 1155 when Dubbed is. Changing the audio choice refilters the list straight away, and the status bar shows how many subbed or dubbed episodes are left. The selection stays on the same episode when it's still listed, and otherwise moves to the closest earlier one. The Previous and Next keys in the player follow the same list, so they skip episodes that aren't available in that audio.
 
@@ -40,7 +40,7 @@ In the player:
 2. Left and Right arrows seek 10 seconds, and Ryu speaks the new position. Shift with Left or Right seeks 60 seconds.
 3. Up and Down arrows change the volume by 5, and Ryu speaks the new volume.
 4. T speaks the current time, for example "3:21 of 24:10", without moving focus.
-5. I skips the intro when the site says where it ends. Ryu says "Intro. Press I to skip." when the intro starts.
+5. I skips the intro when the site says where it ends, and Ryu says "Intro" when the intro starts.
 6. R turns reading subtitles aloud on or off.
 7. N plays the next episode and P plays the previous one. On the last or first episode, Ryu says so instead.
 8. Escape stops playback and goes back to the episode list, with the episode you were watching selected.
