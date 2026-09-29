@@ -10,7 +10,16 @@ std::string showLabel(const Show& show) {
     if (!show.format.empty()) {
         label += ", " + show.format;
     }
+    if (show.year > 0) {
+        label += ", " + std::to_string(show.year);
+    }
     if (show.subEpisodes == 0 && show.dubEpisodes == 0) {
+        if (show.offersSub && show.offersDub) {
+            return label + ", subbed and dubbed";
+        }
+        if (show.offersSub || show.offersDub) {
+            return label + (show.offersSub ? ", subbed" : ", dubbed");
+        }
         return label + ", no episodes yet";
     }
     if (show.subEpisodes > 0) {

@@ -1,6 +1,7 @@
 #include "megaplay.hpp"
 
 #include "../encoding.hpp"
+#include "../hls.hpp"
 #include "../html.hpp"
 
 #include <nlohmann/json.hpp>
@@ -131,6 +132,13 @@ Stream MegaplayResolver::resolve(const std::string& embedUrl, Audio audio, const
             if (!subtitle.url.empty()) {
                 stream.subtitles.push_back(std::move(subtitle));
             }
+        }
+    }
+    stream.alternateHosts.push_back(hostOf(stream.url));
+    for (const auto& subtitle : stream.subtitles) {
+        const auto subtitleHost = hostOf(subtitle.url);
+        if (!subtitleHost.empty() && std::ranges::find(stream.alternateHosts, subtitleHost) == stream.alternateHosts.end()) {
+            stream.alternateHosts.push_back(subtitleHost);
         }
     }
     return stream;

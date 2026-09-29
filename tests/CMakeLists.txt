@@ -8,6 +8,8 @@ add_executable(ryu_unit_tests
     unit/test_format.cpp
     unit/test_html.cpp
     unit/test_hianime.cpp
+    unit/test_hls.cpp
+    unit/test_host_repair.cpp
     unit/test_megaplay.cpp
     unit/test_registry.cpp
     unit/test_settings.cpp
@@ -19,6 +21,7 @@ set_tests_properties(unit PROPERTIES LABELS unit)
 
 add_executable(ryu_live_tests
     live/test_live_hianime.cpp
+    live/test_live_repair.cpp
 )
 target_link_libraries(ryu_live_tests PRIVATE ryu_core ryu_test_main)
 add_test(NAME live COMMAND ryu_live_tests)

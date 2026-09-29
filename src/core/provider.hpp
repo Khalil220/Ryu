@@ -18,6 +18,9 @@ struct Show {
     std::string format;
     int subEpisodes = 0;
     int dubEpisodes = 0;
+    int year = 0;
+    bool offersSub = false;
+    bool offersDub = false;
 };
 
 struct Episode {
@@ -40,6 +43,8 @@ struct Stream {
     Headers headers;
     std::vector<Subtitle> subtitles;
     bool disguisedSegments = false;
+    std::vector<std::string> alternateHosts;
+    std::string audioLanguage;
 };
 
 class ProviderError : public std::runtime_error {
