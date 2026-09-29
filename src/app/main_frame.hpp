@@ -24,7 +24,7 @@ struct ProviderSession;
 
 class MainFrame : public wxFrame {
 public:
-    MainFrame();
+    explicit MainFrame(SettingsStore& store);
 
 private:
     void createMenu();
@@ -42,6 +42,7 @@ private:
     void showError(const wxString& title, const std::string& message);
     Audio selectedAudio() const;
 
+    SettingsStore& store_;
     Settings settings_;
     std::shared_ptr<ProviderSession> session_;
     std::shared_ptr<PlaylistServer> playlistServer_;

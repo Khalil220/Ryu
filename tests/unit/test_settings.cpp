@@ -6,6 +6,11 @@
 #include <wx/init.h>
 #include <wx/sstream.h>
 
+#include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
+
 using namespace ryu;
 
 namespace {
@@ -74,4 +79,61 @@ TEST_CASE("an unknown provider in the file falls back to the first registered on
     const auto settings = loadSettings(config);
     CHECK(settings.providerId == "hianime");
     CHECK(settings.audio == Audio::Dub);
+}
+
+namespace {
+
+std::filesystem::path scratchDirectory() {
+    const auto directory = std::filesystem::temp_directory_path() /
+                           ("ryu-store-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+    std::filesystem::create_directories(directory);
+    return directory;
+}
+
+std::string readText(const std::filesystem::path& path) {
+    std::ifstream in(path, std::ios::binary);
+    return {std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()};
+}
+
+}
+
+TEST_CASE("the settings store writes in the background and reloads what it saved") {
+    wxInitializer init;
+    const auto directory = scratchDirectory();
+    const auto path = directory / "nested" / "settings.ini";
+    {
+        SettingsStore store(path);
+        auto settings = store.load();
+        CHECK(settings.audio == Audio::Sub);
+        settings.audio = Audio::Dub;
+        settings.readSubtitlesDubbed = true;
+        store.save(settings);
+        store.flush();
+        CHECK(readText(path).find("Audio=dub") != std::string::npos);
+    }
+    SettingsStore reopened(path);
+    CHECK(reopened.load().audio == Audio::Dub);
+    CHECK(reopened.load().readSubtitlesFor(Audio::Dub));
+    std::filesystem::remove_all(directory);
+}
+
+TEST_CASE("rapid saves end with the last one on disk, and closing the store writes what is pending") {
+    wxInitializer init;
+    const auto directory = scratchDirectory();
+    const auto path = directory / "settings.ini";
+    {
+        SettingsStore store(path);
+        Settings settings;
+        for (int i = 0; i < 50; ++i) {
+            settings.audio = i % 2 == 0 ? Audio::Dub : Audio::Sub;
+            store.save(settings);
+        }
+        settings.providerId = "kickassanime";
+        store.save(settings);
+    }
+    const auto text = readText(path);
+    CHECK(text.find("Provider=kickassanime") != std::string::npos);
+    CHECK(text.find("Audio=sub") != std::string::npos);
+    CHECK_FALSE(std::filesystem::exists(directory / "settings.ini.tmp"));
+    std::filesystem::remove_all(directory);
 }

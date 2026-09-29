@@ -1,8 +1,8 @@
 #include "main_frame.hpp"
+#include "settings.hpp"
 #include "speech.hpp"
 
 #include <wx/app.h>
-#include <wx/fileconf.h>
 #include <wx/filename.h>
 #include <wx/stdpaths.h>
 #include <wx/utils.h>
@@ -24,20 +24,22 @@ public:
             file.Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
             path = file.GetFullPath();
         }
-        wxConfigBase::Set(new wxFileConfig("Ryu", wxEmptyString, path, wxEmptyString, wxCONFIG_USE_LOCAL_FILE));
+        settings_ = std::make_unique<ryu::SettingsStore>(path.ToStdWstring());
         speech_ = std::make_unique<ryu::Speech>();
         ryu::setSpeech(speech_.get());
-        (new ryu::MainFrame())->Show();
+        (new ryu::MainFrame(*settings_))->Show();
         return true;
     }
 
     int OnExit() override {
         ryu::setSpeech(nullptr);
         speech_.reset();
+        settings_.reset();
         return wxApp::OnExit();
     }
 
 private:
+    std::unique_ptr<ryu::SettingsStore> settings_;
     std::unique_ptr<ryu::Speech> speech_;
 };
 

@@ -12,7 +12,6 @@
 
 #include <wx/button.h>
 #include <wx/choice.h>
-#include <wx/confbase.h>
 #include <wx/menu.h>
 #include <wx/msgdlg.h>
 #include <wx/panel.h>
@@ -31,10 +30,10 @@ struct ProviderSession {
     Provider& primary() const { return *providers.front(); }
 };
 
-MainFrame::MainFrame()
-    : wxFrame(nullptr, wxID_ANY, "Ryu"), playlistServer_(std::make_shared<PlaylistServer>()),
+MainFrame::MainFrame(SettingsStore& store)
+    : wxFrame(nullptr, wxID_ANY, "Ryu"), store_(store), playlistServer_(std::make_shared<PlaylistServer>()),
       alive_(std::make_shared<int>(0)) {
-    settings_ = loadSettings(*wxConfigBase::Get());
+    settings_ = store_.load();
     createMenu();
     createControls();
     CreateStatusBar();
@@ -97,7 +96,7 @@ void MainFrame::createControls() {
         book_, [this] { showBrowser(); }, [this](int delta) { stepEpisode(delta); },
         [this](bool read) {
             (playingAudio_ == Audio::Dub ? settings_.readSubtitlesDubbed : settings_.readSubtitlesSubbed) = read;
-            saveSettings(*wxConfigBase::Get(), settings_);
+            store_.save(settings_);
         });
     book_->AddPage(browsePage_, "Browse", true);
     book_->AddPage(player_, "Player");
@@ -115,7 +114,7 @@ void MainFrame::createControls() {
     playButton_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { playEpisode(episodeList_->selectedIndex()); });
     audioChoice_->Bind(wxEVT_CHOICE, [this](wxCommandEvent&) {
         settings_.audio = selectedAudio();
-        saveSettings(*wxConfigBase::Get(), settings_);
+        store_.save(settings_);
     });
 }
 
@@ -346,7 +345,7 @@ void MainFrame::showPreferences() {
         showBrowser();
     }
     settings_ = dialog.settings();
-    saveSettings(*wxConfigBase::Get(), settings_);
+    store_.save(settings_);
     applySettings();
     if (providerChanged) {
         ++searchGeneration_;

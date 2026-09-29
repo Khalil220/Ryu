@@ -3,10 +3,17 @@
 #include "provider.hpp"
 #include "registry.hpp"
 
+#include <condition_variable>
+#include <filesystem>
 #include <map>
+#include <memory>
+#include <mutex>
+#include <optional>
 #include <string>
+#include <thread>
 
 class wxConfigBase;
+class wxFileConfig;
 
 namespace ryu {
 
@@ -27,5 +34,30 @@ struct Settings {
 
 Settings loadSettings(wxConfigBase& config);
 void saveSettings(wxConfigBase& config, const Settings& settings);
+
+class SettingsStore {
+public:
+    explicit SettingsStore(std::filesystem::path path);
+    ~SettingsStore();
+    SettingsStore(const SettingsStore&) = delete;
+    SettingsStore& operator=(const SettingsStore&) = delete;
+
+    Settings load() const;
+    void save(const Settings& settings);
+    void flush();
+
+private:
+    void writeLoop();
+
+    std::filesystem::path path_;
+    std::unique_ptr<wxFileConfig> config_;
+    std::mutex mutex_;
+    std::condition_variable wake_;
+    std::condition_variable idle_;
+    std::optional<std::string> pending_;
+    bool writing_ = false;
+    bool stopping_ = false;
+    std::thread writer_;
+};
 
 }
