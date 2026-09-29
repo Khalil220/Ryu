@@ -24,7 +24,12 @@ bool probeAlive(HttpClient& http, const std::string& url, const Headers& headers
 }
 
 std::string fetchPlaylist(HttpClient& http, const std::string& url, const Headers& headers) {
-    auto response = http.get(url, headers);
+    HttpResponse response;
+    try {
+        response = http.get(url, headers);
+    } catch (const HttpError&) {
+        return {};
+    }
     if (response.status < 200 || response.status >= 300 || !response.body.starts_with("#EXTM3U")) {
         return {};
     }

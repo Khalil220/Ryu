@@ -9,6 +9,7 @@ add_library(ryu_core STATIC
     providers/hianime.cpp
     providers/kickassanime.cpp
     resolvers/megaplay.cpp
+    stream_finder.cpp
 )
 target_include_directories(ryu_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ryu_core

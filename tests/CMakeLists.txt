@@ -14,6 +14,7 @@ add_executable(ryu_unit_tests
     unit/test_megaplay.cpp
     unit/test_registry.cpp
     unit/test_settings.cpp
+    unit/test_stream_finder.cpp
 )
 target_link_libraries(ryu_unit_tests PRIVATE ryu_core ryu_ui_support ryu_test_main)
 target_compile_definitions(ryu_unit_tests PRIVATE RYU_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -21,6 +22,7 @@ add_test(NAME unit COMMAND ryu_unit_tests)
 set_tests_properties(unit PROPERTIES LABELS unit)
 
 add_executable(ryu_live_tests
+    live/test_live_fallback.cpp
     live/test_live_hianime.cpp
     live/test_live_kickassanime.cpp
     live/test_live_repair.cpp
