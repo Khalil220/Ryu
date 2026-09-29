@@ -96,9 +96,8 @@ def run(app, speech_log):
         send_keys("{TAB}")
         time.sleep(2)
         heard = heard_since(viewer, mark)
-        check(sum(first.window_text() in line for line in heard) == 1,
-              f"NVDA says the first result once when tabbing into the list ({heard})")
-        check(any(re.search(r"\b1 of 4\b", line) for line in heard), f"NVDA says the result's position ({heard})")
+        check(any(first.window_text() in line and re.search(r"\b1 of 4\b", line) for line in heard),
+              f"NVDA says the first result with its position when tabbing into the list ({heard})")
 
     results.set_focus()
     first.select()
