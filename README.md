@@ -36,7 +36,7 @@ Ryu stays in one window. The player replaces the search box and lists while an e
 
 In the player:
 
-1. Space pauses and resumes, and Ryu says "Paused" or "Playing". When focus is on a button, Space presses that button instead.
+1. Space pauses and resumes, and Ryu says "Paused" or "Playing". When focus is on a button, Space presses that button instead. When the Pause button itself has focus, Ryu stays quiet and leaves it to your screen reader to read the button's new name.
 2. Left and Right arrows seek 10 seconds, and Ryu speaks the new position. Shift with Left or Right seeks 60 seconds.
 3. Up and Down arrows change the volume by 5, and Ryu speaks the new volume.
 4. T speaks the current time, for example "3:21 of 24:10", without moving focus.

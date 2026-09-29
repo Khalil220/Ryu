@@ -178,6 +178,7 @@ def run(app, speech_log):
           f"sliding right moves past the intro ({time_box.get_value()})")
     check(wait_for(lambda: not skip_button.exists(), 10) is not None, "Skip intro goes away after sliding past it")
     pause_button.set_focus()
+    mark = len(spoken(speech_log))
 
     player.child_window(title="Pause", control_type="Button").invoke()
     play_button = player.child_window(title="Play", control_type="Button")
@@ -190,6 +191,8 @@ def run(app, speech_log):
     play_button.invoke()
     check(wait_for(lambda: seconds(time_box.get_value()) >= paused_at + 2, 20) is not None,
           f"clock resumes after Play ({time_box.get_value()})")
+    check(not any(line in ("Paused", "Playing") for line in spoken(speech_log)[mark:]),
+          "pressing the focused Pause button leaves the speaking to the screen reader")
 
     before_seek = seconds(time_box.get_value())
     player.child_window(title="Forward 10 seconds", control_type="Button").invoke()
@@ -204,10 +207,13 @@ def run(app, speech_log):
           f"Right arrow seeks ahead ({before_key} to {time_box.get_value()})")
 
     time_box.set_focus()
+    mark = len(spoken(speech_log))
     send_keys("{SPACE}")
     check(wait_for(play_button.exists, 10) is not None, "Space pauses from the time field")
+    check(wait_for(lambda: "Paused" in spoken(speech_log)[mark:], 5) is not None, "pausing with Space is announced")
     send_keys("{SPACE}")
     check(wait_for(pause_button.exists, 10) is not None, "Space resumes")
+    check(wait_for(lambda: "Playing" in spoken(speech_log)[mark:], 5) is not None, "resuming with Space is announced")
 
     pause_button.set_focus()
     furthest = seconds(time_box.get_value())

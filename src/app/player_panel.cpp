@@ -360,7 +360,7 @@ void PlayerPanel::onPropertyChange(uint64_t id, const mpv_event_property& proper
         if (isFlag) {
             const int paused = *static_cast<int*>(property.data) ? 1 : 0;
             pauseButton_->SetLabel(paused ? "&Play" : "&Pause");
-            if (paused_ != -1 && paused != paused_) {
+            if (paused_ != -1 && paused != paused_ && FindFocus() != pauseButton_) {
                 announce(paused ? "Paused" : "Playing");
             }
             paused_ = paused;
