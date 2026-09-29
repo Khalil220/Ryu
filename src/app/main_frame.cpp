@@ -12,7 +12,7 @@
 #include <wx/button.h>
 #include <wx/choice.h>
 #include <wx/confbase.h>
-#include <wx/listbox.h>
+#include <wx/listctrl.h>
 #include <wx/menu.h>
 #include <wx/msgdlg.h>
 #include <wx/panel.h>
@@ -31,6 +31,43 @@ struct ProviderSession {
     Provider& primary() const { return *providers.front(); }
 };
 
+namespace {
+
+void fitColumn(wxListView* list) {
+    list->SetColumnWidth(0, wxLIST_AUTOSIZE_USEHEADER);
+}
+
+wxListView* createList(wxWindow* parent) {
+    auto* list = new wxListView(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
+                                wxLC_REPORT | wxLC_SINGLE_SEL | wxLC_NO_HEADER);
+    list->AppendColumn(wxEmptyString);
+    list->Bind(wxEVT_SIZE, [list](wxSizeEvent& event) {
+        event.Skip();
+        list->CallAfter([list] { fitColumn(list); });
+    });
+    return list;
+}
+
+void appendItem(wxListView* list, const wxString& text) {
+    list->InsertItem(list->GetItemCount(), text);
+}
+
+void selectItem(wxListView* list, long index) {
+    if (index < 0 || index >= list->GetItemCount()) {
+        return;
+    }
+    fitColumn(list);
+    list->Select(index);
+    list->Focus(index);
+}
+
+size_t selectedItem(const wxListView* list) {
+    const long index = list->GetFirstSelected();
+    return index < 0 ? static_cast<size_t>(-1) : static_cast<size_t>(index);
+}
+
+}
+
 MainFrame::MainFrame()
     : wxFrame(nullptr, wxID_ANY, "Ryu"), playlistServer_(std::make_shared<PlaylistServer>()),
       alive_(std::make_shared<int>(0)) {
@@ -42,7 +79,6 @@ MainFrame::MainFrame()
     SetSize(FromDIP(wxSize(800, 640)));
     applySettings();
     setStatus("Ready");
-    Bind(wxEVT_CHAR_HOOK, &MainFrame::onCharHook, this);
     searchBox_->SetFocus();
 }
 
@@ -73,12 +109,12 @@ void MainFrame::createControls() {
     sizer->Add(searchRow, 0, wxEXPAND | wxALL, 8);
 
     sizer->Add(new wxStaticText(panel, wxID_ANY, "&Results:"), 0, wxLEFT | wxRIGHT, 8);
-    results_ = new wxListBox(panel, wxID_ANY);
+    results_ = createList(panel);
     results_->SetMinSize(FromDIP(wxSize(-1, 120)));
     sizer->Add(results_, 1, wxEXPAND | wxALL, 8);
 
     sizer->Add(new wxStaticText(panel, wxID_ANY, "&Episodes:"), 0, wxLEFT | wxRIGHT, 8);
-    episodeList_ = new wxListBox(panel, wxID_ANY);
+    episodeList_ = createList(panel);
     episodeList_->SetMinSize(FromDIP(wxSize(-1, 120)));
     sizer->Add(episodeList_, 1, wxEXPAND | wxALL, 8);
 
@@ -110,9 +146,10 @@ void MainFrame::createControls() {
 
     searchBox_->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent&) { startSearch(); });
     searchButton_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { startSearch(); });
-    results_->Bind(wxEVT_LISTBOX_DCLICK, [this](wxCommandEvent&) { loadEpisodes(); });
-    episodeList_->Bind(wxEVT_LISTBOX_DCLICK, [this](wxCommandEvent&) { playEpisode(episodeList_->GetSelection()); });
-    playButton_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { playEpisode(episodeList_->GetSelection()); });
+    results_->Bind(wxEVT_LIST_ITEM_ACTIVATED, [this](wxListEvent&) { loadEpisodes(); });
+    episodeList_->Bind(wxEVT_LIST_ITEM_ACTIVATED,
+                       [this](wxListEvent& event) { playEpisode(static_cast<size_t>(event.GetIndex())); });
+    playButton_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { playEpisode(selectedItem(episodeList_)); });
     audioChoice_->Bind(wxEVT_CHOICE, [this](wxCommandEvent&) {
         settings_.audio = selectedAudio();
         saveSettings(*wxConfigBase::Get(), settings_);
@@ -139,21 +176,6 @@ void MainFrame::applySettings() {
     SetTitle("Ryu - " + wxString::FromUTF8(settings_.provider().name));
 }
 
-void MainFrame::onCharHook(wxKeyEvent& event) {
-    const int key = event.GetKeyCode();
-    if ((key == WXK_RETURN || key == WXK_NUMPAD_ENTER) && !event.HasAnyModifiers()) {
-        if (FindFocus() == results_) {
-            loadEpisodes();
-            return;
-        }
-        if (FindFocus() == episodeList_) {
-            playEpisode(episodeList_->GetSelection());
-            return;
-        }
-    }
-    event.Skip();
-}
-
 void MainFrame::startSearch() {
     wxString query = searchBox_->GetValue();
     query.Trim().Trim(false);
@@ -167,8 +189,8 @@ void MainFrame::startSearch() {
     ++episodeGeneration_;
     shows_.clear();
     episodes_.clear();
-    results_->Clear();
-    episodeList_->Clear();
+    results_->DeleteAllItems();
+    episodeList_->DeleteAllItems();
     setStatus("Searching for " + query + "...");
     announce("Searching for " + query);
 
@@ -181,15 +203,15 @@ void MainFrame::startSearch() {
             }
             shows_ = std::move(shows);
             if (shows_.empty()) {
-                results_->Append("No results for " + query);
+                appendItem(results_, "No results for " + query);
                 setStatus("No results for " + query);
             } else {
                 for (const auto& show : shows_) {
-                    results_->Append(wxString::FromUTF8(showLabel(show)));
+                    appendItem(results_, wxString::FromUTF8(showLabel(show)));
                 }
                 setStatus(wxString::Format("%zu results for %s", shows_.size(), query));
             }
-            results_->SetSelection(0);
+            selectItem(results_, 0);
             if (!browsing()) {
                 return;
             }
@@ -208,14 +230,14 @@ void MainFrame::startSearch() {
 }
 
 void MainFrame::loadEpisodes() {
-    const int index = results_->GetSelection();
-    if (index == wxNOT_FOUND || static_cast<size_t>(index) >= shows_.size()) {
+    const size_t index = selectedItem(results_);
+    if (index >= shows_.size()) {
         return;
     }
     currentShow_ = shows_[index];
     const unsigned generation = ++episodeGeneration_;
     episodes_.clear();
-    episodeList_->Clear();
+    episodeList_->DeleteAllItems();
     const auto title = wxString::FromUTF8(currentShow_.title);
     setStatus("Loading episodes of " + title + "...");
     announce("Loading episodes");
@@ -229,15 +251,15 @@ void MainFrame::loadEpisodes() {
             }
             episodes_ = std::move(episodes);
             if (episodes_.empty()) {
-                episodeList_->Append("No episodes available");
+                appendItem(episodeList_, "No episodes available");
                 setStatus("No episodes available for " + title);
             } else {
                 for (const auto& episode : episodes_) {
-                    episodeList_->Append(wxString::FromUTF8(episodeLabel(episode)));
+                    appendItem(episodeList_, wxString::FromUTF8(episodeLabel(episode)));
                 }
                 setStatus(wxString::Format("%zu episodes of %s", episodes_.size(), title));
             }
-            episodeList_->SetSelection(0);
+            selectItem(episodeList_, 0);
             if (!browsing()) {
                 return;
             }
@@ -334,7 +356,7 @@ void MainFrame::showBrowser() {
     SetTitle("Ryu - " + wxString::FromUTF8(settings_.provider().name));
     setStatus("Stopped");
     if (currentEpisode_ < episodes_.size()) {
-        episodeList_->SetSelection(static_cast<int>(currentEpisode_));
+        selectItem(episodeList_, static_cast<long>(currentEpisode_));
         episodeList_->SetFocus();
     } else {
         searchBox_->SetFocus();
@@ -363,8 +385,8 @@ void MainFrame::showPreferences() {
         ++episodeGeneration_;
         shows_.clear();
         episodes_.clear();
-        results_->Clear();
-        episodeList_->Clear();
+        results_->DeleteAllItems();
+        episodeList_->DeleteAllItems();
         setStatus("Using " + wxString::FromUTF8(settings_.provider().name));
     }
 }

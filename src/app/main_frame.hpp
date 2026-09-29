@@ -11,7 +11,7 @@
 
 class wxButton;
 class wxChoice;
-class wxListBox;
+class wxListView;
 class wxPanel;
 class wxSimplebook;
 class wxTextCtrl;
@@ -38,7 +38,6 @@ private:
     void showBrowser();
     bool browsing() const;
     void showPreferences();
-    void onCharHook(wxKeyEvent& event);
     void setStatus(const wxString& text);
     void showError(const wxString& title, const std::string& message);
     Audio selectedAudio() const;
@@ -61,8 +60,8 @@ private:
     PlayerPanel* player_ = nullptr;
     wxTextCtrl* searchBox_ = nullptr;
     wxButton* searchButton_ = nullptr;
-    wxListBox* results_ = nullptr;
-    wxListBox* episodeList_ = nullptr;
+    wxListView* results_ = nullptr;
+    wxListView* episodeList_ = nullptr;
     wxChoice* audioChoice_ = nullptr;
     wxButton* playButton_ = nullptr;
 };
