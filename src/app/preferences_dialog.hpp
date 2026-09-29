@@ -4,6 +4,7 @@
 
 #include <wx/dialog.h>
 
+class wxCheckBox;
 class wxChoice;
 class wxTextCtrl;
 
@@ -25,6 +26,7 @@ private:
     wxChoice* providerChoice_ = nullptr;
     wxTextCtrl* baseUrl_ = nullptr;
     wxChoice* audioChoice_ = nullptr;
+    wxCheckBox* fallbackCheck_ = nullptr;
 };
 
 }

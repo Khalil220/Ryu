@@ -18,7 +18,10 @@ const ProviderInfo& Settings::provider() const {
 }
 
 std::string Settings::baseUrl() const {
-    const auto& info = provider();
+    return baseUrlFor(provider());
+}
+
+std::string Settings::baseUrlFor(const ProviderInfo& info) const {
     const auto it = baseUrlOverrides.find(info.id);
     return it != baseUrlOverrides.end() && !it->second.empty() ? it->second : info.defaultBaseUrl;
 }
@@ -28,6 +31,7 @@ Settings loadSettings(wxConfigBase& config) {
     settings.providerId = config.Read("/Provider", wxString::FromUTF8(settings.providerId)).utf8_string();
     settings.providerId = settings.provider().id;
     settings.audio = config.Read("/Audio", "sub") == "dub" ? Audio::Dub : Audio::Sub;
+    settings.useFallback = config.ReadBool("/Fallback", true);
     for (const auto& info : availableProviders()) {
         const auto value = config.Read(baseUrlKey(info.id), wxString()).utf8_string();
         if (!value.empty()) {
@@ -40,6 +44,7 @@ Settings loadSettings(wxConfigBase& config) {
 void saveSettings(wxConfigBase& config, const Settings& settings) {
     config.Write("/Provider", wxString::FromUTF8(settings.providerId));
     config.Write("/Audio", settings.audio == Audio::Dub ? "dub" : "sub");
+    config.Write("/Fallback", settings.useFallback);
     for (const auto& info : availableProviders()) {
         const auto it = settings.baseUrlOverrides.find(info.id);
         if (it != settings.baseUrlOverrides.end() && !it->second.empty() && it->second != info.defaultBaseUrl) {

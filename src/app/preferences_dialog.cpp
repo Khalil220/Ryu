@@ -3,6 +3,7 @@
 #include "accessibility.hpp"
 
 #include <wx/button.h>
+#include <wx/checkbox.h>
 #include <wx/choice.h>
 #include <wx/msgdlg.h>
 #include <wx/sizer.h>
@@ -43,8 +44,12 @@ PreferencesDialog::PreferencesDialog(wxWindow* parent, const Settings& settings)
     audioChoice_->SetSelection(settings_.audio == Audio::Dub ? 1 : 0);
     grid->Add(audioChoice_, 0);
 
+    fallbackCheck_ = new wxCheckBox(this, wxID_ANY, "&Try other providers when an episode won't play");
+    fallbackCheck_->SetValue(settings_.useFallback);
+
     auto* sizer = new wxBoxSizer(wxVERTICAL);
     sizer->Add(grid, 1, wxEXPAND | wxALL, 12);
+    sizer->Add(fallbackCheck_, 0, wxLEFT | wxRIGHT | wxBOTTOM, 12);
     sizer->Add(CreateStdDialogButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 12);
     SetSizerAndFit(sizer);
     setAccessibleName(providerChoice_, "Provider");
@@ -107,6 +112,7 @@ void PreferencesDialog::onOk(wxCommandEvent& event) {
     }
     settings_.providerId = availableProviders()[shownProvider_].id;
     settings_.audio = audioChoice_->GetSelection() == 1 ? Audio::Dub : Audio::Sub;
+    settings_.useFallback = fallbackCheck_->GetValue();
     event.Skip();
 }
 

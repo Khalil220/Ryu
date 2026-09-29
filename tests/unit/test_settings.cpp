@@ -24,6 +24,7 @@ TEST_CASE("empty settings fall back to HiAnime, subs and the default base URL") 
     CHECK(settings.providerId == "hianime");
     CHECK(settings.audio == Audio::Sub);
     CHECK(settings.baseUrl() == "https://hianime.at");
+    CHECK(settings.useFallback);
 }
 
 TEST_CASE("saved settings load back unchanged") {
@@ -31,12 +32,17 @@ TEST_CASE("saved settings load back unchanged") {
     auto config = configFrom("");
     Settings settings;
     settings.audio = Audio::Dub;
+    settings.useFallback = false;
+    settings.providerId = "kickassanime";
     settings.baseUrlOverrides["hianime"] = "https://mirror.example";
     saveSettings(config, settings);
 
     const auto loaded = loadSettings(config);
     CHECK(loaded.audio == Audio::Dub);
-    CHECK(loaded.baseUrl() == "https://mirror.example");
+    CHECK_FALSE(loaded.useFallback);
+    CHECK(loaded.providerId == "kickassanime");
+    CHECK(loaded.baseUrl() == "https://kaa.lt");
+    CHECK(loaded.baseUrlFor(*findProvider("hianime")) == "https://mirror.example");
 }
 
 TEST_CASE("an override equal to the default is not stored") {

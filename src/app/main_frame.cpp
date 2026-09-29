@@ -3,7 +3,7 @@
 #include "accessibility.hpp"
 #include "background.hpp"
 #include "format.hpp"
-#include "host_repair.hpp"
+#include "stream_finder.hpp"
 #include "playlist_server.hpp"
 #include "player_panel.hpp"
 #include "preferences_dialog.hpp"
@@ -25,7 +25,10 @@ namespace ryu {
 
 struct ProviderSession {
     std::shared_ptr<HttpClient> http;
-    std::unique_ptr<Provider> provider;
+    std::vector<std::unique_ptr<Provider>> providers;
+    std::vector<ProviderHandle> handles;
+
+    Provider& primary() const { return *providers.front(); }
 };
 
 MainFrame::MainFrame()
@@ -114,7 +117,18 @@ void MainFrame::createControls() {
 void MainFrame::applySettings() {
     auto session = std::make_shared<ProviderSession>();
     session->http = std::make_shared<CurlHttpClient>();
-    session->provider = settings_.provider().create(*session->http, settings_.baseUrl());
+    const auto add = [&](const ProviderInfo& info) {
+        session->providers.push_back(info.create(*session->http, settings_.baseUrlFor(info)));
+        session->handles.push_back({info.name, session->providers.back().get()});
+    };
+    add(settings_.provider());
+    if (settings_.useFallback) {
+        for (const auto& info : availableProviders()) {
+            if (info.id != settings_.provider().id) {
+                add(info);
+            }
+        }
+    }
     session_ = std::move(session);
     audioChoice_->SetSelection(settings_.audio == Audio::Dub ? 1 : 0);
     SetTitle("Ryu - " + wxString::FromUTF8(settings_.provider().name));
@@ -155,7 +169,7 @@ void MainFrame::startSearch() {
 
     auto session = session_;
     runInBackground<std::vector<ryu::Show>>(
-        alive_, [session, text = query.utf8_string()] { return session->provider->search(text); },
+        alive_, [session, text = query.utf8_string()] { return session->primary().search(text); },
         [this, generation, query](std::vector<ryu::Show> shows) {
             if (generation != searchGeneration_) {
                 return;
@@ -203,7 +217,7 @@ void MainFrame::loadEpisodes() {
 
     auto session = session_;
     runInBackground<std::vector<Episode>>(
-        alive_, [session, id = currentShow_.id] { return session->provider->episodes(id); },
+        alive_, [session, id = currentShow_.id] { return session->primary().episodes(id); },
         [this, generation, title](std::vector<Episode> episodes) {
             if (generation != episodeGeneration_) {
                 return;
@@ -251,30 +265,24 @@ void MainFrame::playEpisode(size_t index) {
 
     auto session = session_;
     auto server = playlistServer_;
-    runInBackground<std::vector<Stream>>(
+    runInBackground<FoundStream>(
         alive_,
-        [session, server, id = episode.id, audio] {
-            auto streams = session->provider->streams(id, audio);
-            if (!streams.empty()) {
-                streams.front() = repairStreamHosts(*session->http, *server, streams.front()).stream;
-            }
-            return streams;
+        [session, server, show = currentShow_, episode, audio] {
+            return findStream(*session->http, *server, session->handles, show, episode, audio);
         },
-        [this, generation, index, title, audio](std::vector<Stream> streams) {
+        [this, generation, index, title](FoundStream found) {
             if (generation != streamGeneration_) {
                 return;
             }
-            if (streams.empty()) {
-                const wxString message = audio == Audio::Dub ? "No dubbed stream is available for this episode."
-                                                             : "No subbed stream is available for this episode.";
-                setStatus(message);
-                wxMessageBox(message, "Ryu", wxOK | wxICON_INFORMATION, this);
-                return;
-            }
             try {
-                player_->play(streams.front());
+                player_->play(found.stream);
                 currentEpisode_ = index;
                 showPlayer(title);
+                if (found.fromFallback) {
+                    const auto source = wxString::FromUTF8(found.providerName);
+                    setStatus("Playing " + title + " from " + source);
+                    announce("From " + source, false);
+                }
             } catch (const std::exception& error) {
                 setStatus("Playback failed");
                 showError("Playback failed", error.what());
