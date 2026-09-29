@@ -109,6 +109,16 @@ def run(app, speech_log):
     check(wait_for(lambda: subtitles.selected_text() == "English", 20) is not None,
           f"English subtitles load and are selected ({subtitles.selected_text()})")
 
+    check(player.child_window(title="Skip intro", control_type="Button").exists(),
+          "Skip intro is offered for an episode with intro data")
+    check(wait_for(lambda: "Intro. Press I to skip." in spoken(speech_log), 10) is not None, "the intro is announced")
+    player.child_window(title="Pause", control_type="Button").set_focus()
+    before_skip = seconds(time_box.get_value())
+    send_keys("i", vk_packet=False)
+    check(wait_for(lambda: seconds(time_box.get_value()) >= 88, 20) is not None,
+          f"I skips the intro ({before_skip} to {time_box.get_value()})")
+    check("Skipped intro" in spoken(speech_log), "skipping the intro is announced")
+
     player.child_window(title="Pause", control_type="Button").invoke()
     play_button = player.child_window(title="Play", control_type="Button")
     check(wait_for(play_button.exists, 10) is not None, "Pause button turns into Play")
@@ -147,6 +157,15 @@ def run(app, speech_log):
     send_keys("{DOWN}")
     check(wait_for(lambda: "Volume 95" in spoken(speech_log), 5) is not None, "Down arrow lowers and announces the volume")
 
+    read = player.child_window(title="Read subtitles aloud", control_type="CheckBox")
+    check(read.get_toggle_state() == 0, "subtitles are not read aloud by default for a dub")
+    pause_button.set_focus()
+    mark = len(spoken(speech_log))
+    send_keys("r", vk_packet=False)
+    check(wait_for(lambda: read.get_toggle_state() == 1, 5) is not None, "R turns subtitle reading on")
+    check(wait_for(lambda: "Reading subtitles" in spoken(speech_log)[mark:], 5) is not None,
+          "turning subtitle reading on is announced")
+
     pause_button.set_focus()
     send_keys("p", vk_packet=False)
     check(wait_for(lambda: "This is the first episode" in spoken(speech_log), 5) is not None,
@@ -158,6 +177,7 @@ def run(app, speech_log):
           f"N plays the next episode ({main.window_text()})")
     check(wait_for(lambda: 1 <= seconds(time_box.get_value()) < 60, 60) is not None,
           f"the next episode plays, repairing its host if it is banned ({time_box.get_value()})")
+    check(read.get_toggle_state() == 1, "the subtitle reading choice carries over to the next episode")
 
     check(player.child_window(title="Close", control_type="Button", class_name="Button").exists(),
           "player has a Close button")
@@ -174,6 +194,23 @@ def run(app, speech_log):
     send_keys("{END}tnp", vk_packet=False)
     check(search.get_value() == "frierentnp", f"player keys do not fire while typing a search ({search.get_value()})")
     search.set_edit_text("frieren")
+
+    audio.select("Subbed")
+    items(episodes)[0].select()
+    main.child_window(title="Play", control_type="Button").invoke()
+    check(wait_for(lambda: main.window_text().startswith("Episode 1:"), 45) is not None,
+          f"episode 1 subbed plays, repairing its banned host ({main.window_text()})")
+    check(read.get_toggle_state() == 1, "subtitles are read aloud by default for a subbed episode")
+    mark = len(spoken(speech_log))
+    known = re.compile(r"^(\d+:\d\d( of \d+:\d\d)?|Volume \d+|Paused|Playing|Reading subtitles|Not reading subtitles|"
+                       r"Skipped intro|Intro\. Press I to skip\.|End of episode|Loading .*|From .*|\[backend\].*)$")
+    subtitle_line = wait_for(lambda: next((line for line in spoken(speech_log)[mark:] if not known.match(line)), None),
+                             60)
+    check(subtitle_line is not None, f"a subtitle line is read aloud ({subtitle_line})")
+    main.child_window(title="Pause", control_type="Button").set_focus()
+    send_keys("{ESC}")
+    check(wait_for(lambda: main.window_text() == "Ryu - HiAnime", 15) is not None, "Escape leaves the subbed episode")
+    search.set_focus()
 
     send_keys("^,")
     preferences = main.child_window(title="Preferences", control_type="Window")
