@@ -19,6 +19,7 @@ class wxTextCtrl;
 namespace ryu {
 
 class PlayerPanel;
+class PlaylistServer;
 struct ProviderSession;
 
 class MainFrame : public wxFrame {
@@ -44,6 +45,7 @@ private:
 
     Settings settings_;
     std::shared_ptr<ProviderSession> session_;
+    std::shared_ptr<PlaylistServer> playlistServer_;
     std::shared_ptr<int> alive_;
     std::vector<ryu::Show> shows_;
     std::vector<Episode> episodes_;

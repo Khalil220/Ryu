@@ -3,6 +3,8 @@
 #include "accessibility.hpp"
 #include "background.hpp"
 #include "format.hpp"
+#include "host_repair.hpp"
+#include "playlist_server.hpp"
 #include "player_panel.hpp"
 #include "preferences_dialog.hpp"
 #include "speech.hpp"
@@ -27,7 +29,8 @@ struct ProviderSession {
 };
 
 MainFrame::MainFrame()
-    : wxFrame(nullptr, wxID_ANY, "Ryu"), alive_(std::make_shared<int>(0)) {
+    : wxFrame(nullptr, wxID_ANY, "Ryu"), playlistServer_(std::make_shared<PlaylistServer>()),
+      alive_(std::make_shared<int>(0)) {
     settings_ = loadSettings(*wxConfigBase::Get());
     createMenu();
     createControls();
@@ -247,8 +250,16 @@ void MainFrame::playEpisode(size_t index) {
     announce("Loading " + label);
 
     auto session = session_;
+    auto server = playlistServer_;
     runInBackground<std::vector<Stream>>(
-        alive_, [session, id = episode.id, audio] { return session->provider->streams(id, audio); },
+        alive_,
+        [session, server, id = episode.id, audio] {
+            auto streams = session->provider->streams(id, audio);
+            if (!streams.empty()) {
+                streams.front() = repairStreamHosts(*session->http, *server, streams.front()).stream;
+            }
+            return streams;
+        },
         [this, generation, index, title, audio](std::vector<Stream> streams) {
             if (generation != streamGeneration_) {
                 return;

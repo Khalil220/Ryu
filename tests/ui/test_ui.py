@@ -156,9 +156,8 @@ def run(app, speech_log):
     send_keys("n", vk_packet=False)
     check(wait_for(lambda: main.window_text().startswith("Episode 2:"), 45) is not None,
           f"N plays the next episode ({main.window_text()})")
-    outcome = wait_for(lambda: "plays" if 1 <= seconds(time_box.get_value()) < 60 else
-                       ("reported" if "The video is not loading. Its host may be down." in spoken(speech_log) else None), 60)
-    check(outcome is not None, f"the next episode plays or Ryu says it is not loading ({outcome}, {time_box.get_value()})")
+    check(wait_for(lambda: 1 <= seconds(time_box.get_value()) < 60, 60) is not None,
+          f"the next episode plays, repairing its host if it is banned ({time_box.get_value()})")
 
     check(player.child_window(title="Close", control_type="Button", class_name="Button").exists(),
           "player has a Close button")
