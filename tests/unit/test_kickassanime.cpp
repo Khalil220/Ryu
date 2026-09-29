@@ -48,11 +48,13 @@ TEST_CASE("search posts the query and reads titles, format, year and audio avail
 TEST_CASE("episodes lists the Japanese-audio episodes with ids that carry the show and number") {
     FakeHttpClient http;
     http.serve(jaListUrl, readFixture("kickassanime/episodes_frieren_ja.json"));
+    http.serve(enListUrl, readFixture("kickassanime/episodes_frieren_en.json"));
     KickAssAnimeProvider provider(http);
 
-    const auto episodes = provider.episodes("sousou-no-frieren-2d15");
+    const auto episodes = provider.episodes(Show{"sousou-no-frieren-2d15"});
 
     REQUIRE(episodes.size() == 28);
+    CHECK(std::ranges::all_of(episodes, [](const Episode& e) { return e.subbed && e.dubbed; }));
     CHECK(episodes.front().id == "sousou-no-frieren-2d15|1");
     CHECK(episodes.front().number == "1");
     CHECK(episodes.front().title == "The Journey's End");
@@ -69,11 +71,16 @@ TEST_CASE("episodes follows every page of a long show") {
                R"("result":[{"slug":"b","title":"Two","episode_number":101,"episode_string":"101"}]})");
     KickAssAnimeProvider provider(http);
 
-    const auto episodes = provider.episodes("long");
+    http.serve("https://kaa.lt/api/show/long/episodes?ep=1&lang=en-US",
+               R"({"current_page":1,"pages":[{"number":1,"eps":[1]}],"result":[]})");
+    const auto episodes = provider.episodes(Show{"long"});
 
     REQUIRE(episodes.size() == 2);
     CHECK(episodes[1].id == "long|101");
     CHECK(episodes[1].title == "Two");
+    CHECK(episodes[0].dubbed);
+    CHECK_FALSE(episodes[1].dubbed);
+    CHECK(episodes[1].subbed);
 }
 
 TEST_CASE("episodes falls back to the English list for dub-only shows") {
@@ -84,10 +91,24 @@ TEST_CASE("episodes falls back to the English list for dub-only shows") {
                R"("result":[{"slug":"x","title":"Pilot","episode_number":1,"episode_string":"1"}]})");
     KickAssAnimeProvider provider(http);
 
-    const auto episodes = provider.episodes("dubonly");
+    const auto episodes = provider.episodes(Show{"dubonly"});
 
     REQUIRE(episodes.size() == 1);
     CHECK(episodes[0].title == "Pilot");
+    CHECK_FALSE(episodes[0].subbed);
+    CHECK(episodes[0].dubbed);
+}
+
+TEST_CASE("episodes shows every episode when the English list cannot be read") {
+    FakeHttpClient http;
+    http.serve(jaListUrl, readFixture("kickassanime/episodes_frieren_ja.json"));
+    http.serve(enListUrl, "<html>down</html>", 502);
+    KickAssAnimeProvider provider(http);
+
+    const auto episodes = provider.episodes(Show{"sousou-no-frieren-2d15"});
+
+    REQUIRE(episodes.size() == 28);
+    CHECK(std::ranges::all_of(episodes, [](const Episode& e) { return e.dubbed; }));
 }
 
 TEST_CASE("streams resolves the VidStreaming player into a manifest with headers, audio and subtitles") {

@@ -41,7 +41,7 @@ TEST_CASE("live: KickAssAnime finds Frieren and plays episode 1 subbed and dubbe
     const auto shows = provider.search("frieren");
     const auto show = std::ranges::find_if(shows, [](const Show& s) { return s.altTitle == "Sousou no Frieren"; });
     REQUIRE(show != shows.end());
-    const auto episodes = provider.episodes(show->id);
+    const auto episodes = provider.episodes(*show);
     REQUIRE(episodes.size() == 28);
 
     for (const auto audio : {Audio::Sub, Audio::Dub}) {

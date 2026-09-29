@@ -13,7 +13,7 @@ namespace {
 class EmptyProvider : public Provider {
 public:
     std::vector<Show> search(std::string_view) override { return {}; }
-    std::vector<Episode> episodes(std::string_view) override { return {}; }
+    std::vector<Episode> episodes(const Show&) override { return {}; }
     std::vector<Stream> streams(std::string_view, Audio) override { return {}; }
 };
 
@@ -29,7 +29,7 @@ TEST_CASE("live: a HiAnime episode that the primary cannot play is found on Kick
     const auto shows = hianime.search("frieren");
     REQUIRE_FALSE(shows.empty());
     const auto& show = shows.front();
-    const auto episodes = hianime.episodes(show.id);
+    const auto episodes = hianime.episodes(show);
     REQUIRE(episodes.size() > 1);
 
     const auto found = findStream(http, server, {{"Nothing", &nothing}, {"KickAssAnime", &kickass}}, show,

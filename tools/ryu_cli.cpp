@@ -50,7 +50,8 @@ void printEpisodes(const std::vector<ryu::Episode>& episodes) {
         if (!episode.title.empty()) {
             std::cout << ", " << episode.title;
         }
-        std::cout << ", id " << episode.id << "\n";
+        std::cout << (episode.subbed ? ", sub" : "") << (episode.dubbed ? ", dub" : "") << ", id " << episode.id
+                  << "\n";
     }
 }
 
@@ -120,7 +121,9 @@ int main(int argc, char** argv) {
         if (command == "search") {
             printShows(provider->search(positional[1]));
         } else if (command == "episodes") {
-            printEpisodes(provider->episodes(positional[1]));
+            ryu::Show show;
+            show.id = positional[1];
+            printEpisodes(provider->episodes(show));
         } else if (command == "streams") {
             const bool dub = positional.size() > 2 && positional[2] == "dub";
             printStreams(provider->streams(positional[1], dub ? ryu::Audio::Dub : ryu::Audio::Sub));

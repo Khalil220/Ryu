@@ -12,7 +12,7 @@ public:
     HiAnimeProvider(HttpClient& http, std::string baseUrl = defaultBaseUrl);
 
     std::vector<Show> search(std::string_view query) override;
-    std::vector<Episode> episodes(std::string_view showId) override;
+    std::vector<Episode> episodes(const Show& show) override;
     std::vector<Stream> streams(std::string_view episodeId, Audio audio) override;
 
 private:

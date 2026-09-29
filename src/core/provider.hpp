@@ -28,6 +28,10 @@ struct Episode {
     std::string id;
     std::string number;
     std::string title;
+    bool subbed = true;
+    bool dubbed = true;
+
+    bool availableIn(Audio audio) const { return audio == Audio::Dub ? dubbed : subbed; }
 };
 
 struct Subtitle {
@@ -64,7 +68,7 @@ class Provider {
 public:
     virtual ~Provider() = default;
     virtual std::vector<Show> search(std::string_view query) = 0;
-    virtual std::vector<Episode> episodes(std::string_view showId) = 0;
+    virtual std::vector<Episode> episodes(const Show& show) = 0;
     virtual std::vector<Stream> streams(std::string_view episodeId, Audio audio) = 0;
 };
 

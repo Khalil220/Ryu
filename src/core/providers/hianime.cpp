@@ -104,13 +104,19 @@ std::vector<Show> HiAnimeProvider::search(std::string_view query) {
     return shows;
 }
 
-std::vector<Episode> HiAnimeProvider::episodes(std::string_view showId) {
-    const HtmlDocument list(fetchHtmlFragment(baseUrl_ + "/api/theme/episode/list/" + urlEncode(showId)));
+std::vector<Episode> HiAnimeProvider::episodes(const Show& show) {
+    const HtmlDocument list(fetchHtmlFragment(baseUrl_ + "/api/theme/episode/list/" + urlEncode(show.id)));
     std::vector<Episode> result;
     for (const auto& item : list.select(".ep-item")) {
         Episode episode{item.attr("data-id"), item.attr("data-number"), item.attr("title")};
         if (!episode.id.empty()) {
             result.push_back(std::move(episode));
+        }
+    }
+    if (show.subEpisodes > 0 || show.dubEpisodes > 0) {
+        for (size_t i = 0; i < result.size(); ++i) {
+            result[i].subbed = i < static_cast<size_t>(show.subEpisodes);
+            result[i].dubbed = i < static_cast<size_t>(show.dubEpisodes);
         }
     }
     return result;

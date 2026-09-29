@@ -7,6 +7,9 @@
 
 #include <algorithm>
 #include <cctype>
+#include <charconv>
+#include <optional>
+#include <set>
 
 namespace ryu {
 
@@ -78,6 +81,31 @@ std::string trimTrailingSlash(std::string url) {
     return url;
 }
 
+std::optional<double> numberOf(std::string_view text) {
+    double value = 0;
+    const auto result = std::from_chars(text.data(), text.data() + text.size(), value);
+    if (result.ec != std::errc() || result.ptr != text.data() + text.size()) {
+        return std::nullopt;
+    }
+    return value;
+}
+
+std::set<double> listedNumbers(const json& response) {
+    std::set<double> numbers;
+    if (const auto pages = response.find("pages"); pages != response.end() && pages->is_array()) {
+        for (const auto& page : *pages) {
+            if (const auto eps = page.find("eps"); eps != page.end() && eps->is_array()) {
+                for (const auto& number : *eps) {
+                    if (number.is_number()) {
+                        numbers.insert(number.get<double>());
+                    }
+                }
+            }
+        }
+    }
+    return numbers;
+}
+
 json parseJson(const std::string& body, const std::string& url) {
     auto parsed = json::parse(body, nullptr, false);
     if (parsed.is_discarded() || !parsed.is_object()) {
@@ -127,7 +155,8 @@ std::vector<Show> KickAssAnimeProvider::search(std::string_view query) {
     return shows;
 }
 
-std::vector<Episode> KickAssAnimeProvider::episodes(std::string_view showId) {
+std::vector<Episode> KickAssAnimeProvider::episodes(const Show& show) {
+    const std::string_view showId = show.id;
     const auto base = baseUrl_ + "/api/show/" + urlEncode(showId) + "/episodes";
     std::string language = "ja-JP";
     auto first = parseJson(fetch(base + "?ep=1&lang=" + language), base);
@@ -147,6 +176,15 @@ std::vector<Episode> KickAssAnimeProvider::episodes(std::string_view showId) {
         }
     }
 
+    const bool japanese = language == "ja-JP";
+    std::optional<std::set<double>> dubbed;
+    if (japanese) {
+        try {
+            dubbed = listedNumbers(parseJson(fetch(base + "?ep=1&lang=en-US"), base));
+        } catch (const std::exception&) {
+        }
+    }
+
     std::vector<Episode> result;
     for (const auto& page : pages) {
         const auto items = page.find("result");
@@ -155,9 +193,14 @@ std::vector<Episode> KickAssAnimeProvider::episodes(std::string_view showId) {
         }
         for (const auto& item : *items) {
             const auto number = episodeString(item);
-            if (!number.empty()) {
-                result.push_back({std::string(showId) + "|" + number, number, stringField(item, "title")});
+            if (number.empty()) {
+                continue;
             }
+            Episode episode{std::string(showId) + "|" + number, number, stringField(item, "title")};
+            episode.subbed = japanese;
+            const auto value = numberOf(number);
+            episode.dubbed = !japanese || !dubbed || (value && dubbed->contains(*value));
+            result.push_back(std::move(episode));
         }
     }
     return result;

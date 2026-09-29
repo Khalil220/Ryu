@@ -109,7 +109,7 @@ FoundStream findStream(HttpClient& http, PlaylistServer& server, const std::vect
                 if (!match) {
                     continue;
                 }
-                const auto episodes = handle.provider->episodes(match->id);
+                const auto episodes = handle.provider->episodes(*match);
                 const auto same = std::ranges::find_if(
                     episodes, [&](const Episode& candidate) { return sameEpisodeNumber(candidate.number, episode.number); });
                 if (same == episodes.end()) {

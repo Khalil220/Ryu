@@ -208,7 +208,7 @@ void MainFrame::loadEpisodes() {
 
     auto session = session_;
     runInBackground<std::vector<Episode>>(
-        alive_, [session, id = currentShow_.id] { return session->primary().episodes(id); },
+        alive_, [session, show = currentShow_] { return session->primary().episodes(show); },
         [this, generation, title](std::vector<Episode> episodes) {
             if (generation != episodeGeneration_) {
                 return;

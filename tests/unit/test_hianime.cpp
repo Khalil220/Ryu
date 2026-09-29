@@ -3,6 +3,8 @@
 
 #include <doctest/doctest.h>
 
+#include <algorithm>
+
 using namespace ryu;
 using ryu::test::FakeHttpClient;
 using ryu::test::readFixture;
@@ -77,15 +79,43 @@ TEST_CASE("episodes parses ids, numbers and titles from the list API") {
     http.serve(episodesUrl, readFixture("hianime/episodes_481.json"));
     HiAnimeProvider provider(http);
 
-    const auto episodes = provider.episodes("481");
+    const auto episodes = provider.episodes(Show{"481", "Frieren: Beyond Journey's End", "", "TV", 28, 28});
 
     REQUIRE(episodes.size() == 28);
+    CHECK(episodes.front().subbed);
+    CHECK(episodes.back().dubbed);
     CHECK(episodes.front().id == "9227");
     CHECK(episodes.front().number == "1");
     CHECK(episodes.front().title == "The Journey's End");
     CHECK(episodes.back().id == "9254");
     CHECK(episodes.back().number == "28");
     CHECK(episodes.back().title == "It Would Be Embarrassing When We Met Again");
+}
+
+TEST_CASE("episodes marks only the first dubbed-count episodes as dubbed") {
+    FakeHttpClient http;
+    http.serve(episodesUrl, readFixture("hianime/episodes_481.json"));
+    HiAnimeProvider provider(http);
+
+    const auto episodes = provider.episodes(Show{"481", "Frieren", "", "TV", 27, 25});
+
+    REQUIRE(episodes.size() == 28);
+    CHECK(episodes[24].dubbed);
+    CHECK_FALSE(episodes[25].dubbed);
+    CHECK(episodes[26].subbed);
+    CHECK_FALSE(episodes[27].subbed);
+    CHECK(episodes[27].availableIn(Audio::Sub) == false);
+}
+
+TEST_CASE("episodes treats every episode as available when the show has no counts") {
+    FakeHttpClient http;
+    http.serve(episodesUrl, readFixture("hianime/episodes_481.json"));
+    HiAnimeProvider provider(http);
+
+    const auto episodes = provider.episodes(Show{"481"});
+
+    REQUIRE(episodes.size() == 28);
+    CHECK(std::ranges::all_of(episodes, [](const Episode& e) { return e.subbed && e.dubbed; }));
 }
 
 TEST_CASE("streams resolves the ZokoAnime embed into a master playlist with headers and subtitles") {
@@ -165,7 +195,7 @@ TEST_CASE("HTTP errors and failed API responses are provider errors") {
     HiAnimeProvider provider(http);
 
     CHECK_THROWS_WITH_AS(provider.search("frieren"), doctest::Contains("HTTP 404"), ProviderError);
-    CHECK_THROWS_AS(provider.episodes("481"), ProviderError);
+    CHECK_THROWS_AS(provider.episodes(Show{"481"}), ProviderError);
     CHECK_THROWS_AS(provider.streams("9227", Audio::Sub), ProviderError);
 }
 

@@ -50,7 +50,7 @@ TEST_CASE("live: a recent HiAnime episode resolves to video Ryu can play") {
     const auto shows = provider.search("one piece");
     const auto show = std::ranges::find_if(shows, [](const Show& s) { return s.title == "One Piece"; });
     REQUIRE(show != shows.end());
-    const auto episodes = provider.episodes(show->id);
+    const auto episodes = provider.episodes(*show);
     REQUIRE(episodes.size() > 3);
 
     bool played = false;
@@ -75,7 +75,7 @@ TEST_CASE("live: Frieren still lists episodes with a stream for episode 1") {
     const auto shows = provider.search("frieren");
     REQUIRE_FALSE(shows.empty());
     CHECK(shows.front().id == "481");
-    const auto episodes = provider.episodes(shows.front().id);
+    const auto episodes = provider.episodes(shows.front());
     REQUIRE(episodes.size() == 28);
     CHECK_FALSE(provider.streams(episodes.front().id, Audio::Sub).empty());
 }

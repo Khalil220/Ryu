@@ -26,7 +26,7 @@ public:
         const auto it = searchResults.find(std::string(query));
         return it == searchResults.end() ? std::vector<Show>{} : it->second;
     }
-    std::vector<Episode> episodes(std::string_view showId) override { return episodeLists[std::string(showId)]; }
+    std::vector<Episode> episodes(const Show& show) override { return episodeLists[show.id]; }
     std::vector<Stream> streams(std::string_view episodeId, Audio audio) override { return onStreams(episodeId, audio); }
 };
 
