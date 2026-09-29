@@ -117,6 +117,13 @@ Stream MegaplayResolver::resolve(const std::string& embedUrl, Audio audio, const
     stream.audio = audio;
     stream.headers = {{"Referer", originOf(embedUrl)}};
     stream.disguisedSegments = true;
+    if (const auto intro = sources.find("intro"); intro != sources.end() && intro->is_object()) {
+        const auto start = intro->value("start", 0.0);
+        const auto end = intro->value("end", 0.0);
+        if (end > start) {
+            stream.intro = TimeRange{start, end};
+        }
+    }
     if (const auto tracks = sources.find("tracks"); tracks != sources.end() && tracks->is_array()) {
         for (const auto& track : *tracks) {
             const auto kind = stringField(track, "kind");

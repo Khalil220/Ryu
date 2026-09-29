@@ -61,6 +61,9 @@ void printStreams(const std::vector<ryu::Stream>& streams) {
     for (const auto& stream : streams) {
         std::cout << stream.server << " " << (stream.audio == ryu::Audio::Dub ? "dub" : "sub") << ": " << stream.url
                   << "\n";
+        if (stream.intro) {
+            std::cout << "Intro from " << stream.intro->start << " to " << stream.intro->end << " seconds\n";
+        }
         for (const auto& [name, value] : stream.headers) {
             std::cout << "Header " << name << ": " << value << "\n";
         }

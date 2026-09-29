@@ -54,6 +54,9 @@ TEST_CASE("resolve decrypts the stream address with the key from megaplay's own 
     CHECK(stream.url == masterUrl);
     CHECK(stream.audio == Audio::Sub);
     CHECK(stream.disguisedSegments);
+    REQUIRE(stream.intro.has_value());
+    CHECK(stream.intro->start == 0);
+    CHECK(stream.intro->end == 89);
     REQUIRE(stream.headers.size() == 1);
     CHECK(stream.headers[0].first == "Referer");
     CHECK(stream.headers[0].second == "https://megaplay.buzz/");

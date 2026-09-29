@@ -2,6 +2,7 @@
 
 #include "http.hpp"
 
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -36,6 +37,11 @@ struct Subtitle {
     bool isDefault = false;
 };
 
+struct TimeRange {
+    double start = 0;
+    double end = 0;
+};
+
 struct Stream {
     std::string url;
     std::string server;
@@ -45,6 +51,8 @@ struct Stream {
     bool disguisedSegments = false;
     std::vector<std::string> alternateHosts;
     std::string audioLanguage;
+    std::optional<TimeRange> intro;
+    std::vector<std::string> subtitleNoise;
 };
 
 class ProviderError : public std::runtime_error {

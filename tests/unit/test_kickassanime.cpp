@@ -105,6 +105,8 @@ TEST_CASE("streams resolves the VidStreaming player into a manifest with headers
     CHECK(stream.server == "VidStreaming");
     CHECK(stream.disguisedSegments);
     CHECK(stream.audioLanguage == "jpn,ja");
+    CHECK(stream.subtitleNoise == std::vector<std::string>{"kaa.lt"});
+    CHECK_FALSE(stream.intro.has_value());
     REQUIRE(stream.headers.size() == 2);
     CHECK(stream.headers[0] == std::pair<std::string, std::string>{"Origin", "https://krussdomi.com"});
     CHECK(stream.headers[1] == std::pair<std::string, std::string>{"Referer", "https://krussdomi.com/"});

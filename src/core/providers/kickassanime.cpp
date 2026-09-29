@@ -239,6 +239,7 @@ Stream KickAssAnimeProvider::resolvePlayer(const std::string& playerUrl, Audio a
     stream.headers = {{"Origin", origin}, {"Referer", origin + "/"}};
     stream.disguisedSegments = true;
     stream.audioLanguage = audio == Audio::Dub ? "eng,en" : "jpn,ja";
+    stream.subtitleNoise = {"kaa.lt"};
 
     bool haveDefault = false;
     if (const auto tracks = props.find("subtitles"); tracks != props.end() && tracks->is_array()) {
