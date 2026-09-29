@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../provider.hpp"
+#include "../resolvers/megaplay.hpp"
 
 namespace ryu {
 
@@ -21,6 +22,7 @@ private:
 
     HttpClient& http_;
     std::string baseUrl_;
+    MegaplayResolver megaplay_;
 };
 
 }

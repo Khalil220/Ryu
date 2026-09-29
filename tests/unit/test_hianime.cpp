@@ -168,3 +168,48 @@ TEST_CASE("HTTP errors and failed API responses are provider errors") {
     CHECK_THROWS_AS(provider.episodes("481"), ProviderError);
     CHECK_THROWS_AS(provider.streams("9227", Audio::Sub), ProviderError);
 }
+
+TEST_CASE("streams resolves megaplay servers when ZokoAnime is not offered") {
+    FakeHttpClient http;
+    http.serve(serversUrl, readFixture("hianime/servers_9227_megaplay.json"));
+    http.serve("https://megaplay.buzz/stream/s-2/107257/sub", readFixture("megaplay/stream_107257_sub.html"));
+    http.serve("https://megaplay.buzz/stream/getSources?id=13461", readFixture("megaplay/get_sources_13461.json"));
+    http.serve("https://megaplay.buzz/lib/newclient.min.js?v=4.20", readFixture("megaplay/newclient.min.js"));
+    HiAnimeProvider provider(http);
+
+    const auto streams = provider.streams("9227", Audio::Sub);
+
+    REQUIRE(streams.size() == 1);
+    CHECK(streams[0].server == "Vidstream-2");
+    CHECK(streams[0].url.ends_with("/master.m3u8"));
+    CHECK(streams[0].disguisedSegments);
+    CHECK(http.header(1, "Referer") == "https://hianime.at/");
+}
+
+TEST_CASE("streams keeps working servers when another one fails") {
+    FakeHttpClient http;
+    http.serve(serversUrl,
+               serversJson(R"(<div class="item server-item" data-type="sub" data-server-name="Vidstream-2" )"
+                           R"(data-hash="aHR0cHM6Ly9tZWdhcGxheS5idXp6L3N0cmVhbS9zLTIvMS9zdWI="></div>)"
+                           R"(<div class="item server-item" data-type="sub" data-server-name="ZokoAnime" )"
+                           R"(data-hash="aHR0cHM6Ly96b2tvYW5pbWUudmlkZW8vc3RyZWFtL21hbC81Mjk5MS8xL3N1Yg=="></div>)"));
+    http.serve("https://megaplay.buzz/stream/s-2/1/sub", "gone", 404);
+    http.serve(subEmbedUrl, readFixture("hianime/embed_zoko.html"));
+    HiAnimeProvider provider(http);
+
+    const auto streams = provider.streams("9227", Audio::Sub);
+
+    REQUIRE(streams.size() == 1);
+    CHECK(streams[0].server == "ZokoAnime");
+}
+
+TEST_CASE("streams reports the failure when every server fails") {
+    FakeHttpClient http;
+    http.serve(serversUrl,
+               serversJson(R"(<div class="item server-item" data-type="sub" data-server-name="Vidstream-2" )"
+                           R"(data-hash="aHR0cHM6Ly9tZWdhcGxheS5idXp6L3N0cmVhbS9zLTIvMS9zdWI="></div>)"));
+    http.serve("https://megaplay.buzz/stream/s-2/1/sub", "gone", 404);
+    HiAnimeProvider provider(http);
+
+    CHECK_THROWS_WITH_AS(provider.streams("9227", Audio::Sub), doctest::Contains("no stream"), ProviderError);
+}

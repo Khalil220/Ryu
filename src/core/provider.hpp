@@ -39,6 +39,7 @@ struct Stream {
     Audio audio = Audio::Sub;
     Headers headers;
     std::vector<Subtitle> subtitles;
+    bool disguisedSegments = false;
 };
 
 class ProviderError : public std::runtime_error {

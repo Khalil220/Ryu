@@ -66,7 +66,7 @@ std::string trimTrailingSlash(std::string url) {
 }
 
 HiAnimeProvider::HiAnimeProvider(HttpClient& http, std::string baseUrl)
-    : http_(http), baseUrl_(trimTrailingSlash(std::move(baseUrl))) {}
+    : http_(http), baseUrl_(trimTrailingSlash(std::move(baseUrl))), megaplay_(http) {}
 
 std::vector<Show> HiAnimeProvider::search(std::string_view query) {
     const HtmlDocument page(fetch(baseUrl_ + "/search?keyword=" + urlEncode(query)));
@@ -121,14 +121,35 @@ std::vector<Stream> HiAnimeProvider::streams(std::string_view episodeId, Audio a
         fetchHtmlFragment(baseUrl_ + "/api/theme/episode/servers?episodeId=" + urlEncode(episodeId)));
     const std::string_view type = audio == Audio::Dub ? "dub" : "sub";
     std::vector<Stream> result;
+    std::string lastError;
     for (const auto& server : servers.select(".server-item")) {
-        if (server.attr("data-type") != type || server.attr("data-server-name") != zokoServer) {
+        if (server.attr("data-type") != type) {
             continue;
         }
-        const auto embedUrl = base64Decode(server.attr("data-hash"));
-        if (!embedUrl.empty()) {
-            result.push_back(resolveZoko(embedUrl, audio));
+        const auto name = server.attr("data-server-name");
+        std::string embedUrl;
+        try {
+            embedUrl = base64Decode(server.attr("data-hash"));
+        } catch (const std::invalid_argument&) {
+            continue;
         }
+        try {
+            if (name == zokoServer) {
+                result.push_back(resolveZoko(embedUrl, audio));
+            } else if (MegaplayResolver::handles(embedUrl)) {
+                auto stream = megaplay_.resolve(embedUrl, audio, baseUrl_ + "/");
+                stream.server = name;
+                result.push_back(std::move(stream));
+            }
+        } catch (const std::exception& error) {
+            lastError = error.what();
+        }
+        if (!result.empty()) {
+            break;
+        }
+    }
+    if (result.empty() && !lastError.empty()) {
+        throw ProviderError(lastError);
     }
     return result;
 }

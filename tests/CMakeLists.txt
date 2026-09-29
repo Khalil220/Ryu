@@ -8,6 +8,7 @@ add_executable(ryu_unit_tests
     unit/test_format.cpp
     unit/test_html.cpp
     unit/test_hianime.cpp
+    unit/test_megaplay.cpp
     unit/test_registry.cpp
     unit/test_settings.cpp
 )
