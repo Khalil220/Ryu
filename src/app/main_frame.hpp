@@ -4,7 +4,6 @@
 #include "settings.hpp"
 
 #include <wx/frame.h>
-#include <wx/weakref.h>
 
 #include <memory>
 #include <string>
@@ -13,11 +12,13 @@
 class wxButton;
 class wxChoice;
 class wxListBox;
+class wxPanel;
+class wxSimplebook;
 class wxTextCtrl;
 
 namespace ryu {
 
-class PlayerFrame;
+class PlayerPanel;
 struct ProviderSession;
 
 class MainFrame : public wxFrame {
@@ -30,7 +31,11 @@ private:
     void applySettings();
     void startSearch();
     void loadEpisodes();
-    void playSelectedEpisode();
+    void playEpisode(size_t index);
+    void stepEpisode(int delta);
+    void showPlayer(const wxString& title);
+    void showBrowser();
+    bool browsing() const;
     void showPreferences();
     void onCharHook(wxKeyEvent& event);
     void setStatus(const wxString& text);
@@ -43,11 +48,14 @@ private:
     std::vector<ryu::Show> shows_;
     std::vector<Episode> episodes_;
     ryu::Show currentShow_;
+    size_t currentEpisode_ = 0;
     unsigned searchGeneration_ = 0;
     unsigned episodeGeneration_ = 0;
     unsigned streamGeneration_ = 0;
-    wxWeakRef<PlayerFrame> player_;
 
+    wxSimplebook* book_ = nullptr;
+    wxPanel* browsePage_ = nullptr;
+    PlayerPanel* player_ = nullptr;
     wxTextCtrl* searchBox_ = nullptr;
     wxButton* searchButton_ = nullptr;
     wxListBox* results_ = nullptr;

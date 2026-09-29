@@ -1,4 +1,4 @@
-#include "player_frame.hpp"
+#include "player_panel.hpp"
 
 #include "accessibility.hpp"
 #include "format.hpp"
@@ -11,7 +11,6 @@
 #include <wx/button.h>
 #include <wx/choice.h>
 #include <wx/msgdlg.h>
-#include <wx/panel.h>
 #include <wx/sizer.h>
 #include <wx/slider.h>
 #include <wx/stattext.h>
@@ -55,86 +54,99 @@ std::string text(const mpv_node* node) {
 
 }
 
-PlayerFrame::PlayerFrame(wxWindow* parent) : wxFrame(parent, wxID_ANY, "Ryu player") {
+PlayerPanel::PlayerPanel(wxWindow* parent, std::function<void()> onLeave, std::function<void(int)> onStep)
+    : wxPanel(parent), onLeave_(std::move(onLeave)), onStep_(std::move(onStep)) {
     createControls();
-    startMpv();
-    Bind(wxEVT_CHAR_HOOK, &PlayerFrame::onCharHook, this);
+    Bind(wxEVT_CHAR_HOOK, &PlayerPanel::onCharHook, this);
+    stallTimer_.SetOwner(this);
+    Bind(wxEVT_TIMER, [this](wxTimerEvent&) { checkForStall(); });
+
     const int speakTimeId = wxWindow::NewControlId();
-    wxAcceleratorEntry speakTime(wxACCEL_NORMAL, 'T', speakTimeId);
-    SetAcceleratorTable(wxAcceleratorTable(1, &speakTime));
+    const int nextId = wxWindow::NewControlId();
+    const int previousId = wxWindow::NewControlId();
+    wxAcceleratorEntry keys[] = {
+        {wxACCEL_NORMAL, 'T', speakTimeId},
+        {wxACCEL_NORMAL, 'N', nextId},
+        {wxACCEL_NORMAL, 'P', previousId},
+    };
+    SetAcceleratorTable(wxAcceleratorTable(static_cast<int>(std::size(keys)), keys));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { announce(wxString::FromUTF8(timeLabel(position_, duration_))); },
          speakTimeId);
-    Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent& event) {
-        stopMpv();
-        event.Skip();
-    });
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { onStep_(1); }, nextId);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { onStep_(-1); }, previousId);
 }
 
-PlayerFrame::~PlayerFrame() {
+PlayerPanel::~PlayerPanel() {
+    stallTimer_.Stop();
     stopMpv();
 }
 
-void PlayerFrame::createControls() {
-    auto* root = new wxPanel(this);
+void PlayerPanel::createControls() {
     auto* sizer = new wxBoxSizer(wxVERTICAL);
 
-    video_ = new VideoSurface(root);
+    video_ = new VideoSurface(this);
     video_->SetBackgroundColour(*wxBLACK);
-    video_->SetMinSize(FromDIP(wxSize(640, 360)));
+    video_->SetMinSize(FromDIP(wxSize(320, 180)));
     sizer->Add(video_, 1, wxEXPAND);
 
     auto* buttons = new wxBoxSizer(wxHORIZONTAL);
-    pauseButton_ = new wxButton(root, wxID_ANY, "&Pause");
-    auto* back = new wxButton(root, wxID_ANY, "&Back 10 seconds");
-    auto* forward = new wxButton(root, wxID_ANY, "&Forward 10 seconds");
-    auto* close = new wxButton(root, wxID_ANY, "&Close");
-    for (auto* button : {pauseButton_, back, forward, close}) {
+    pauseButton_ = new wxButton(this, wxID_ANY, "&Pause");
+    auto* back = new wxButton(this, wxID_ANY, "&Back 10 seconds");
+    auto* forward = new wxButton(this, wxID_ANY, "&Forward 10 seconds");
+    auto* previous = new wxButton(this, wxID_ANY, "P&revious episode");
+    auto* next = new wxButton(this, wxID_ANY, "&Next episode");
+    auto* close = new wxButton(this, wxID_ANY, "&Close");
+    for (auto* button : {pauseButton_, back, forward, previous, next, close}) {
         buttons->Add(button, 0, wxRIGHT, 6);
     }
     sizer->Add(buttons, 0, wxALL, 8);
 
     auto* info = new wxBoxSizer(wxHORIZONTAL);
-    info->Add(new wxStaticText(root, wxID_ANY, "Posi&tion:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
-    positionSlider_ = new wxSlider(root, wxID_ANY, 0, 0, 1);
+    info->Add(new wxStaticText(this, wxID_ANY, "Posi&tion:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
+    positionSlider_ = new wxSlider(this, wxID_ANY, 0, 0, 1);
     positionSlider_->SetLineSize(10);
     positionSlider_->SetPageSize(60);
     info->Add(positionSlider_, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 12);
-    info->Add(new wxStaticText(root, wxID_ANY, "Ti&me:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
-    timeText_ = new wxTextCtrl(root, wxID_ANY, "Loading", wxDefaultPosition, FromDIP(wxSize(140, -1)), wxTE_READONLY);
+    info->Add(new wxStaticText(this, wxID_ANY, "Ti&me:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
+    timeText_ = new wxTextCtrl(this, wxID_ANY, "Stopped", wxDefaultPosition, FromDIP(wxSize(140, -1)), wxTE_READONLY);
     info->Add(timeText_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 12);
-    info->Add(new wxStaticText(root, wxID_ANY, "&Volume:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
-    volumeSlider_ = new wxSlider(root, wxID_ANY, 100, 0, 100);
+    info->Add(new wxStaticText(this, wxID_ANY, "&Volume:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
+    volumeSlider_ = new wxSlider(this, wxID_ANY, 100, 0, 100);
     volumeSlider_->SetLineSize(5);
     volumeSlider_->SetPageSize(20);
     info->Add(volumeSlider_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 12);
-    info->Add(new wxStaticText(root, wxID_ANY, "&Subtitles:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
-    subtitleChoice_ = new wxChoice(root, wxID_ANY);
+    info->Add(new wxStaticText(this, wxID_ANY, "&Subtitles:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
+    subtitleChoice_ = new wxChoice(this, wxID_ANY);
     subtitleChoice_->Append("Off");
     subtitleChoice_->SetSelection(0);
     info->Add(subtitleChoice_, 0, wxALIGN_CENTER_VERTICAL);
     sizer->Add(info, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 8);
 
-    root->SetSizer(sizer);
+    SetSizer(sizer);
     setAccessibleName(positionSlider_, "Position");
     setAccessibleName(timeText_, "Time");
     setAccessibleName(volumeSlider_, "Volume");
     setAccessibleName(subtitleChoice_, "Subtitles");
-    auto* frameSizer = new wxBoxSizer(wxVERTICAL);
-    frameSizer->Add(root, 1, wxEXPAND);
-    SetSizerAndFit(frameSizer);
 
     pauseButton_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { togglePause(); });
     back->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { seek(-10); });
     forward->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { seek(10); });
-    close->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { Close(); });
+    previous->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { onStep_(-1); });
+    next->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { onStep_(1); });
+    close->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { onLeave_(); });
     positionSlider_->Bind(wxEVT_SLIDER, [this](wxCommandEvent&) {
         command({"seek", std::to_string(positionSlider_->GetValue()), "absolute"});
     });
     volumeSlider_->Bind(wxEVT_SLIDER, [this](wxCommandEvent&) {
-        double volume = volumeSlider_->GetValue();
-        mpv_set_property(mpv_, "volume", MPV_FORMAT_DOUBLE, &volume);
+        if (mpv_) {
+            double volume = volumeSlider_->GetValue();
+            mpv_set_property(mpv_, "volume", MPV_FORMAT_DOUBLE, &volume);
+        }
     });
     subtitleChoice_->Bind(wxEVT_CHOICE, [this](wxCommandEvent&) {
+        if (!mpv_) {
+            return;
+        }
         const int index = subtitleChoice_->GetSelection();
         if (index <= 0 || static_cast<size_t>(index) > subtitleTracks_.size()) {
             mpv_set_property_string(mpv_, "sid", "no");
@@ -145,7 +157,7 @@ void PlayerFrame::createControls() {
     });
 }
 
-void PlayerFrame::startMpv() {
+void PlayerPanel::startMpv() {
     mpv_ = mpv_create();
     if (!mpv_) {
         throw std::runtime_error("Could not create the mpv player");
@@ -184,10 +196,10 @@ void PlayerFrame::startMpv() {
     mpv_observe_property(mpv_, EndReached, "eof-reached", MPV_FORMAT_FLAG);
     mpv_request_log_messages(mpv_, "error");
     mpv_set_wakeup_callback(
-        mpv_, [](void* frame) { static_cast<PlayerFrame*>(frame)->CallAfter(&PlayerFrame::processEvents); }, this);
+        mpv_, [](void* panel) { static_cast<PlayerPanel*>(panel)->CallAfter(&PlayerPanel::processEvents); }, this);
 }
 
-void PlayerFrame::stopMpv() {
+void PlayerPanel::stopMpv() {
     if (!mpv_) {
         return;
     }
@@ -196,7 +208,11 @@ void PlayerFrame::stopMpv() {
     mpv_ = nullptr;
 }
 
-void PlayerFrame::play(const Stream& stream, const wxString& title) {
+void PlayerPanel::play(const Stream& stream) {
+    if (!mpv_) {
+        startMpv();
+    }
+
     std::vector<std::string> lines;
     for (const auto& [name, value] : stream.headers) {
         lines.push_back(name + ": " + value);
@@ -215,7 +231,29 @@ void PlayerFrame::play(const Stream& stream, const wxString& title) {
     mpv_set_property(mpv_, "http-header-fields", MPV_FORMAT_NODE, &node);
     mpv_set_property_string(mpv_, "demuxer-lavf-o", stream.disguisedSegments ? "extension_picky=0" : "");
 
+    resetState("Loading");
     pendingSubtitles_ = stream.subtitles;
+    active_ = true;
+    command({"loadfile", stream.url, "replace"});
+    stallTimer_.Start(1000);
+}
+
+void PlayerPanel::stop() {
+    if (!active_) {
+        return;
+    }
+    active_ = false;
+    stallTimer_.Stop();
+    pendingSubtitles_.clear();
+    command({"stop"});
+    resetState("Stopped");
+}
+
+void PlayerPanel::focusControls() {
+    pauseButton_->SetFocus();
+}
+
+void PlayerPanel::resetState(const wxString& timeText) {
     subtitleTracks_.clear();
     subtitleChoice_->Clear();
     subtitleChoice_->Append("Off");
@@ -225,13 +263,16 @@ void PlayerFrame::play(const Stream& stream, const wxString& title) {
     duration_ = 0;
     shownSecond_ = -1;
     paused_ = -1;
-    timeText_->ChangeValue("Loading");
-    SetTitle(title + " - Ryu");
-    command({"loadfile", stream.url, "replace"});
-    pauseButton_->SetFocus();
+    ended_ = false;
+    lastProgress_ = -1;
+    stalledSeconds_ = 0;
+    stallReported_ = false;
+    positionSlider_->SetValue(0);
+    pauseButton_->SetLabel("&Pause");
+    timeText_->ChangeValue(timeText);
 }
 
-void PlayerFrame::processEvents() {
+void PlayerPanel::processEvents() {
     while (mpv_) {
         const mpv_event* event = mpv_wait_event(mpv_, 0);
         if (event->event_id == MPV_EVENT_NONE) {
@@ -239,7 +280,9 @@ void PlayerFrame::processEvents() {
         }
         switch (event->event_id) {
         case MPV_EVENT_PROPERTY_CHANGE:
-            onPropertyChange(event->reply_userdata, *static_cast<const mpv_event_property*>(event->data));
+            if (active_) {
+                onPropertyChange(event->reply_userdata, *static_cast<const mpv_event_property*>(event->data));
+            }
             break;
         case MPV_EVENT_FILE_LOADED:
             for (const auto& subtitle : pendingSubtitles_) {
@@ -256,7 +299,7 @@ void PlayerFrame::processEvents() {
         }
         case MPV_EVENT_END_FILE: {
             const auto* end = static_cast<const mpv_event_end_file*>(event->data);
-            if (end->reason == MPV_END_FILE_REASON_ERROR) {
+            if (active_ && end->reason == MPV_END_FILE_REASON_ERROR) {
                 wxString message = "Playback failed: " + wxString::FromUTF8(mpv_error_string(end->error));
                 if (!lastError_.empty()) {
                     message += "\n" + wxString::FromUTF8(lastError_);
@@ -272,7 +315,7 @@ void PlayerFrame::processEvents() {
     }
 }
 
-void PlayerFrame::onPropertyChange(uint64_t id, const mpv_event_property& property) {
+void PlayerPanel::onPropertyChange(uint64_t id, const mpv_event_property& property) {
     const bool isDouble = property.format == MPV_FORMAT_DOUBLE;
     const bool isFlag = property.format == MPV_FORMAT_FLAG;
     switch (id) {
@@ -310,7 +353,8 @@ void PlayerFrame::onPropertyChange(uint64_t id, const mpv_event_property& proper
         }
         break;
     case EndReached:
-        if (isFlag && *static_cast<int*>(property.data)) {
+        ended_ = isFlag && *static_cast<int*>(property.data);
+        if (ended_) {
             announce("End of episode");
         }
         break;
@@ -319,7 +363,7 @@ void PlayerFrame::onPropertyChange(uint64_t id, const mpv_event_property& proper
     }
 }
 
-void PlayerFrame::refreshSubtitles(const mpv_node& tracks) {
+void PlayerPanel::refreshSubtitles(const mpv_node& tracks) {
     if (tracks.format != MPV_FORMAT_NODE_ARRAY) {
         return;
     }
@@ -359,7 +403,25 @@ void PlayerFrame::refreshSubtitles(const mpv_node& tracks) {
     subtitleChoice_->SetSelection(selected);
 }
 
-void PlayerFrame::updateTime() {
+void PlayerPanel::checkForStall() {
+    if (!active_ || ended_ || paused_ == 1) {
+        stalledSeconds_ = 0;
+        return;
+    }
+    if (position_ > lastProgress_ + 0.2) {
+        lastProgress_ = position_;
+        stalledSeconds_ = 0;
+        stallReported_ = false;
+        return;
+    }
+    if (++stalledSeconds_ >= 15 && !stallReported_) {
+        stallReported_ = true;
+        timeText_->ChangeValue("Not loading");
+        announce("The video is not loading. Its host may be down.");
+    }
+}
+
+void PlayerPanel::updateTime() {
     const long second = static_cast<long>(position_);
     if (second == shownSecond_) {
         return;
@@ -371,7 +433,7 @@ void PlayerFrame::updateTime() {
     }
 }
 
-void PlayerFrame::command(std::initializer_list<std::string> args) {
+void PlayerPanel::command(std::initializer_list<std::string> args) {
     if (!mpv_) {
         return;
     }
@@ -383,7 +445,7 @@ void PlayerFrame::command(std::initializer_list<std::string> args) {
     mpv_command(mpv_, argv.data());
 }
 
-void PlayerFrame::commandAsync(std::initializer_list<std::string> args) {
+void PlayerPanel::commandAsync(std::initializer_list<std::string> args) {
     if (!mpv_) {
         return;
     }
@@ -395,35 +457,39 @@ void PlayerFrame::commandAsync(std::initializer_list<std::string> args) {
     mpv_command_async(mpv_, 0, argv.data());
 }
 
-void PlayerFrame::togglePause() {
+void PlayerPanel::togglePause() {
     command({"cycle", "pause"});
 }
 
-void PlayerFrame::seek(double seconds) {
+void PlayerPanel::seek(double seconds) {
     const double end = duration_ > 0 ? duration_ : std::numeric_limits<double>::max();
     announce(wxString::FromUTF8(formatClock(std::clamp(position_ + seconds, 0.0, end))));
     command({"seek", std::to_string(seconds), "relative"});
 }
 
-void PlayerFrame::changeVolume(double delta) {
+void PlayerPanel::changeVolume(double delta) {
+    if (!mpv_) {
+        return;
+    }
     double volume = std::clamp(volume_ + delta, 0.0, 100.0);
     announce(wxString::Format("Volume %d", static_cast<int>(std::lround(volume))));
     mpv_set_property(mpv_, "volume", MPV_FORMAT_DOUBLE, &volume);
 }
 
-void PlayerFrame::onCharHook(wxKeyEvent& event) {
+void PlayerPanel::onCharHook(wxKeyEvent& event) {
     const int key = event.GetKeyCode();
     const bool plain = !event.HasAnyModifiers();
     auto* focus = FindFocus();
 
     if (key == WXK_ESCAPE && plain) {
-        Close();
+        onLeave_();
         return;
     }
     if (key == WXK_SPACE && plain && !dynamic_cast<wxButton*>(focus)) {
         togglePause();
         return;
     }
+
     const bool focusUsesArrows =
         focus == positionSlider_ || focus == volumeSlider_ || focus == timeText_ || focus == subtitleChoice_;
     const bool shifted = event.GetModifiers() == wxMOD_SHIFT;

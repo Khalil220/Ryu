@@ -3,7 +3,7 @@
 #include "accessibility.hpp"
 #include "background.hpp"
 #include "format.hpp"
-#include "player_frame.hpp"
+#include "player_panel.hpp"
 #include "preferences_dialog.hpp"
 #include "speech.hpp"
 
@@ -14,6 +14,7 @@
 #include <wx/menu.h>
 #include <wx/msgdlg.h>
 #include <wx/panel.h>
+#include <wx/simplebook.h>
 #include <wx/sizer.h>
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
@@ -52,7 +53,9 @@ void MainFrame::createMenu() {
 }
 
 void MainFrame::createControls() {
-    auto* panel = new wxPanel(this);
+    book_ = new wxSimplebook(this);
+    browsePage_ = new wxPanel(book_);
+    auto* panel = browsePage_;
     auto* sizer = new wxBoxSizer(wxVERTICAL);
 
     auto* searchRow = new wxBoxSizer(wxHORIZONTAL);
@@ -85,6 +88,10 @@ void MainFrame::createControls() {
 
     panel->SetSizer(sizer);
 
+    player_ = new PlayerPanel(book_, [this] { showBrowser(); }, [this](int delta) { stepEpisode(delta); });
+    book_->AddPage(browsePage_, "Browse", true);
+    book_->AddPage(player_, "Player");
+
     setAccessibleName(searchBox_, "Search");
     setAccessibleName(results_, "Results");
     setAccessibleName(episodeList_, "Episodes");
@@ -93,8 +100,8 @@ void MainFrame::createControls() {
     searchBox_->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent&) { startSearch(); });
     searchButton_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { startSearch(); });
     results_->Bind(wxEVT_LISTBOX_DCLICK, [this](wxCommandEvent&) { loadEpisodes(); });
-    episodeList_->Bind(wxEVT_LISTBOX_DCLICK, [this](wxCommandEvent&) { playSelectedEpisode(); });
-    playButton_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { playSelectedEpisode(); });
+    episodeList_->Bind(wxEVT_LISTBOX_DCLICK, [this](wxCommandEvent&) { playEpisode(episodeList_->GetSelection()); });
+    playButton_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { playEpisode(episodeList_->GetSelection()); });
     audioChoice_->Bind(wxEVT_CHOICE, [this](wxCommandEvent&) {
         settings_.audio = selectedAudio();
         saveSettings(*wxConfigBase::Get(), settings_);
@@ -118,7 +125,7 @@ void MainFrame::onCharHook(wxKeyEvent& event) {
             return;
         }
         if (FindFocus() == episodeList_) {
-            playSelectedEpisode();
+            playEpisode(episodeList_->GetSelection());
             return;
         }
     }
@@ -161,6 +168,9 @@ void MainFrame::startSearch() {
                 setStatus(wxString::Format("%zu results for %s", shows_.size(), query));
             }
             results_->SetSelection(0);
+            if (!browsing()) {
+                return;
+            }
             results_->SetFocus();
             if (!shows_.empty()) {
                 announce(shows_.size() == 1 ? wxString("1 result") : wxString::Format("%zu results", shows_.size()),
@@ -206,6 +216,9 @@ void MainFrame::loadEpisodes() {
                 setStatus(wxString::Format("%zu episodes of %s", episodes_.size(), title));
             }
             episodeList_->SetSelection(0);
+            if (!browsing()) {
+                return;
+            }
             episodeList_->SetFocus();
             if (!episodes_.empty()) {
                 announce(episodes_.size() == 1 ? wxString("1 episode")
@@ -221,22 +234,22 @@ void MainFrame::loadEpisodes() {
         });
 }
 
-void MainFrame::playSelectedEpisode() {
-    const int index = episodeList_->GetSelection();
-    if (index == wxNOT_FOUND || static_cast<size_t>(index) >= episodes_.size()) {
+void MainFrame::playEpisode(size_t index) {
+    if (index >= episodes_.size()) {
         return;
     }
     const auto episode = episodes_[index];
     const auto audio = selectedAudio();
-    const auto title = wxString::FromUTF8(episodeLabel(episode) + " - " + currentShow_.title);
+    const auto label = wxString::FromUTF8(episodeLabel(episode));
+    const auto title = label + " - " + wxString::FromUTF8(currentShow_.title);
     const unsigned generation = ++streamGeneration_;
     setStatus("Loading " + title + "...");
-    announce("Loading episode");
+    announce("Loading " + label);
 
     auto session = session_;
     runInBackground<std::vector<Stream>>(
         alive_, [session, id = episode.id, audio] { return session->provider->streams(id, audio); },
-        [this, generation, title, audio](std::vector<Stream> streams) {
+        [this, generation, index, title, audio](std::vector<Stream> streams) {
             if (generation != streamGeneration_) {
                 return;
             }
@@ -248,13 +261,9 @@ void MainFrame::playSelectedEpisode() {
                 return;
             }
             try {
-                if (!player_) {
-                    player_ = new PlayerFrame(this);
-                }
-                player_->play(streams.front(), title);
-                player_->Show();
-                player_->Raise();
-                setStatus("Playing " + title);
+                player_->play(streams.front());
+                currentEpisode_ = index;
+                showPlayer(title);
             } catch (const std::exception& error) {
                 setStatus("Playback failed");
                 showError("Playback failed", error.what());
@@ -268,6 +277,49 @@ void MainFrame::playSelectedEpisode() {
         });
 }
 
+void MainFrame::stepEpisode(int delta) {
+    if (browsing()) {
+        return;
+    }
+    const auto target = static_cast<long long>(currentEpisode_) + delta;
+    if (target < 0) {
+        announce("This is the first episode");
+        return;
+    }
+    if (static_cast<size_t>(target) >= episodes_.size()) {
+        announce("This is the last episode");
+        return;
+    }
+    playEpisode(static_cast<size_t>(target));
+}
+
+void MainFrame::showPlayer(const wxString& title) {
+    if (browsing()) {
+        book_->ChangeSelection(1);
+    }
+    SetTitle(title + " - Ryu");
+    setStatus("Playing " + title);
+    player_->focusControls();
+}
+
+void MainFrame::showBrowser() {
+    ++streamGeneration_;
+    player_->stop();
+    book_->ChangeSelection(0);
+    SetTitle("Ryu - " + wxString::FromUTF8(settings_.provider().name));
+    setStatus("Stopped");
+    if (currentEpisode_ < episodes_.size()) {
+        episodeList_->SetSelection(static_cast<int>(currentEpisode_));
+        episodeList_->SetFocus();
+    } else {
+        searchBox_->SetFocus();
+    }
+}
+
+bool MainFrame::browsing() const {
+    return book_->GetSelection() == 0;
+}
+
 void MainFrame::showPreferences() {
     PreferencesDialog dialog(this, settings_);
     if (dialog.ShowModal() != wxID_OK) {
@@ -275,6 +327,9 @@ void MainFrame::showPreferences() {
     }
     const bool providerChanged =
         dialog.settings().providerId != settings_.providerId || dialog.settings().baseUrl() != settings_.baseUrl();
+    if (providerChanged && !browsing()) {
+        showBrowser();
+    }
     settings_ = dialog.settings();
     saveSettings(*wxConfigBase::Get(), settings_);
     applySettings();

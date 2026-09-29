@@ -9,7 +9,7 @@ add_executable(ryu WIN32
     accessibility.cpp
     app.cpp
     main_frame.cpp
-    player_frame.cpp
+    player_panel.cpp
     preferences_dialog.cpp
     speech.cpp
     ryu.rc

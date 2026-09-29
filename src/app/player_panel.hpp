@@ -2,9 +2,11 @@
 
 #include "provider.hpp"
 
-#include <wx/frame.h>
+#include <wx/panel.h>
+#include <wx/timer.h>
 
 #include <cstdint>
+#include <functional>
 #include <initializer_list>
 #include <string>
 #include <vector>
@@ -19,12 +21,14 @@ class wxTextCtrl;
 
 namespace ryu {
 
-class PlayerFrame : public wxFrame {
+class PlayerPanel : public wxPanel {
 public:
-    explicit PlayerFrame(wxWindow* parent);
-    ~PlayerFrame() override;
+    PlayerPanel(wxWindow* parent, std::function<void()> onLeave, std::function<void(int)> onStep);
+    ~PlayerPanel() override;
 
-    void play(const Stream& stream, const wxString& title);
+    void play(const Stream& stream);
+    void stop();
+    void focusControls();
 
 private:
     void createControls();
@@ -39,8 +43,12 @@ private:
     void seek(double seconds);
     void changeVolume(double delta);
     void updateTime();
+    void resetState(const wxString& timeText);
     void onCharHook(wxKeyEvent& event);
+    void checkForStall();
 
+    std::function<void()> onLeave_;
+    std::function<void(int)> onStep_;
     mpv_handle* mpv_ = nullptr;
     std::vector<Subtitle> pendingSubtitles_;
     std::vector<int64_t> subtitleTracks_;
@@ -50,6 +58,12 @@ private:
     double volume_ = 100;
     long shownSecond_ = -1;
     int paused_ = -1;
+    bool active_ = false;
+    bool ended_ = false;
+    double lastProgress_ = -1;
+    int stalledSeconds_ = 0;
+    bool stallReported_ = false;
+    wxTimer stallTimer_;
 
     wxWindow* video_ = nullptr;
     wxButton* pauseButton_ = nullptr;
