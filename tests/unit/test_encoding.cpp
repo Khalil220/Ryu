@@ -36,3 +36,27 @@ TEST_CASE("urlEncode escapes everything except unreserved characters") {
     CHECK(urlEncode("\xC3\xA9") == "%C3%A9");
     CHECK(urlEncode("-_.~") == "-_.~");
 }
+
+namespace {
+
+const std::string megaplayKey = std::string("i?LMTAx0Q6,:}50U") + std::string(16, '\0');
+const std::string megaplayIv = "W0;27ToaUpl_P%'c";
+const std::string megaplayBlob =
+    "wdeBruh3qqn_i5wUNnyaPcXqidp1UWP84FfPHzGyKXAz4mAVkH6j3DueswO2yXLWn8H-XMHNvbAo5Gsg7zIcFBuQI_zsUvMGI1gKwQsPTSHQHiF55R4"
+    "BopgEQ-7jebQQ4C0Gu7YhaMucopp6d3Q8yAY9b5GdsSvPGq6CUn7SHyc";
+
+}
+
+TEST_CASE("aes256CbcDecrypt decrypts megaplay's source blob and strips the padding") {
+    CHECK(aes256CbcDecrypt(base64Decode(megaplayBlob), megaplayKey, megaplayIv) ==
+          "{\"file\":\"https://fetch.nexabloom.top/anime/bb6d2babd7797d94d8f4a8600bc9b44e/"
+          "b7d51fb7e838ee9b60dcdb34b953bc07/master.m3u8\"}");
+}
+
+TEST_CASE("aes256CbcDecrypt rejects a wrong key, bad sizes and truncated input") {
+    const std::string wrongKey(32, 'x');
+    CHECK_THROWS_AS(aes256CbcDecrypt(base64Decode(megaplayBlob), wrongKey, megaplayIv), std::runtime_error);
+    CHECK_THROWS_AS(aes256CbcDecrypt(base64Decode(megaplayBlob), "short", megaplayIv), std::invalid_argument);
+    CHECK_THROWS_AS(aes256CbcDecrypt(base64Decode(megaplayBlob), megaplayKey, "short"), std::invalid_argument);
+    CHECK_THROWS_AS(aes256CbcDecrypt("0123456789", megaplayKey, megaplayIv), std::invalid_argument);
+}

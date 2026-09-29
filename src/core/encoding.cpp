@@ -3,6 +3,14 @@
 #include <array>
 #include <stdexcept>
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+
+#include <bcrypt.h>
+#endif
+
 namespace ryu {
 
 namespace {
@@ -80,6 +88,48 @@ std::string urlEncode(std::string_view input) {
         }
     }
     return output;
+}
+
+std::string aes256CbcDecrypt(std::string_view ciphertext, std::string_view key, std::string_view iv) {
+    if (key.size() != 32 || iv.size() != 16) {
+        throw std::invalid_argument("AES-256-CBC needs a 32 byte key and a 16 byte IV");
+    }
+    if (ciphertext.empty() || ciphertext.size() % 16 != 0) {
+        throw std::invalid_argument("AES-256-CBC ciphertext must be a non-empty multiple of 16 bytes");
+    }
+#ifdef _WIN32
+    BCRYPT_ALG_HANDLE algorithm = nullptr;
+    if (!BCRYPT_SUCCESS(BCryptOpenAlgorithmProvider(&algorithm, BCRYPT_AES_ALGORITHM, nullptr, 0))) {
+        throw std::runtime_error("Could not open the AES provider");
+    }
+    BCRYPT_KEY_HANDLE handle = nullptr;
+    auto* mode = const_cast<PUCHAR>(reinterpret_cast<const UCHAR*>(BCRYPT_CHAIN_MODE_CBC));
+    const bool ready =
+        BCRYPT_SUCCESS(BCryptSetProperty(algorithm, BCRYPT_CHAINING_MODE, mode, sizeof(BCRYPT_CHAIN_MODE_CBC), 0)) &&
+        BCRYPT_SUCCESS(BCryptGenerateSymmetricKey(algorithm, &handle, nullptr, 0,
+                                                  reinterpret_cast<PUCHAR>(const_cast<char*>(key.data())),
+                                                  static_cast<ULONG>(key.size()), 0));
+    std::string plaintext(ciphertext.size(), '\0');
+    std::string ivCopy(iv);
+    ULONG written = 0;
+    const bool decrypted =
+        ready && BCRYPT_SUCCESS(BCryptDecrypt(handle, reinterpret_cast<PUCHAR>(const_cast<char*>(ciphertext.data())),
+                                              static_cast<ULONG>(ciphertext.size()), nullptr,
+                                              reinterpret_cast<PUCHAR>(ivCopy.data()), static_cast<ULONG>(ivCopy.size()),
+                                              reinterpret_cast<PUCHAR>(plaintext.data()),
+                                              static_cast<ULONG>(plaintext.size()), &written, BCRYPT_BLOCK_PADDING));
+    if (handle) {
+        BCryptDestroyKey(handle);
+    }
+    BCryptCloseAlgorithmProvider(algorithm, 0);
+    if (!decrypted) {
+        throw std::runtime_error("AES decryption failed");
+    }
+    plaintext.resize(written);
+    return plaintext;
+#else
+    throw std::runtime_error("AES decryption is only implemented on Windows");
+#endif
 }
 
 }
