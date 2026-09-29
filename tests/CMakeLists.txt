@@ -35,4 +35,7 @@ set(RYU_UI_TEST_PYTHON "" CACHE FILEPATH "Python interpreter with pywinauto inst
 if(RYU_UI_TEST_PYTHON)
     add_test(NAME ui COMMAND "${RYU_UI_TEST_PYTHON}" "${CMAKE_CURRENT_SOURCE_DIR}/ui/test_ui.py" $<TARGET_FILE:ryu>)
     set_tests_properties(ui PROPERTIES LABELS ui TIMEOUT 300)
+    add_test(NAME ui-responsiveness
+             COMMAND "${RYU_UI_TEST_PYTHON}" "${CMAKE_CURRENT_SOURCE_DIR}/ui/test_responsiveness.py" $<TARGET_FILE:ryu>)
+    set_tests_properties(ui-responsiveness PROPERTIES LABELS ui TIMEOUT 180)
 endif()
