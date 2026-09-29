@@ -137,15 +137,47 @@ def run(app, speech_log):
     check(wait_for(lambda: subtitles.selected_text() == "English", 20) is not None,
           f"English subtitles load and are selected ({subtitles.selected_text()})")
 
-    check(player.child_window(title="Skip intro", control_type="Button").exists(),
-          "Skip intro is offered for an episode with intro data")
     check(wait_for(lambda: "Intro" in spoken(speech_log), 10) is not None, "the intro is announced")
-    player.child_window(title="Pause", control_type="Button").set_focus()
+    skip_button = player.child_window(title="Skip intro", control_type="Button")
+    pause_button = player.child_window(title="Pause", control_type="Button")
+    check(skip_button.exists(), "Skip intro is offered during the intro")
+    skip_button.set_focus()
+    before_skip = seconds(time_box.get_value())
+    send_keys("{SPACE}")
+    check(wait_for(lambda: seconds(time_box.get_value()) >= 89, 20) is not None,
+          f"the Skip intro button skips the intro ({before_skip} to {time_box.get_value()})")
+    check(wait_for(lambda: not skip_button.exists(), 10) is not None, "Skip intro goes away once the intro is over")
+    check(wait_for(pause_button.has_keyboard_focus, 5) is not None, "focus moves from Skip intro to Pause")
+    check("Skipped intro" in spoken(speech_log), "skipping the intro is announced")
+
+    mark = len(spoken(speech_log))
+    past_intro = seconds(time_box.get_value())
+    send_keys("i", vk_packet=False)
+    time.sleep(2)
+    check(not any("intro" in line.lower() for line in spoken(speech_log)[mark:]), "I says nothing after the intro")
+    check(seconds(time_box.get_value()) < past_intro + 10,
+          f"I does not seek after the intro ({past_intro} to {time_box.get_value()})")
+
+    send_keys("+{LEFT}")
+    check(wait_for(lambda: seconds(time_box.get_value()) < 89, 20) is not None,
+          f"Shift+Left goes back into the intro ({time_box.get_value()})")
+    check(wait_for(skip_button.exists, 10) is not None, "Skip intro comes back inside the intro")
     before_skip = seconds(time_box.get_value())
     send_keys("i", vk_packet=False)
-    check(wait_for(lambda: seconds(time_box.get_value()) >= 88, 20) is not None,
+    check(wait_for(lambda: seconds(time_box.get_value()) >= 89, 20) is not None,
           f"I skips the intro ({before_skip} to {time_box.get_value()})")
-    check("Skipped intro" in spoken(speech_log), "skipping the intro is announced")
+    check(wait_for(lambda: not skip_button.exists(), 10) is not None, "Skip intro goes away after I")
+
+    player.child_window(title="Position", control_type="Slider").set_focus()
+    send_keys("{HOME}")
+    check(wait_for(lambda: seconds(time_box.get_value()) < 30, 20) is not None,
+          f"Home on the position slider goes back to the start ({time_box.get_value()})")
+    check(wait_for(skip_button.exists, 10) is not None, "Skip intro comes back after sliding into the intro")
+    send_keys("{RIGHT 10}")
+    check(wait_for(lambda: seconds(time_box.get_value()) >= 89, 20) is not None,
+          f"sliding right moves past the intro ({time_box.get_value()})")
+    check(wait_for(lambda: not skip_button.exists(), 10) is not None, "Skip intro goes away after sliding past it")
+    pause_button.set_focus()
 
     player.child_window(title="Pause", control_type="Button").invoke()
     play_button = player.child_window(title="Play", control_type="Button")

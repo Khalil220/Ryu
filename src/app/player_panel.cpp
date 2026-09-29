@@ -256,8 +256,7 @@ void PlayerPanel::play(const Stream& stream, bool readSubtitles) {
     intro_ = stream.intro;
     readSubtitles_ = readSubtitles;
     readCheck_->SetValue(readSubtitles);
-    skipIntroButton_->Show(intro_.has_value());
-    Layout();
+    updateIntroButton();
     active_ = true;
     command({"loadfile", stream.url, "replace"});
     stallTimer_.Start(1000);
@@ -286,6 +285,8 @@ void PlayerPanel::resetState(const wxString& timeText) {
     lastError_.clear();
     position_ = 0;
     duration_ = 0;
+    intro_.reset();
+    updateIntroButton();
     shownSecond_ = -1;
     paused_ = -1;
     ended_ = false;
@@ -349,6 +350,7 @@ void PlayerPanel::onPropertyChange(uint64_t id, const mpv_event_property& proper
         position_ = isDouble ? *static_cast<double*>(property.data) : 0;
         updateTime();
         announceIntro();
+        updateIntroButton();
         break;
     case Duration:
         duration_ = isDouble ? *static_cast<double*>(property.data) : 0;
@@ -449,19 +451,31 @@ void PlayerPanel::speakSubtitle(const char* raw) {
 }
 
 void PlayerPanel::announceIntro() {
-    if (!intro_ || introAnnounced_ || position_ < intro_->start || position_ >= intro_->end) {
+    if (introAnnounced_ || !inIntro()) {
         return;
     }
     introAnnounced_ = true;
     announce("Intro", false);
 }
 
-void PlayerPanel::skipIntro() {
-    if (!active_ || !intro_) {
+bool PlayerPanel::inIntro() const {
+    return intro_ && position_ >= intro_->start && position_ < intro_->end;
+}
+
+void PlayerPanel::updateIntroButton() {
+    const bool show = inIntro();
+    if (skipIntroButton_->IsShown() == show) {
         return;
     }
-    if (position_ >= intro_->end) {
-        announce("The intro is already over");
+    if (!show && FindFocus() == skipIntroButton_) {
+        pauseButton_->SetFocus();
+    }
+    skipIntroButton_->Show(show);
+    Layout();
+}
+
+void PlayerPanel::skipIntro() {
+    if (!active_ || !inIntro()) {
         return;
     }
     introAnnounced_ = true;

@@ -53,6 +53,8 @@ private:
     void toggleReadSubtitles();
     void speakSubtitle(const char* raw);
     void announceIntro();
+    bool inIntro() const;
+    void updateIntroButton();
 
     std::function<void()> onLeave_;
     std::function<void(int)> onStep_;
