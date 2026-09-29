@@ -1,3 +1,4 @@
+import ctypes
 import os
 import re
 import subprocess
@@ -54,6 +55,13 @@ def heard_since(viewer, mark):
 
 def items(list_box):
     return list_box.children(control_type="ListItem")
+
+
+CB_GETCOUNT = 0x0146
+
+
+def choice_count(combo):
+    return ctypes.windll.user32.SendMessageW(combo.handle, CB_GETCOUNT, 0, 0)
 
 
 def spoken(log_path):
@@ -136,6 +144,8 @@ def run(app, speech_log):
     subtitles = player.child_window(title="Subtitles", control_type="ComboBox")
     check(wait_for(lambda: subtitles.selected_text() == "English", 20) is not None,
           f"English subtitles load and are selected ({subtitles.selected_text()})")
+    time.sleep(2)
+    check(choice_count(subtitles) == 2, f"the dub offers only its own English track ({choice_count(subtitles) - 1} tracks)")
 
     check(wait_for(lambda: "Intro" in spoken(speech_log), 10) is not None, "the intro is announced")
     skip_button = player.child_window(title="Skip intro", control_type="Button")
@@ -287,6 +297,8 @@ def run(app, speech_log):
     check(wait_for(lambda: main.window_text().startswith("Episode 1:"), 45) is not None,
           f"episode 1 subbed plays, repairing its banned host ({main.window_text()})")
     check(read.get_toggle_state() == 1, "subtitles are read aloud by default for a subbed episode")
+    check(wait_for(lambda: choice_count(subtitles) > 2, 20) is not None,
+          f"the subbed episode brings its own subtitle tracks ({choice_count(subtitles) - 1} tracks)")
     mark = len(spoken(speech_log))
     known = re.compile(r"^(\d+:\d\d( of \d+:\d\d)?|Volume \d+|Paused|Playing|Reading subtitles|Not reading subtitles|"
                        r"Skipped intro|Intro|End of episode|Loading .*|From .*|\[backend\].*)$")
@@ -294,8 +306,25 @@ def run(app, speech_log):
                              60)
     check(subtitle_line is not None, f"a subtitle line is read aloud ({subtitle_line})")
     main.child_window(title="Pause", control_type="Button").set_focus()
+    send_keys("r", vk_packet=False)
+    check(wait_for(lambda: read.get_toggle_state() == 0, 5) is not None, "R turns subtitle reading off for subs")
     send_keys("{ESC}")
     check(wait_for(lambda: main.window_text() == "Ryu - HiAnime", 15) is not None, "Escape leaves the subbed episode")
+
+    audio.select("Dubbed")
+    items(episodes)[0].select()
+    main.child_window(title="Play", control_type="Button").invoke()
+    check(wait_for(lambda: main.window_text().startswith("Episode 1:"), 45) is not None,
+          f"episode 1 plays dubbed again after the subbed one ({main.window_text()})")
+    check(wait_for(lambda: subtitles.selected_text() == "English", 20) is not None,
+          f"the dub's English track is selected again ({subtitles.selected_text()})")
+    time.sleep(2)
+    check(choice_count(subtitles) == 2,
+          f"switching back to the dub drops the subbed tracks ({choice_count(subtitles) - 1} tracks)")
+    check(read.get_toggle_state() == 1, "the dub keeps its own reading choice, separate from subs")
+    main.child_window(title="Pause", control_type="Button").set_focus()
+    send_keys("{ESC}")
+    check(wait_for(lambda: main.window_text() == "Ryu - HiAnime", 15) is not None, "Escape leaves the dubbed episode")
     search.set_focus()
 
     send_keys("^p", vk_packet=False)

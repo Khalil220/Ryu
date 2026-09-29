@@ -47,7 +47,7 @@ In the player:
 9. Alt+P is Pause or Play, Alt+B goes back 10 seconds, Alt+F goes forward 10 seconds, Alt+I presses Skip intro, Alt+R and Alt+N press Previous episode and Next episode, Alt+D toggles the Read subtitles aloud checkbox, and Alt+C closes the player.
 10. Alt+T moves to the position slider, Alt+M to the time field, Alt+V to the volume slider and Alt+S to the subtitles choice. Arrow keys move the sliders and change the subtitle track when those have focus, and move the cursor in the time field.
 
-The time field reads like "3:21 of 24:10" and updates once a second. The subtitles choice lists every track that loaded, with the site's default selected, plus Off.
+The time field reads like "3:21 of 24:10" and updates once a second. The subtitles choice lists every track that loaded, with the site's default selected, plus Off. The subbed and dubbed versions of an episode come with their own subtitle files, and Ryu loads the right set each time you play. Dubs often have a single English track that only covers songs and signs. Frieren's first episode on HiAnime, for example, has nine tracks when subbed and one when dubbed.
 
 When reading subtitles aloud is on, each new line of the selected subtitle track goes to your screen reader as it appears on screen. Lines queue behind each other instead of cutting each other off, and pausing or seeking keeps them in step with the video. Reading is on by default for subbed episodes and off for dubs, and Ryu remembers your choice for each separately. Turning subtitles Off in the subtitles choice also stops the reading.
 
