@@ -14,6 +14,7 @@ find_package(nlohmann_json CONFIG REQUIRED)
 find_package(lexbor CONFIG REQUIRED)
 find_package(wxWidgets CONFIG REQUIRED)
 include(cmake/Libmpv.cmake)
+include(cmake/Prism.cmake)
 
 if(TARGET lexbor::lexbor_static)
     set(RYU_LEXBOR lexbor::lexbor_static)

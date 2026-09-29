@@ -5,6 +5,7 @@
 #include "format.hpp"
 #include "player_frame.hpp"
 #include "preferences_dialog.hpp"
+#include "speech.hpp"
 
 #include <wx/button.h>
 #include <wx/choice.h>
@@ -140,6 +141,7 @@ void MainFrame::startSearch() {
     results_->Clear();
     episodeList_->Clear();
     setStatus("Searching for " + query + "...");
+    announce("Searching for " + query);
 
     auto session = session_;
     runInBackground<std::vector<ryu::Show>>(
@@ -160,6 +162,10 @@ void MainFrame::startSearch() {
             }
             results_->SetSelection(0);
             results_->SetFocus();
+            if (!shows_.empty()) {
+                announce(shows_.size() == 1 ? wxString("1 result") : wxString::Format("%zu results", shows_.size()),
+                         false);
+            }
         },
         [this, generation](const std::string& message) {
             if (generation == searchGeneration_) {
@@ -180,6 +186,7 @@ void MainFrame::loadEpisodes() {
     episodeList_->Clear();
     const auto title = wxString::FromUTF8(currentShow_.title);
     setStatus("Loading episodes of " + title + "...");
+    announce("Loading episodes");
 
     auto session = session_;
     runInBackground<std::vector<Episode>>(
@@ -200,6 +207,11 @@ void MainFrame::loadEpisodes() {
             }
             episodeList_->SetSelection(0);
             episodeList_->SetFocus();
+            if (!episodes_.empty()) {
+                announce(episodes_.size() == 1 ? wxString("1 episode")
+                                               : wxString::Format("%zu episodes", episodes_.size()),
+                         false);
+            }
         },
         [this, generation](const std::string& message) {
             if (generation == episodeGeneration_) {
@@ -219,6 +231,7 @@ void MainFrame::playSelectedEpisode() {
     const auto title = wxString::FromUTF8(episodeLabel(episode) + " - " + currentShow_.title);
     const unsigned generation = ++streamGeneration_;
     setStatus("Loading " + title + "...");
+    announce("Loading episode");
 
     auto session = session_;
     runInBackground<std::vector<Stream>>(

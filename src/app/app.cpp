@@ -1,10 +1,13 @@
 #include "main_frame.hpp"
+#include "speech.hpp"
 
 #include <wx/app.h>
 #include <wx/fileconf.h>
 #include <wx/filename.h>
 #include <wx/stdpaths.h>
 #include <wx/utils.h>
+
+#include <memory>
 
 namespace {
 
@@ -22,9 +25,20 @@ public:
             path = file.GetFullPath();
         }
         wxConfigBase::Set(new wxFileConfig("Ryu", wxEmptyString, path, wxEmptyString, wxCONFIG_USE_LOCAL_FILE));
+        speech_ = std::make_unique<ryu::Speech>();
+        ryu::setSpeech(speech_.get());
         (new ryu::MainFrame())->Show();
         return true;
     }
+
+    int OnExit() override {
+        ryu::setSpeech(nullptr);
+        speech_.reset();
+        return wxApp::OnExit();
+    }
+
+private:
+    std::unique_ptr<ryu::Speech> speech_;
 };
 
 }

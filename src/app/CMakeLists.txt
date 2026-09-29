@@ -11,10 +11,11 @@ add_executable(ryu WIN32
     main_frame.cpp
     player_frame.cpp
     preferences_dialog.cpp
+    speech.cpp
     ryu.rc
     ryu.manifest
 )
-target_link_libraries(ryu PRIVATE ryu_ui_support wx::core wx::base libmpv oleacc)
+target_link_libraries(ryu PRIVATE ryu_ui_support wx::core wx::base libmpv prism::prism oleacc)
 add_custom_command(TARGET ryu POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_RUNTIME_DLLS:ryu> $<TARGET_FILE_DIR:ryu>
     COMMAND_EXPAND_LISTS
