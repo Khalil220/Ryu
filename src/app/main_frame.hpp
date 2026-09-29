@@ -32,6 +32,8 @@ private:
     void applySettings();
     void startSearch();
     void loadEpisodes();
+    void showEpisodes(size_t preferred);
+    wxString episodeCountLabel(bool mentionAudio) const;
     void playEpisode(size_t index);
     void stepEpisode(int delta);
     void showPlayer(const wxString& title);
@@ -49,6 +51,7 @@ private:
     std::shared_ptr<int> alive_;
     std::vector<ryu::Show> shows_;
     std::vector<Episode> episodes_;
+    std::vector<size_t> visibleEpisodes_;
     ryu::Show currentShow_;
     size_t currentEpisode_ = 0;
     Audio playingAudio_ = Audio::Sub;

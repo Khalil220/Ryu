@@ -28,6 +28,8 @@ The main window has a search box, a results list, an episode list, an audio choi
 2. Press Enter on a result to load its episodes. Focus moves to the episode list and Ryu says how many episodes there are.
 3. Press Enter on an episode, or use the Play button, to start playing it. The window switches to the player, focus lands on Pause, the title names the episode, and Ryu says "Playing" once the video starts.
 
+The episode list only shows episodes that exist in the audio you picked. One Piece, for example, lists 1180 episodes when Subbed is chosen and 1155 when Dubbed is. Changing the audio choice refilters the list straight away, and the status bar shows how many subbed or dubbed episodes are left. The selection stays on the same episode when it's still listed, and otherwise moves to the closest earlier one. The Previous and Next keys in the player follow the same list, so they skip episodes that aren't available in that audio.
+
 Alt+S, Alt+R, Alt+E, Alt+A and Alt+P jump to the search box, results, episodes, audio choice and Play button. Ctrl+P opens Preferences, from the player too.
 
 Ryu stays in one window. The player replaces the search box and lists while an episode plays, and leaving the player brings them back.

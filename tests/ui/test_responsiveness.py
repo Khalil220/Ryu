@@ -10,7 +10,7 @@ import time
 from pywinauto import Application
 from pywinauto.keyboard import send_keys
 
-from test_ui import check, items, wait_for
+from test_ui import check, items, spoken, wait_for
 import test_ui
 
 user32 = ctypes.windll.user32
@@ -20,6 +20,8 @@ user32.SendMessageW.restype = ctypes.c_ssize_t
 user32.SendMessageW.argtypes = [wt.HWND, wt.UINT, wt.WPARAM, wt.LPARAM]
 
 LVM_GETITEMCOUNT = 0x1004
+LVM_GETNEXTITEM = 0x100C
+LVNI_SELECTED = 0x0002
 LONGEST_ACCEPTABLE_STALL = 0.25
 
 
@@ -32,11 +34,19 @@ def watch(hwnd, stop, gaps):
         time.sleep(0.02)
 
 
+def item_count(hwnd):
+    return user32.SendMessageW(hwnd, LVM_GETITEMCOUNT, 0, 0)
+
+
+def selected_row(hwnd):
+    return user32.SendMessageW(hwnd, LVM_GETNEXTITEM, -1, LVNI_SELECTED)
+
+
 def worst(gaps, since):
     return max((gap for stamp, gap in gaps if stamp >= since), default=0)
 
 
-def run(app, pid):
+def run(app, pid, speech_log):
     handle = app.window(title_re="Ryu.*").handle
     window = app.window(handle=handle)
     native = Application(backend="win32").connect(process=pid).window(handle=handle)
@@ -67,6 +77,12 @@ def run(app, pid):
         check(count is not None, f"over a thousand episodes load ({loaded})")
         check(stall < LONGEST_ACCEPTABLE_STALL, f"loading them never freezes the window for long ({stall * 1000:.0f} ms)")
 
+        window.child_window(title="Episodes", control_type="List").set_focus()
+        send_keys("{END}")
+        time.sleep(0.5)
+        subbed = item_count(episodes_hwnd)
+        check(selected_row(episodes_hwnd) == subbed - 1, f"End selects the last subbed episode ({selected_row(episodes_hwnd)})")
+
         audio = window.child_window(title="Audio", control_type="ComboBox")
         audio.set_focus()
         changed = time.perf_counter()
@@ -74,13 +90,27 @@ def run(app, pid):
         time.sleep(1)
         stall = worst(gaps, changed)
         check(stall < LONGEST_ACCEPTABLE_STALL, f"changing the audio right after stays responsive ({stall * 1000:.0f} ms)")
+        check(audio.selected_text() == "Dubbed", f"Down picks Dubbed ({audio.selected_text()})")
+        dubbed = item_count(episodes_hwnd)
+        check(1000 < dubbed < subbed, f"Dubbed lists only the dubbed episodes ({dubbed} of {subbed})")
+        check(not any("dubbed episodes" in line for line in spoken(speech_log)),
+              "switching to Dubbed stays quiet")
+        check(selected_row(episodes_hwnd) == dubbed - 1,
+              f"the selection moves to the latest dubbed episode ({selected_row(episodes_hwnd)})")
+
         send_keys("{UP}")
+        time.sleep(1)
+        check(item_count(episodes_hwnd) == subbed, f"Subbed lists every subbed episode again ({item_count(episodes_hwnd)})")
+        check(not any("subbed episodes" in line for line in spoken(speech_log)),
+              "switching back to Subbed stays quiet")
+        check(selected_row(episodes_hwnd) == dubbed - 1,
+              f"the same episode stays selected when switching back ({selected_row(episodes_hwnd)})")
     finally:
         stop.set()
     window.close()
 
 
-def run_after_playback(app, pid):
+def run_after_playback(app, pid, speech_log):
     handle = app.window(title_re="Ryu.*").handle
     window = app.window(handle=handle)
     stop = threading.Event()
@@ -122,20 +152,22 @@ def run_after_playback(app, pid):
 
 def launch(exe, scenario):
     config = os.path.join(tempfile.gettempdir(), f"ryu-responsiveness-{os.getpid()}.ini")
-    env = dict(os.environ, RYU_CONFIG_FILE=config, RYU_MPV_OPTIONS="ao=null")
+    speech_log = os.path.join(tempfile.gettempdir(), f"ryu-responsiveness-speech-{os.getpid()}.log")
+    env = dict(os.environ, RYU_CONFIG_FILE=config, RYU_MPV_OPTIONS="ao=null", RYU_SPEECH_LOG=speech_log)
     process = subprocess.Popen([os.path.abspath(exe)], env=env)
     try:
         app = Application(backend="uia").connect(process=process.pid, timeout=20)
         app.window(title_re="Ryu.*").wait("visible", timeout=20)
-        scenario(app, process.pid)
+        scenario(app, process.pid, speech_log)
         process.wait(15)
     except Exception as error:
         check(False, f"unexpected error: {error!r}")
     finally:
         if process.poll() is None:
             process.kill()
-        if os.path.exists(config):
-            os.remove(config)
+        for path in (config, speech_log):
+            if os.path.exists(path):
+                os.remove(path)
 
 
 def main(exe):

@@ -10,6 +10,8 @@
 #include "speech.hpp"
 #include "text_list.hpp"
 
+#include <algorithm>
+
 #include <wx/button.h>
 #include <wx/choice.h>
 #include <wx/menu.h>
@@ -115,6 +117,12 @@ void MainFrame::createControls() {
     audioChoice_->Bind(wxEVT_CHOICE, [this](wxCommandEvent&) {
         settings_.audio = selectedAudio();
         store_.save(settings_);
+        if (episodes_.empty()) {
+            return;
+        }
+        const size_t row = episodeList_->selectedIndex();
+        showEpisodes(row < visibleEpisodes_.size() ? visibleEpisodes_[row] : 0);
+        setStatus(episodeCountLabel(true) + " of " + wxString::FromUTF8(currentShow_.title));
     });
 }
 
@@ -151,6 +159,7 @@ void MainFrame::startSearch() {
     ++episodeGeneration_;
     shows_.clear();
     episodes_.clear();
+    visibleEpisodes_.clear();
     results_->setItems({});
     episodeList_->setItems({});
     setStatus("Searching for " + query + "...");
@@ -201,6 +210,7 @@ void MainFrame::loadEpisodes() {
     currentShow_ = shows_[index];
     const unsigned generation = ++episodeGeneration_;
     episodes_.clear();
+    visibleEpisodes_.clear();
     episodeList_->setItems({});
     const auto title = wxString::FromUTF8(currentShow_.title);
     setStatus("Loading episodes of " + title + "...");
@@ -214,27 +224,15 @@ void MainFrame::loadEpisodes() {
                 return;
             }
             episodes_ = std::move(episodes);
-            std::vector<wxString> labels;
-            if (episodes_.empty()) {
-                labels.push_back("No episodes available");
-                setStatus("No episodes available for " + title);
-            } else {
-                labels.reserve(episodes_.size());
-                for (const auto& episode : episodes_) {
-                    labels.push_back(wxString::FromUTF8(episodeLabel(episode)));
-                }
-                setStatus(wxString::Format("%zu episodes of %s", episodes_.size(), title));
-            }
-            episodeList_->setItems(std::move(labels));
-            episodeList_->selectItem(0);
+            showEpisodes(0);
+            setStatus(episodes_.empty() ? "No episodes available for " + title
+                                        : episodeCountLabel(false) + " of " + title);
             if (!browsing()) {
                 return;
             }
             episodeList_->SetFocus();
             if (!episodes_.empty()) {
-                announce(episodes_.size() == 1 ? wxString("1 episode")
-                                               : wxString::Format("%zu episodes", episodes_.size()),
-                         false);
+                announce(episodeCountLabel(false), false);
             }
         },
         [this, generation](const std::string& message) {
@@ -245,10 +243,42 @@ void MainFrame::loadEpisodes() {
         });
 }
 
-void MainFrame::playEpisode(size_t index) {
-    if (index >= episodes_.size()) {
+void MainFrame::showEpisodes(size_t preferred) {
+    const auto audio = selectedAudio();
+    visibleEpisodes_.clear();
+    std::vector<wxString> labels;
+    for (size_t i = 0; i < episodes_.size(); ++i) {
+        if (episodes_[i].availableIn(audio)) {
+            visibleEpisodes_.push_back(i);
+            labels.push_back(wxString::FromUTF8(episodeLabel(episodes_[i])));
+        }
+    }
+    if (labels.empty()) {
+        labels.push_back(episodes_.empty()      ? wxString("No episodes available")
+                         : audio == Audio::Dub ? wxString("No dubbed episodes")
+                                               : wxString("No subbed episodes"));
+    }
+    episodeList_->setItems(std::move(labels));
+    long row = 0;
+    for (size_t r = 0; r < visibleEpisodes_.size() && visibleEpisodes_[r] <= preferred; ++r) {
+        row = static_cast<long>(r);
+    }
+    episodeList_->selectItem(row);
+}
+
+wxString MainFrame::episodeCountLabel(bool mentionAudio) const {
+    const auto count = visibleEpisodes_.size();
+    const wxString kind = !mentionAudio                    ? wxString()
+                          : selectedAudio() == Audio::Dub ? wxString("dubbed ")
+                                                          : wxString("subbed ");
+    return count == 1 ? "1 " + kind + "episode" : wxString::Format("%zu %sepisodes", count, kind);
+}
+
+void MainFrame::playEpisode(size_t row) {
+    if (row >= visibleEpisodes_.size()) {
         return;
     }
+    const size_t index = visibleEpisodes_[row];
     const auto episode = episodes_[index];
     const auto audio = selectedAudio();
     const auto label = wxString::FromUTF8(episodeLabel(episode));
@@ -295,12 +325,16 @@ void MainFrame::stepEpisode(int delta) {
     if (browsing()) {
         return;
     }
-    const auto target = static_cast<long long>(currentEpisode_) + delta;
+    const auto current = std::ranges::find(visibleEpisodes_, currentEpisode_);
+    if (current == visibleEpisodes_.end()) {
+        return;
+    }
+    const auto target = (current - visibleEpisodes_.begin()) + delta;
     if (target < 0) {
         announce("This is the first episode");
         return;
     }
-    if (static_cast<size_t>(target) >= episodes_.size()) {
+    if (static_cast<size_t>(target) >= visibleEpisodes_.size()) {
         announce("This is the last episode");
         return;
     }
@@ -322,8 +356,8 @@ void MainFrame::showBrowser() {
     book_->ChangeSelection(0);
     SetTitle("Ryu - " + wxString::FromUTF8(settings_.provider().name));
     setStatus("Stopped");
-    if (currentEpisode_ < episodes_.size()) {
-        episodeList_->selectItem(static_cast<long>(currentEpisode_));
+    if (const auto row = std::ranges::find(visibleEpisodes_, currentEpisode_); row != visibleEpisodes_.end()) {
+        episodeList_->selectItem(static_cast<long>(row - visibleEpisodes_.begin()));
         episodeList_->SetFocus();
     } else {
         searchBox_->SetFocus();
@@ -352,6 +386,7 @@ void MainFrame::showPreferences() {
         ++episodeGeneration_;
         shows_.clear();
         episodes_.clear();
+        visibleEpisodes_.clear();
         results_->setItems({});
         episodeList_->setItems({});
         setStatus("Using " + wxString::FromUTF8(settings_.provider().name));
