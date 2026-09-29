@@ -5,7 +5,7 @@ import sys
 import tempfile
 import time
 
-from pywinauto import Application
+from pywinauto import Application, Desktop
 from pywinauto.keyboard import send_keys
 
 failures = 0
@@ -39,6 +39,19 @@ def seconds(clock):
     return int(hours or 0) * 3600 + int(minutes) * 60 + int(secs)
 
 
+def speech_viewer():
+    for window in Desktop(backend="win32").windows():
+        if window.window_text() == "NVDA Speech Viewer":
+            for child in window.descendants():
+                if child.class_name().startswith("RICHEDIT"):
+                    return child
+    return None
+
+
+def heard_since(viewer, mark):
+    return [line for line in viewer.window_text()[mark:].replace("\r", "\n").split("\n") if line.strip()]
+
+
 def items(list_box):
     return list_box.children(control_type="ListItem")
 
@@ -70,6 +83,22 @@ def run(app, speech_log):
           f"first result reads well ({first.window_text()})")
     check(wait_for(lambda: results.has_keyboard_focus() or first.has_keyboard_focus(), 5) is not None,
           "focus moves to the results list")
+
+    viewer = speech_viewer()
+    if viewer is None:
+        print("SKIP: NVDA Speech Viewer is not open, so what NVDA says on entering the list is not checked", flush=True)
+    else:
+        search.set_focus()
+        time.sleep(1.5)
+        send_keys("{TAB}")
+        time.sleep(1.5)
+        mark = len(viewer.window_text())
+        send_keys("{TAB}")
+        time.sleep(2)
+        heard = heard_since(viewer, mark)
+        check(sum(first.window_text() in line for line in heard) == 1,
+              f"NVDA says the first result once when tabbing into the list ({heard})")
+        check(any(re.search(r"\b1 of 4\b", line) for line in heard), f"NVDA says the result's position ({heard})")
 
     results.set_focus()
     first.select()
