@@ -11,7 +11,6 @@
 
 class wxButton;
 class wxChoice;
-class wxListView;
 class wxPanel;
 class wxSimplebook;
 class wxTextCtrl;
@@ -19,6 +18,7 @@ class wxTextCtrl;
 namespace ryu {
 
 class PlayerPanel;
+class TextList;
 class PlaylistServer;
 struct ProviderSession;
 
@@ -60,8 +60,8 @@ private:
     PlayerPanel* player_ = nullptr;
     wxTextCtrl* searchBox_ = nullptr;
     wxButton* searchButton_ = nullptr;
-    wxListView* results_ = nullptr;
-    wxListView* episodeList_ = nullptr;
+    TextList* results_ = nullptr;
+    TextList* episodeList_ = nullptr;
     wxChoice* audioChoice_ = nullptr;
     wxButton* playButton_ = nullptr;
 };
