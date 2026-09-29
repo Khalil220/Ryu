@@ -80,13 +80,54 @@ def run(app, pid):
     window.close()
 
 
-def main(exe):
+def run_after_playback(app, pid):
+    handle = app.window(title_re="Ryu.*").handle
+    window = app.window(handle=handle)
+    stop = threading.Event()
+    gaps = []
+    threading.Thread(target=watch, args=(handle, stop, gaps), daemon=True).start()
+    try:
+        window.child_window(title="Search", control_type="Edit").set_edit_text("frieren")
+        window.child_window(title="Search", control_type="Button").invoke()
+        results = window.child_window(title="Results", control_type="List")
+        first = wait_for(lambda: items(results)[0])
+        results.set_focus()
+        first.select()
+        send_keys("{ENTER}")
+        episodes = window.child_window(title="Episodes", control_type="List")
+        wait_for(lambda: items(episodes) or None)
+        audio = window.child_window(title="Audio", control_type="ComboBox")
+        audio.select("Dubbed")
+        window.child_window(title="Play", control_type="Button").invoke()
+        time_box = window.child_window(title="Time", control_type="Edit")
+        played = wait_for(lambda: test_ui.seconds(time_box.get_value()) >= 5, 60)
+        check(played is not None, f"a dubbed episode plays ({time_box.get_value()})")
+        window.child_window(title="Pause", control_type="Button").set_focus()
+        send_keys("{ESC}")
+        wait_for(lambda: window.window_text().startswith("Ryu - "), 15)
+        time.sleep(2)
+        audio.set_focus()
+        time.sleep(1)
+        for key in ("{UP}", "{DOWN}"):
+            changed = time.perf_counter()
+            send_keys(key)
+            time.sleep(3)
+            stall = worst(gaps, changed)
+            check(stall < LONGEST_ACCEPTABLE_STALL,
+                  f"changing the audio after leaving the player stays responsive ({stall * 1000:.0f} ms)")
+    finally:
+        stop.set()
+    window.close()
+
+
+def launch(exe, scenario):
     config = os.path.join(tempfile.gettempdir(), f"ryu-responsiveness-{os.getpid()}.ini")
-    process = subprocess.Popen([os.path.abspath(exe)], env=dict(os.environ, RYU_CONFIG_FILE=config))
+    env = dict(os.environ, RYU_CONFIG_FILE=config, RYU_MPV_OPTIONS="ao=null")
+    process = subprocess.Popen([os.path.abspath(exe)], env=env)
     try:
         app = Application(backend="uia").connect(process=process.pid, timeout=20)
         app.window(title_re="Ryu.*").wait("visible", timeout=20)
-        run(app, process.pid)
+        scenario(app, process.pid)
         process.wait(15)
     except Exception as error:
         check(False, f"unexpected error: {error!r}")
@@ -95,6 +136,11 @@ def main(exe):
             process.kill()
         if os.path.exists(config):
             os.remove(config)
+
+
+def main(exe):
+    launch(exe, run)
+    launch(exe, run_after_playback)
     print(f"{test_ui.failures} failure(s)")
     return 1 if test_ui.failures else 0
 
