@@ -43,7 +43,15 @@ def items(list_box):
     return list_box.children(control_type="ListItem")
 
 
-def run(app):
+def spoken(log_path):
+    try:
+        with open(log_path, encoding="utf-8") as log:
+            return [line.rstrip("\n") for line in log]
+    except FileNotFoundError:
+        return []
+
+
+def run(app, speech_log):
     main = app.window(title_re="Ryu.*")
     main.wait("visible", timeout=20)
     check(main.window_text() == "Ryu - HiAnime", f"main window title names the provider ({main.window_text()})")
@@ -77,6 +85,10 @@ def run(app):
     check(wait_for(lambda: episodes.has_keyboard_focus() or episode_items[0].has_keyboard_focus(), 5) is not None,
           "focus moves to the episode list")
 
+    audio = main.child_window(title="Audio", control_type="ComboBox")
+    audio.select("Dubbed")
+    check(audio.selected_text() == "Dubbed", f"audio choice switches to Dubbed ({audio.selected_text()})")
+
     main.child_window(title="Play", control_type="Button").invoke()
     player = app.window(title_re="Episode 1.*")
     check(wait_for(player.exists, 45) is not None, "Play opens the player window")
@@ -90,6 +102,10 @@ def run(app):
           f"playback advances the clock ({time_box.get_value()})")
     check(re.search(r" of \d+:\d\d", time_box.get_value()) is not None,
           f"time shows the duration ({time_box.get_value()})")
+
+    subtitles = player.child_window(title="Subtitles", control_type="ComboBox")
+    check(wait_for(lambda: subtitles.selected_text() == "English", 20) is not None,
+          f"English subtitles load and are selected ({subtitles.selected_text()})")
 
     player.child_window(title="Pause", control_type="Button").invoke()
     play_button = player.child_window(title="Play", control_type="Button")
@@ -121,6 +137,14 @@ def run(app):
     send_keys("{SPACE}")
     check(wait_for(pause_button.exists, 10) is not None, "Space resumes")
 
+    pause_button.set_focus()
+    send_keys("t", vk_packet=False)
+    check(wait_for(lambda: any(re.match(r"^\d+:\d\d of \d+:\d\d$", line) for line in spoken(speech_log)), 5)
+          is not None, "T announces the time")
+    check(pause_button.has_keyboard_focus(), "T leaves focus where it was")
+    send_keys("{DOWN}")
+    check(wait_for(lambda: "Volume 95" in spoken(speech_log), 5) is not None, "Down arrow lowers and announces the volume")
+
     check(player.child_window(title="Close", control_type="Button", class_name="Button").exists(),
           "player has a Close button")
     send_keys("{ESC}")
@@ -139,15 +163,23 @@ def run(app):
         preferences.child_window(title="Cancel", control_type="Button").invoke()
         check(wait_for(lambda: not preferences.exists(), 10) is not None, "Cancel closes Preferences")
 
+    lines = spoken(speech_log)
+    for expected in ["Searching for frieren", "4 results", "Loading episodes", "28 episodes", "Loading episode",
+                     "Playing", "Paused"]:
+        check(expected in lines, f"announced: {expected}")
+    backend = [line for line in lines if line.startswith("[backend] ")]
+    print(f"INFO: speech backend {backend[0][10:] if backend else 'none (no screen reader running)'}")
+
     main.close()
 
 
 def main(exe):
     config = os.path.join(tempfile.gettempdir(), f"ryu-ui-test-{os.getpid()}.ini")
-    env = dict(os.environ, RYU_CONFIG_FILE=config, RYU_MPV_OPTIONS="ao=null")
+    speech_log = os.path.join(tempfile.gettempdir(), f"ryu-ui-speech-{os.getpid()}.log")
+    env = dict(os.environ, RYU_CONFIG_FILE=config, RYU_MPV_OPTIONS="ao=null", RYU_SPEECH_LOG=speech_log)
     process = subprocess.Popen([os.path.abspath(exe)], env=env)
     try:
-        run(Application(backend="uia").connect(process=process.pid, timeout=20))
+        run(Application(backend="uia").connect(process=process.pid, timeout=20), speech_log)
         try:
             process.wait(15)
             check(True, "closing the main window exits the app")
@@ -158,8 +190,9 @@ def main(exe):
     finally:
         if process.poll() is None:
             process.kill()
-        if os.path.exists(config):
-            os.remove(config)
+        for path in (config, speech_log):
+            if os.path.exists(path):
+                os.remove(path)
     print(f"{failures} failure(s)")
     return 1 if failures else 0
 
