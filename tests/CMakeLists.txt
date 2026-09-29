@@ -7,6 +7,7 @@ add_executable(ryu_unit_tests
     unit/test_encoding.cpp
     unit/test_format.cpp
     unit/test_html.cpp
+    unit/test_kickassanime.cpp
     unit/test_hianime.cpp
     unit/test_hls.cpp
     unit/test_host_repair.cpp
@@ -21,6 +22,7 @@ set_tests_properties(unit PROPERTIES LABELS unit)
 
 add_executable(ryu_live_tests
     live/test_live_hianime.cpp
+    live/test_live_kickassanime.cpp
     live/test_live_repair.cpp
 )
 target_link_libraries(ryu_live_tests PRIVATE ryu_core ryu_test_main)

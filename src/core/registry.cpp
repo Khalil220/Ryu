@@ -1,6 +1,7 @@
 #include "registry.hpp"
 
 #include "providers/hianime.hpp"
+#include "providers/kickassanime.hpp"
 
 #include <algorithm>
 
@@ -10,6 +11,10 @@ const std::vector<ProviderInfo>& availableProviders() {
     static const std::vector<ProviderInfo> providers{
         {"hianime", "HiAnime", HiAnimeProvider::defaultBaseUrl,
          [](HttpClient& http, const std::string& baseUrl) { return std::make_unique<HiAnimeProvider>(http, baseUrl); }},
+        {"kickassanime", "KickAssAnime", KickAssAnimeProvider::defaultBaseUrl,
+         [](HttpClient& http, const std::string& baseUrl) {
+             return std::make_unique<KickAssAnimeProvider>(http, baseUrl);
+         }},
     };
     return providers;
 }

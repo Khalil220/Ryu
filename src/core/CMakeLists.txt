@@ -7,6 +7,7 @@ add_library(ryu_core STATIC
     playlist_server.cpp
     registry.cpp
     providers/hianime.cpp
+    providers/kickassanime.cpp
     resolvers/megaplay.cpp
 )
 target_include_directories(ryu_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
