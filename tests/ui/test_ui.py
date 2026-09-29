@@ -183,8 +183,30 @@ def run(app, speech_log):
         check(base_url.get_value() == "https://hianime.at", f"base URL shows the default ({base_url.get_value()})")
         check(preferences.child_window(title="Provider", control_type="ComboBox").exists(),
               "provider choice is labelled")
+        fallback = preferences.child_window(title="Try other providers when an episode won't play",
+                                            control_type="CheckBox")
+        check(fallback.exists() and fallback.get_toggle_state() == 1, "provider fallback is offered and on by default")
         preferences.child_window(title="Cancel", control_type="Button").invoke()
         check(wait_for(lambda: not preferences.exists(), 10) is not None, "Cancel closes Preferences")
+
+    search.set_focus()
+    send_keys("^,")
+    check(wait_for(preferences.exists, 10) is not None, "Preferences opens again")
+    if preferences.exists():
+        provider = preferences.child_window(title="Provider", control_type="ComboBox")
+        provider.select("KickAssAnime")
+        base_url = preferences.child_window(title="Base URL", control_type="Edit")
+        check(wait_for(lambda: base_url.get_value() == "https://kaa.lt", 5) is not None,
+              f"choosing KickAssAnime shows its base URL ({base_url.get_value()})")
+        preferences.child_window(title="OK", control_type="Button").invoke()
+        check(wait_for(lambda: main.window_text() == "Ryu - KickAssAnime", 10) is not None,
+              f"the window title follows the provider ({main.window_text()})")
+        search.set_edit_text("frieren")
+        main.child_window(title="Search", control_type="Button").invoke()
+        first_kaa = wait_for(lambda: items(results)[0])
+        check(first_kaa is not None and first_kaa.window_text() ==
+              "Frieren: Beyond Journey's End, TV, 2023, subbed and dubbed",
+              f"KickAssAnime results read well ({first_kaa.window_text() if first_kaa else None})")
 
     lines = spoken(speech_log)
     for expected in ["Searching for frieren", "4 results", "Loading episodes", "28 episodes",

@@ -2,7 +2,9 @@
 
 Ryu is an anime client for Windows built for screen reader users. It is written in C++ with wxWidgets and plays video through libmpv. Every control is a standard Windows control with an explicit accessible name, so NVDA, JAWS and Narrator read it without guesswork.
 
-Ryu currently supports one provider, HiAnime (hianime.at), whose videos are served through megaplay. It can search, list episodes, play subbed or dubbed episodes, and load every subtitle track the episode offers.
+Ryu supports two providers. HiAnime (hianime.at) serves its videos through megaplay, and KickAssAnime (kaa.lt) hosts its own. Both can search, list episodes, play subbed or dubbed episodes, and load every subtitle track the episode offers.
+
+These sites store video on throwaway domains that Cloudflare bans from time to time. Before playing an episode, Ryu checks each video host it uses. If one has been banned, Ryu rewrites the playlist to use one of the same site's other hosts, which serve the same files, and hands the corrected playlist to the player from a small server on 127.0.0.1. If an episode still can't be played, Ryu looks for the same show and episode on the other provider and plays it from there, saying which provider it came from.
 
 Ryu speaks status updates through the screen reader you are running, using the Prism library. It talks to NVDA, JAWS, Narrator and other screen readers directly, with no extra DLLs. It deliberately never falls back to a SAPI or OneCore voice, so it stays quiet when no screen reader is running.
 
@@ -45,7 +47,7 @@ The time field reads like "3:21 of 24:10" and updates once a second. The subtitl
 
 ## Preferences
 
-Preferences holds the provider, the provider's base URL and the preferred audio. The base URL is there for when a site moves to a new domain or you want a mirror. Reset to default puts back the built-in address. Settings are stored in `%APPDATA%\Ryu\settings.ini`.
+Preferences holds the provider, the provider's base URL, the preferred audio, and whether to try other providers when an episode won't play, which is on by default. The base URL is there for when a site moves to a new domain or you want a mirror, and each provider remembers its own. Reset to default puts back the built-in address. Settings are stored in `%APPDATA%\Ryu\settings.ini`.
 
 ## Command-line tool
 
@@ -55,6 +57,7 @@ Preferences holds the provider, the provider's base URL and the preferred audio.
 2. `ryu-cli search "frieren"`
 3. `ryu-cli episodes 481`
 4. `ryu-cli streams 9227 dub`
+5. `ryu-cli --provider kickassanime search "frieren"`, then `ryu-cli --provider kickassanime streams "sousou-no-frieren-2d15|1" sub`
 
 Every command accepts `--provider <id>` and `--base-url <url>`.
 

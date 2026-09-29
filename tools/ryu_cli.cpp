@@ -30,7 +30,14 @@ void printShows(const std::vector<ryu::Show>& shows) {
         if (!show.format.empty()) {
             std::cout << ", " << show.format;
         }
-        std::cout << ", " << show.subEpisodes << " sub, " << show.dubEpisodes << " dub\n";
+        if (show.year > 0) {
+            std::cout << ", " << show.year;
+        }
+        if (show.subEpisodes == 0 && show.dubEpisodes == 0) {
+            std::cout << (show.offersSub ? ", sub" : "") << (show.offersDub ? ", dub" : "") << "\n";
+        } else {
+            std::cout << ", " << show.subEpisodes << " sub, " << show.dubEpisodes << " dub\n";
+        }
     }
 }
 
