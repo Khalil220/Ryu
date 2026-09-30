@@ -5,7 +5,6 @@
 #include <wx/image.h>
 #include <wx/scrolwin.h>
 #include <wx/settings.h>
-#include <wx/simplebook.h>
 #include <wx/sizer.h>
 #include <wx/statbmp.h>
 #include <wx/stattext.h>
@@ -38,16 +37,6 @@ wxImage fitPoster(const wxImage& image, wxSize box) {
     const int height = std::max(1, static_cast<int>(image.GetHeight() * scale));
     return image.Scale(width, height, wxIMAGE_QUALITY_HIGH);
 }
-
-class PlainPanel : public wxPanel {
-public:
-    explicit PlainPanel(wxWindow* parent) : wxPanel(parent) { m_container.DisableSelfFocus(); }
-};
-
-class PlainBook : public wxSimplebook {
-public:
-    explicit PlainBook(wxWindow* parent) : wxSimplebook(parent) { m_container.DisableSelfFocus(); }
-};
 
 class SynopsisView : public wxScrolled<wxWindow> {
 public:
@@ -89,52 +78,39 @@ private:
 
 ShowDetailsPanel::ShowDetailsPanel(wxWindow* parent) : wxPanel(parent), posterSize_(FromDIP(wxSize(160, 240))) {
     m_container.DisableSelfFocus();
-    book_ = new PlainBook(this);
-
-    auto* hintPage = new PlainPanel(book_);
-    auto* hint = new wxStaticText(hintPage, wxID_ANY, "Pick a search result to see its details here.");
-    hint->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT));
-    auto* hintSizer = new wxBoxSizer(wxVERTICAL);
-    hintSizer->AddStretchSpacer();
-    hintSizer->Add(hint, 0, wxALIGN_CENTER_HORIZONTAL);
-    hintSizer->AddStretchSpacer();
-    hintPage->SetSizer(hintSizer);
-
-    auto* page = new PlainPanel(book_);
     auto* row = new wxBoxSizer(wxHORIZONTAL);
-    poster_ = new wxStaticBitmap(page, wxID_ANY, wxBitmapBundle(), wxDefaultPosition, posterSize_);
+    poster_ = new wxStaticBitmap(this, wxID_ANY, wxBitmapBundle(), wxDefaultPosition, posterSize_);
     poster_->SetMinSize(posterSize_);
     row->Add(poster_, 0, wxALIGN_TOP | wxRIGHT, FromDIP(14));
     auto* text = new wxBoxSizer(wxVERTICAL);
-    title_ = new wxStaticText(page, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxST_ELLIPSIZE_END);
+    title_ = new wxStaticText(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxST_ELLIPSIZE_END);
     title_->SetFont(GetFont().Scaled(1.6f).Bold());
     text->Add(title_, 0, wxEXPAND | wxBOTTOM, FromDIP(4));
-    info_ = new wxStaticText(page, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxST_ELLIPSIZE_END);
+    info_ = new wxStaticText(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxST_ELLIPSIZE_END);
     info_->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT));
     text->Add(info_, 0, wxEXPAND | wxBOTTOM, FromDIP(10));
-    synopsis_ = new SynopsisView(page);
+    synopsis_ = new SynopsisView(this);
     text->Add(synopsis_, 1, wxEXPAND);
     row->Add(text, 1, wxEXPAND);
-    page->SetSizer(row);
-
-    book_->AddPage(hintPage, wxEmptyString, true);
-    book_->AddPage(page, wxEmptyString, false);
-    auto* sizer = new wxBoxSizer(wxVERTICAL);
-    sizer->Add(book_, 1, wxEXPAND);
-    SetSizer(sizer);
+    SetSizer(row);
+    Hide();
 }
 
 void ShowDetailsPanel::showDetails(const ryu::Show& show) {
-    book_->ChangeSelection(1);
     title_->SetLabelText(wxString::FromUTF8(show.title));
     info_->SetLabelText(wxString::FromUTF8(showDetailsLine(show)));
     synopsis_->setText(show.synopsis.empty() ? wxString("No synopsis available.") : wxString::FromUTF8(show.synopsis));
-    book_->GetPage(1)->Layout();
+    if (IsShown()) {
+        Layout();
+    } else {
+        Show();
+        GetParent()->Layout();
+    }
 }
 
 void ShowDetailsPanel::setPoster(const wxBitmap& poster) {
     poster_->SetBitmap(poster);
-    book_->GetPage(1)->Layout();
+    Layout();
 }
 
 void ShowDetailsPanel::clearPoster() {
@@ -146,7 +122,10 @@ void ShowDetailsPanel::clear() {
     info_->SetLabelText(wxEmptyString);
     synopsis_->setText(wxEmptyString);
     poster_->SetBitmap(wxBitmapBundle());
-    book_->ChangeSelection(0);
+    if (IsShown()) {
+        Hide();
+        GetParent()->Layout();
+    }
 }
 
 }

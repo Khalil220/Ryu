@@ -124,6 +124,9 @@ def run(app, speech_log):
 
     search = main.child_window(title="Search", control_type="Edit")
     check(search.exists(), "search box is labelled Search")
+    check(not poster_shown(main) and not any(text.window_text().startswith("Pick a search result")
+                                             for text in main.descendants(control_type="Text")),
+          "the details panel stays hidden until there is a show to describe")
     search.set_edit_text("frieren")
     main.child_window(title="Search", control_type="Button").invoke()
 
@@ -527,6 +530,9 @@ def run(app, speech_log):
         preferences.child_window(title="OK", control_type="Button").invoke()
         check(wait_for(lambda: main.window_text() == "Ryu - KickAssAnime", 10) is not None,
               f"the window title follows the provider ({main.window_text()})")
+        check(wait_for(search.has_keyboard_focus, 5) is not None, "switching provider puts focus in the search box")
+        check(wait_for(lambda: not poster_shown(main) and not synopsis_text(), 5) is not None,
+              "switching provider hides the emptied details panel")
         search.set_edit_text("frieren")
         main.child_window(title="Search", control_type="Button").invoke()
         first_kaa = wait_for(lambda: items(results)[0])
