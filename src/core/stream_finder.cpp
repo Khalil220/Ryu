@@ -139,7 +139,7 @@ FoundStream findStream(HttpClient& http, PlaylistServer& server, const std::vect
                     }
                     logLine(std::format("Using {} {} after {} ms: {}", handle.name, stream.server, elapsed(),
                                         report.stream.url));
-                    return {std::move(report.stream), handle.name, i > 0, std::move(report.deadHosts)};
+                    return {std::move(report.stream), handle.name, i > 0};
                 } catch (const std::exception& error) {
                     anyFailure = true;
                     lastError = handle.name + ": " + error.what();

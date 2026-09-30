@@ -11,7 +11,6 @@ namespace {
 
 constexpr const char* masterUrl = "https://fetch.example.top/anime/a/b/master.m3u8";
 constexpr const char* mediaUrl = "https://fetch.example.top/anime/a/b/index-f1.m3u8";
-constexpr const char* abuse = "https://www.cloudflare-terms-of-service-abuse.com/stream.jpeg";
 const std::string tsBytes = std::string("\x47\x40\x11\x10", 4) + std::string(20, '\x00');
 
 Stream megaplayStream() {
@@ -71,7 +70,7 @@ TEST_CASE("a banned host is swapped for a working alternate and served from loop
     FakeHttpClient http;
     serveMaster(http);
     serveMedia(http, "dead.example.online");
-    http.serveRedirect("https://dead.example.online/anime/a/b/seg-1-f1.jpg", abuse);
+    http.serveRedirect("https://dead.example.online/anime/a/b/seg-1-f1.jpg");
     http.serve("https://fetch.example.top/anime/a/b/seg-1-f1.jpg", tsBytes);
     PlaylistServer server;
 
@@ -130,7 +129,7 @@ TEST_CASE("only the dead hosts in a rotating playlist are swapped, onto a living
     http.serve(mediaUrl, "#EXTM3U\n#EXTINF:6,\n//st1.alpha.xyz/v/000.jpg\n#EXTINF:6,\n//st1.beta.xyz/v/001.jpg\n"
                          "#EXTINF:6,\n//st1.alpha.xyz/v/002.jpg\n#EXT-X-ENDLIST\n");
     http.serve("https://st1.alpha.xyz/v/000.jpg", tsBytes);
-    http.serveRedirect("https://st1.beta.xyz/v/001.jpg", abuse);
+    http.serveRedirect("https://st1.beta.xyz/v/001.jpg");
     PlaylistServer server;
     Stream stream;
     stream.url = mediaUrl;
@@ -150,7 +149,7 @@ TEST_CASE("a stream with no reachable host is reported as a provider error") {
     FakeHttpClient http;
     serveMaster(http);
     serveMedia(http, "dead.example.online");
-    http.serveRedirect("https://dead.example.online/anime/a/b/seg-1-f1.jpg", abuse);
+    http.serveRedirect("https://dead.example.online/anime/a/b/seg-1-f1.jpg");
     http.serve("https://fetch.example.top/anime/a/b/seg-1-f1.jpg", "<html>404</html>", 404);
     PlaylistServer server;
 

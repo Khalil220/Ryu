@@ -106,10 +106,6 @@ void Speech::say(const wxString& text, bool interrupt) {
     }
 }
 
-std::string Speech::backendName() const {
-    return backend_ ? prism_backend_name(backend_) : std::string();
-}
-
 void setSpeech(Speech* speech) {
     current = speech;
 }

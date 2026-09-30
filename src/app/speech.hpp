@@ -16,7 +16,6 @@ public:
     Speech& operator=(const Speech&) = delete;
 
     void say(const wxString& text, bool interrupt);
-    std::string backendName() const;
 
 private:
     bool selectBackend();

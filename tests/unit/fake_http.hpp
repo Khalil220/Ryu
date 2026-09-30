@@ -32,11 +32,11 @@ public:
     };
 
     void serve(const std::string& url, std::string body, long status = 200) {
-        routes_[url] = HttpResponse{status, std::move(body), url, {}};
+        routes_[url] = HttpResponse{status, std::move(body)};
     }
 
-    void serveRedirect(const std::string& url, const std::string& location) {
-        routes_[url] = HttpResponse{302, "<html>moved</html>", url, location};
+    void serveRedirect(const std::string& url) {
+        routes_[url] = HttpResponse{302, "<html>moved</html>"};
     }
 
     HttpResponse get(const std::string& url, const Headers& headers) override {

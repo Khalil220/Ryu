@@ -32,12 +32,6 @@ std::string showLabel(const Show& show) {
         label += ", " + std::to_string(show.year);
     }
     if (show.subEpisodes == 0 && show.dubEpisodes == 0) {
-        if (show.offersSub && show.offersDub) {
-            return label + ", subbed and dubbed";
-        }
-        if (show.offersSub || show.offersDub) {
-            return label + (show.offersSub ? ", subbed" : ", dubbed");
-        }
         if (show.episodeCount > 0) {
             return label + ", " + std::to_string(show.episodeCount) + (show.episodeCount == 1 ? " episode" : " episodes");
         }
@@ -66,9 +60,6 @@ std::string showDetailsLine(const Show& show) {
     }
     if (show.dubEpisodes > 0) {
         audio += (audio.empty() ? "" : ", ") + std::to_string(show.dubEpisodes) + " dubbed";
-    }
-    if (audio.empty() && (show.offersSub || show.offersDub)) {
-        audio = show.offersSub && show.offersDub ? "Subbed and dubbed" : show.offersSub ? "Subbed" : "Dubbed";
     }
     if (audio.empty() && show.episodeCount > 0) {
         audio = std::to_string(show.episodeCount) + (show.episodeCount == 1 ? " episode" : " episodes");

@@ -129,7 +129,7 @@ TEST_CASE("the fallback also searches the other title when the first finds nothi
 TEST_CASE("a primary that throws or serves only dead hosts hands over to the fallback") {
     FakeHttpClient http;
     http.serve("https://dead.example/master.m3u8", "#EXTM3U\n#EXTINF:10,\nhttps://gone.example/seg-1.jpg\n");
-    http.serveRedirect("https://gone.example/seg-1.jpg", "https://www.cloudflare-terms-of-service-abuse.com/x");
+    http.serveRedirect("https://gone.example/seg-1.jpg");
     PlaylistServer server;
     ScriptedProvider dead;
     dead.onStreams = [](std::string_view, Audio) {

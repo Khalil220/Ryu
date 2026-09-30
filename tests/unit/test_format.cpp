@@ -30,8 +30,6 @@ TEST_CASE("showDetailsLine joins format, year, audio and genres") {
     CHECK(showDetailsLine(frieren) == "TV  \u00b7  2023  \u00b7  28 subbed, 28 dubbed");
     frieren.genres = {"Adventure", "Fantasy"};
     CHECK(showDetailsLine(frieren) == "TV  \u00b7  2023  \u00b7  28 subbed, 28 dubbed  \u00b7  Adventure, Fantasy");
-    Show kaa{"x", "X", "", "TV", 0, 0, 0, true, true};
-    CHECK(showDetailsLine(kaa) == "TV  \u00b7  Subbed and dubbed");
     CHECK(showDetailsLine(Show{"y", "Y", "", "", 0, 4}) == "4 dubbed");
     CHECK(showDetailsLine(Show{"z"}).empty());
 }

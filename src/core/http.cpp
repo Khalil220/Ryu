@@ -130,12 +130,6 @@ HttpResponse CurlHttpClient::perform(Mode mode, const std::string& url, const st
     }
 
     curl_easy_getinfo(easy, CURLINFO_RESPONSE_CODE, &response.status);
-    char* effective = nullptr;
-    curl_easy_getinfo(easy, CURLINFO_EFFECTIVE_URL, &effective);
-    response.effectiveUrl = effective ? effective : url;
-    char* location = nullptr;
-    curl_easy_getinfo(easy, CURLINFO_REDIRECT_URL, &location);
-    response.location = location ? location : "";
     logLine(std::format("{} {} returned {} in {} ms", verb, url, response.status, elapsed));
     return response;
 }

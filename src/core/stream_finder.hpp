@@ -20,7 +20,6 @@ struct FoundStream {
     Stream stream;
     std::string providerName;
     bool fromFallback = false;
-    std::vector<std::string> repairedHosts;
 };
 
 std::string normalizeTitle(std::string_view title);

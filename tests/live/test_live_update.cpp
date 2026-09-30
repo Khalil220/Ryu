@@ -33,9 +33,8 @@ void downloadsLikeTheUpdater(const std::string& name) {
     const auto started = std::chrono::steady_clock::now();
     const auto download = http.get(url);
     const auto seconds = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
-    MESSAGE(name << ": " << download.body.size() << " bytes in " << seconds << " s from " << download.effectiveUrl);
+    MESSAGE(name << ": " << download.body.size() << " bytes in " << seconds << " s");
     CHECK(download.status == 200);
-    CHECK(download.effectiveUrl != url);
     CHECK(download.body.size() == size);
     if (digest.empty()) {
         MESSAGE("GitHub gave no digest for " << name);

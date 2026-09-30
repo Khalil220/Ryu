@@ -16,8 +16,6 @@ using Progress = std::function<bool(std::uint64_t done, std::uint64_t total)>;
 struct HttpResponse {
     long status = 0;
     std::string body;
-    std::string effectiveUrl;
-    std::string location;
 };
 
 class HttpError : public std::runtime_error {

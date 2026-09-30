@@ -20,8 +20,6 @@ struct Show {
     int subEpisodes = 0;
     int dubEpisodes = 0;
     int year = 0;
-    bool offersSub = false;
-    bool offersDub = false;
     std::string posterUrl;
     std::string synopsis;
     std::vector<std::string> genres;

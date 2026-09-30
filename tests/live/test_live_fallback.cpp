@@ -39,7 +39,4 @@ TEST_CASE("live: a HiAnime episode that the primary cannot play is found on Miru
     CHECK(found.fromFallback);
     CHECK(found.stream.audioLanguage == "eng,en,English");
     MESSAGE("Fallback stream: " << found.stream.server << " " << found.stream.url);
-    for (const auto& host : found.repairedHosts) {
-        MESSAGE("Routed around dead host: " << host);
-    }
 }
