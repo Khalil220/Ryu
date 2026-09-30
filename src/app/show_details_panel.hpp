@@ -5,6 +5,7 @@
 #include <wx/panel.h>
 
 class wxImage;
+class wxSimplebook;
 class wxStaticBitmap;
 class wxStaticText;
 class wxTextCtrl;
@@ -22,6 +23,7 @@ public:
 
 private:
     wxSize posterSize_;
+    wxSimplebook* book_ = nullptr;
     wxStaticBitmap* poster_ = nullptr;
     wxStaticText* title_ = nullptr;
     wxStaticText* info_ = nullptr;
