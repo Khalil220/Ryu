@@ -1,0 +1,848 @@
+{
+ "episode_number": 1,
+ "requested_track": null,
+ "tracks": [
+  {
+   "track": "sub",
+   "providers": [
+    {
+     "provider": "animepahe",
+     "subtitles": [],
+     "thumbnails": null,
+     "downloads": [
+      {
+       "url": "https://pahe.win/GrCgf",
+       "quality": "1080p",
+       "size": "172MB",
+       "fansub": "SEV"
+      },
+      {
+       "url": "https://pahe.win/WsGld",
+       "quality": "720p",
+       "size": "101MB",
+       "fansub": "SEV"
+      },
+      {
+       "url": "https://pahe.win/BbKSj",
+       "quality": "360p",
+       "size": "44MB",
+       "fansub": "SEV"
+      }
+     ],
+     "servers": [
+      {
+       "server": "animepahe",
+       "headers": {
+        "Referer": "https://kwik.cx/"
+       },
+       "streams": [
+        {
+         "url": "https://vault-08.uwucdn.top/stream/08/13/2c42dca1bbf0c061e3add6d1874a1d01498fb3e29c62e17071b0b2802b4e8b06/uwu.m3u8",
+         "format": "hls",
+         "quality": "1080p",
+         "resolution": {
+          "width": 1920,
+          "height": 1080
+         },
+         "codec": "h264",
+         "embed": {
+          "url": "https://kwik.cx/e/iKAcIjd2ce0f"
+         }
+        },
+        {
+         "url": "https://vault-08.uwucdn.top/stream/08/13/71ee7618f3b7b9ad4467c6fdcd0d0bbc4af2345d95d9a793d71db77539a43af7/uwu.m3u8",
+         "format": "hls",
+         "quality": "720p",
+         "resolution": {
+          "width": 1280,
+          "height": 720
+         },
+         "codec": "h264",
+         "embed": {
+          "url": "https://kwik.cx/e/d3ccaeXzK7o4"
+         }
+        },
+        {
+         "url": "https://vault-08.uwucdn.top/stream/08/13/63abd0640a098853df01676699553c949b1b3038117d9f59232d56ca53be3fef/uwu.m3u8",
+         "format": "hls",
+         "quality": "360p",
+         "resolution": {
+          "width": 640,
+          "height": 360
+         },
+         "codec": "h264",
+         "embed": {
+          "url": "https://kwik.cx/e/aeNSh4eblrse"
+         }
+        }
+       ],
+       "embed": null
+      }
+     ]
+    },
+    {
+     "provider": "aniwaves",
+     "subtitles": [],
+     "thumbnails": null,
+     "downloads": [],
+     "servers": [
+      {
+       "server": "Vidplay",
+       "headers": {
+        "Referer": "https://play.echovideo.ru/"
+       },
+       "streams": [
+        {
+         "url": "https://ru-cdn2.echovideo.to/cdn/092e3d2d14736a0ad538679089ca3cc667d3dc4936ff0f81291a75f7319cd585f024713efd5bf1a3d59f4e24b0f61c7d97d8efc68b882167f4d32423?t.m3u8",
+         "format": "hls",
+         "quality": null,
+         "resolution": null,
+         "codec": null,
+         "embed": null
+        }
+       ],
+       "embed": {
+        "url": "https://play.echovideo.ru/embed-1/43ur9-zPumvBv2IWW8AGYaLggA0-jt09NwFOOGA7RkS5fzwA42N5WAG4pqj2FF89qjTSdLeR4hFBjhXL7R6wwcOpfaDZjp5iD4pNTdnwchyrU5xiVjt8enh8gByMe1xmEwLv6q8j21hCMK6WFx-NP8CHD9BT0kNIiEo-m0KQJ6AN8kHGHkw_CtdFKra-UAYD?v=1?asi=0&autoPlay=0&ao=0"
+       }
+      },
+      {
+       "server": "BYFMS",
+       "headers": {
+        "Referer": "https://mfw09.org/"
+       },
+       "streams": [],
+       "embed": {
+        "url": "https://mfw09.org/e/hq9osx9cu3n2?v=1?asi=0&autoPlay=0&ao=0"
+       }
+      },
+      {
+       "server": "DGHG",
+       "headers": {
+        "Referer": "https://myvidplay.com/"
+       },
+       "streams": [],
+       "embed": {
+        "url": "https://myvidplay.com/e/336qayfnm98q?v=1?asi=0&autoPlay=0&ao=0"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "track": "dub",
+   "providers": [
+    {
+     "provider": "animepahe",
+     "subtitles": [],
+     "thumbnails": null,
+     "downloads": [
+      {
+       "url": "https://pahe.win/MQrAy",
+       "quality": "1080p",
+       "size": "170MB",
+       "fansub": "SEV"
+      },
+      {
+       "url": "https://pahe.win/mbJHO",
+       "quality": "720p",
+       "size": "100MB",
+       "fansub": "SEV"
+      },
+      {
+       "url": "https://pahe.win/eMiTy",
+       "quality": "360p",
+       "size": "43MB",
+       "fansub": "SEV"
+      }
+     ],
+     "servers": [
+      {
+       "server": "animepahe",
+       "headers": {
+        "Referer": "https://kwik.cx/"
+       },
+       "streams": [
+        {
+         "url": "https://vault-08.uwucdn.top/stream/08/14/35165a88e4ea019eda3a2e9c42c3418d0a573274fda31c03a5463fc6440a2f73/uwu.m3u8",
+         "format": "hls",
+         "quality": "360p",
+         "resolution": {
+          "width": 640,
+          "height": 360
+         },
+         "codec": "h264",
+         "embed": {
+          "url": "https://kwik.cx/e/3GexHqPVlLPw"
+         }
+        }
+       ],
+       "embed": {
+        "url": "https://kwik.cx/e/TmZ9ymbik413"
+       }
+      },
+      {
+       "server": "animepahe",
+       "headers": {
+        "Referer": "https://kwik.cx/"
+       },
+       "streams": [],
+       "embed": {
+        "url": "https://kwik.cx/e/WO0e7DkW9dRm"
+       }
+      }
+     ]
+    },
+    {
+     "provider": "kickassanime",
+     "subtitles": [
+      {
+       "language": "en",
+       "label": "English",
+       "file": "https://subst.krussdomi.com/67d0c079169c31976b8d7970/67e0fa641967208e6c20882f.vtt",
+       "format": "vtt",
+       "default": true
+      },
+      {
+       "language": "de",
+       "label": "German",
+       "file": "https://subst.krussdomi.com/67d0c079169c31976b8d7970/67e0fa646fdb7bb73dce13bc.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "ar",
+       "label": "Arabic",
+       "file": "https://subst.krussdomi.com/67d0c079169c31976b8d7970/67e0fa64748c825a9259437f.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "fr",
+       "label": "French",
+       "file": "https://subst.krussdomi.com/67d0c079169c31976b8d7970/67e0fa656fdb7bb73dce13c8.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "it",
+       "label": "Italian",
+       "file": "https://subst.krussdomi.com/67d0c079169c31976b8d7970/67e0fa656fdb7bb73dce13ce.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "es",
+       "label": "Spanish",
+       "file": "https://subst.krussdomi.com/67d0c079169c31976b8d7970/67e0fa65748c825a9259438a.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "es",
+       "label": "Spanish (2)",
+       "file": "https://subst.krussdomi.com/67d0c079169c31976b8d7970/67e0fa65748c825a92594390.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "pt",
+       "label": "Portuguese",
+       "file": "https://subst.krussdomi.com/67d0c079169c31976b8d7970/67e0fa66274f877274b81216.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "ru",
+       "label": "Russian",
+       "file": "https://subst.krussdomi.com/67d0c079169c31976b8d7970/67e0fa66274f877274b8121c.vtt",
+       "format": "vtt",
+       "default": false
+      }
+     ],
+     "thumbnails": {
+      "vtt": "https://subst.krussdomi.com/67d0c079169c31976b8d7970/preview-4EC9L.vtt",
+      "sprite": null
+     },
+     "downloads": [],
+     "servers": [
+      {
+       "server": "Vid",
+       "headers": {
+        "Referer": "https://krussdomi.com/"
+       },
+       "streams": [
+        {
+         "url": "https://hls.krussdomi.com/manifest/67d0c079169c31976b8d7970/master.m3u8",
+         "format": "hls",
+         "quality": null,
+         "resolution": null,
+         "codec": null,
+         "embed": null
+        }
+       ],
+       "embed": {
+        "url": "https://krussdomi.com/cat-player/player?id=67d0c079169c31976b8d7970&source=vidstream&ln=en-US"
+       }
+      }
+     ]
+    },
+    {
+     "provider": "anikoto",
+     "subtitles": [
+      {
+       "language": "en",
+       "label": "English",
+       "file": "https://9ax9g.shadowharbor.website/anime/bb6d2babd7797d94d8f4a8600bc9b44e/b6ae2e4493d9f272eaef8ca4291d5d73/subtitles/eng-2.vtt",
+       "format": "vtt",
+       "default": true
+      }
+     ],
+     "thumbnails": null,
+     "downloads": [],
+     "servers": [
+      {
+       "server": "Vidstream-2",
+       "headers": {
+        "Referer": "https://megaplay.buzz/"
+       },
+       "streams": [
+        {
+         "url": "https://fetch.nexabloom.top/anime/bb6d2babd7797d94d8f4a8600bc9b44e/b6ae2e4493d9f272eaef8ca4291d5d73/master.m3u8?token=MTc5MDc5OTU2NXxiYjZkMmJhYmQ3Nzk3ZDk0ZDhmNGE4NjAwYmM5YjQ0ZS9iNmFlMmU0NDkzZDlmMjcyZWFlZjhjYTQyOTFkNWQ3Mw.u1LyjHBjcRzChOnQ1wVCHe5D1ogViaAXJyXhtRJsl0Q",
+         "format": "hls",
+         "quality": null,
+         "resolution": null,
+         "codec": null,
+         "embed": null
+        }
+       ],
+       "embed": {
+        "url": "https://megaplay.buzz/stream/s-2/107257/dub"
+       }
+      },
+      {
+       "server": "HD-1",
+       "headers": {
+        "Referer": "https://megaplay.buzz/"
+       },
+       "streams": [
+        {
+         "url": "https://megap.shiora.site/bb6d2babd7797d94d8f4a8600bc9b44e/b6ae2e4493d9f272eaef8ca4291d5d73/master.m3u8?token=MTc5MDc5OTU2NXxiYjZkMmJhYmQ3Nzk3ZDk0ZDhmNGE4NjAwYmM5YjQ0ZS9iNmFlMmU0NDkzZDlmMjcyZWFlZjhjYTQyOTFkNWQ3Mw.u1LyjHBjcRzChOnQ1wVCHe5D1ogViaAXJyXhtRJsl0Q",
+         "format": "hls",
+         "quality": null,
+         "resolution": null,
+         "codec": null,
+         "embed": null
+        }
+       ],
+       "embed": {
+        "url": "https://megaplay.buzz/stream/s-2/107257/dub?s=tcdn"
+       }
+      },
+      {
+       "server": "Vidstream-1 beta",
+       "headers": {
+        "Referer": "https://megaplay.buzz/"
+       },
+       "streams": [],
+       "embed": {
+        "url": "https://megaplay.buzz/videojs/stream/s-2/107257/dub"
+       }
+      }
+     ]
+    },
+    {
+     "provider": "aniwaves",
+     "subtitles": [],
+     "thumbnails": null,
+     "downloads": [],
+     "servers": [
+      {
+       "server": "Vidplay",
+       "headers": {
+        "Referer": "https://play.echovideo.ru/"
+       },
+       "streams": [
+        {
+         "url": "https://ru-ri-cdn3.echovideo.to/cdn/092e3d2d14736a0ad5386790dcd19fbaa7e17ab6cc76ef2351a88291319cd585f024713efd5bf1a3d59f4e24b0f61e28cdd7a184d080323aed85233537b55f82?t.m3u8",
+         "format": "hls",
+         "quality": null,
+         "resolution": null,
+         "codec": null,
+         "embed": null
+        }
+       ],
+       "embed": {
+        "url": "https://play.echovideo.ru/embed-1/43ur9-zPumvBv2IWW8AGYd6Glz__3x3pwxq7usgmwg4MrU20cpruiQHUU2SGrt2MLU6AQXuQyD1o00JBflADayzCIWc7HHZ1zLiNWHhDC9EpU5XA-LsoNmFU8d7a7FBsJUIL4ZeNirWsS9l-J8O_4wrfpwDyRwFN0m3xHjS5SbvbFaEN6FgDPiOJPTRuYfewdXvDnGWDzoDvILkTuBvpzg?v=1?asi=0&autoPlay=0&ao=0"
+       }
+      },
+      {
+       "server": "BYFMS",
+       "headers": {
+        "Referer": "https://mfw09.org/"
+       },
+       "streams": [],
+       "embed": {
+        "url": "https://mfw09.org/e/s2tkfgc6pe0f?v=1?asi=0&autoPlay=0&ao=0"
+       }
+      },
+      {
+       "server": "DGHG",
+       "headers": {
+        "Referer": "https://myvidplay.com/"
+       },
+       "streams": [],
+       "embed": {
+        "url": "https://myvidplay.com/e/7knlj049t2qn?v=1?asi=0&autoPlay=0&ao=0"
+       }
+      }
+     ]
+    },
+    {
+     "provider": "icarus",
+     "subtitles": [
+      {
+       "language": "en",
+       "label": "English.vtt",
+       "file": "https://vault-7.keeply.top/a/4100a03f8f9b0eeef516a7773234c77c6d58cda79ff86deec4a03c20bf7bddd06.jpeg",
+       "format": "vtt",
+       "default": false
+      }
+     ],
+     "thumbnails": {
+      "vtt": "https://vault-7.keeply.top/a/4f950db841d75ca587f0300f262ee61720f101d13578f3437f3bbc8871a9088bf.jpeg",
+      "sprite": null
+     },
+     "downloads": [
+      {
+       "url": "https://ultracloud.cc/d/AWJw5C8iR8mtoj5ZtV6HkAW5frvFcai4LYgKuYsOBU34HD7yg0lBtAYWcM4iL7so7PNHZkuKLG0gyQjxAu0xkQMu5YdFRs62TS7TevY10F02RroNAGJMyTBlvdwdMsKmsHD1ScLpVCBGhnaZOO7BKM6dalDUNaJYu72O7laqeCoi6y7efROz_S_J5H4rkp0SZA_gh6Yl66JkcRqnES4olgdjQ7r2ZvKZdo9Q",
+       "quality": null,
+       "size": null,
+       "fansub": null
+      }
+     ],
+     "servers": [
+      {
+       "server": "icarus-1-1",
+       "headers": {
+        "Origin": "https://ultracloud.cc",
+        "Referer": "https://ultracloud.cc/"
+       },
+       "embed": null,
+       "streams": [
+        {
+         "url": "https://vault-7.keeply.top/m/ATFxcdl9m9VCFBNb8Prc1EAKOnyodKZNn2uT9A1iwR2BtGOwS_y3PnU1wE5e22krOUgMH2OPSGSBgTvRyIAD7HFQCrqEq2hady1eq3yZWMwUy-8u5EczGhavRSBJb37U4E8uCvky2kIcOCIovZTUccgFP_5iEjttdRjtu4EkQNiFcL5Qvv-5N4pqYYSkYYfqzW67tzTXMFWCY2Oy-nTa7Tcr-VWG6i0O1zAlMU1KVEY_QMIPzr-X1UbOEzTcOhiiM-e_8kRGE7TKh7fwVKOtEtGvMJbKqA.m3u8",
+         "format": "hls",
+         "quality": null,
+         "resolution": null,
+         "codec": null,
+         "embed": null
+        }
+       ]
+      },
+      {
+       "server": "vault-6-direct-1",
+       "headers": {
+        "Origin": "https://ultracloud.cc",
+        "Referer": "https://ultracloud.cc/"
+       },
+       "embed": null,
+       "streams": [
+        {
+         "url": "https://vault-6.keeply.top/m/Ad9pyGWxFXnfiP4_s8mfPkF67f5g9fRV9dR3B6-kHxoC3TXA3KS_X5PMYQ1rPdAhX-OhKR5m6hS2L-Afhv4GdweH-JQijI-9Lfr7Sn9L3G69PHt7wsAxoJgvXYSuPBVQR24-jquE5ZjrMn-5wZrQnw6i5_pHjJYTg4mqXt9gKEEgjzj9O33HZbcfVYRarSKD5u1_jT99GN2fCjrWW3BGK9VwJnM8R0J8XO-8UrXSevf029oQ3INQ3Q7AMxGGq8o8LTWxNRGeU4jD5nPUNQWnwqt8wjmStw.m3u8",
+         "format": "hls",
+         "quality": null,
+         "resolution": null,
+         "codec": null,
+         "embed": null
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "track": "ssub",
+   "providers": [
+    {
+     "provider": "kickassanime",
+     "subtitles": [
+      {
+       "language": "en",
+       "label": "English",
+       "file": "https://subst.krussdomi.com/67d0c079169c31976b8d7970/67e0fa641967208e6c20882f.vtt",
+       "format": "vtt",
+       "default": true
+      },
+      {
+       "language": "de",
+       "label": "German",
+       "file": "https://subst.krussdomi.com/67d0c079169c31976b8d7970/67e0fa646fdb7bb73dce13bc.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "ar",
+       "label": "Arabic",
+       "file": "https://subst.krussdomi.com/67d0c079169c31976b8d7970/67e0fa64748c825a9259437f.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "fr",
+       "label": "French",
+       "file": "https://subst.krussdomi.com/67d0c079169c31976b8d7970/67e0fa656fdb7bb73dce13c8.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "it",
+       "label": "Italian",
+       "file": "https://subst.krussdomi.com/67d0c079169c31976b8d7970/67e0fa656fdb7bb73dce13ce.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "es",
+       "label": "Spanish",
+       "file": "https://subst.krussdomi.com/67d0c079169c31976b8d7970/67e0fa65748c825a9259438a.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "es",
+       "label": "Spanish (2)",
+       "file": "https://subst.krussdomi.com/67d0c079169c31976b8d7970/67e0fa65748c825a92594390.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "pt",
+       "label": "Portuguese",
+       "file": "https://subst.krussdomi.com/67d0c079169c31976b8d7970/67e0fa66274f877274b81216.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "ru",
+       "label": "Russian",
+       "file": "https://subst.krussdomi.com/67d0c079169c31976b8d7970/67e0fa66274f877274b8121c.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "id",
+       "label": "Bahasa Indonesia",
+       "file": "https://krussdomi.com/pinky-assets/subtitles/c1602994_id.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "en",
+       "label": "English (2)",
+       "file": "https://krussdomi.com/pinky-assets/subtitles/c1602994_en.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "th",
+       "label": "ภาษาไทย",
+       "file": "https://krussdomi.com/pinky-assets/subtitles/c1602994_th.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "zh-hant",
+       "label": "中文（繁体）",
+       "file": "https://krussdomi.com/pinky-assets/subtitles/c1602994_zh_hant.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "zh-hans",
+       "label": "中文（简体）",
+       "file": "https://krussdomi.com/pinky-assets/subtitles/c1602994_zh_hans.vtt",
+       "format": "vtt",
+       "default": false
+      }
+     ],
+     "thumbnails": {
+      "vtt": "https://subst.krussdomi.com/67d0c079169c31976b8d7970/preview-4EC9L.vtt",
+      "sprite": null
+     },
+     "downloads": [],
+     "servers": [
+      {
+       "server": "Vid",
+       "headers": {
+        "Referer": "https://krussdomi.com/"
+       },
+       "streams": [
+        {
+         "url": "https://hls.krussdomi.com/manifest/67d0c079169c31976b8d7970/master.m3u8",
+         "format": "hls",
+         "quality": null,
+         "resolution": null,
+         "codec": null,
+         "embed": null
+        }
+       ],
+       "embed": {
+        "url": "https://krussdomi.com/cat-player/player?id=67d0c079169c31976b8d7970&source=vidstream&ln=ja-JP"
+       }
+      },
+      {
+       "server": "Bird",
+       "headers": {
+        "Referer": "https://krussdomi.com/"
+       },
+       "streams": [],
+       "embed": {
+        "url": "https://krussdomi.com/cat-player/player?id=ZDBlZjQ4MjIxY2RjN2M1Mzk5YzEyOWUzYjU1ZTg5MGE6ZjJhYzEyM2NiNzQzNGI2YWMwYTg4MTMzMWFjZDFiMjc&type=dash"
+       }
+      }
+     ]
+    },
+    {
+     "provider": "anikoto",
+     "subtitles": [
+      {
+       "language": "ar",
+       "label": "Arabic",
+       "file": "https://sggwk.moonridge.website/anime/bb6d2babd7797d94d8f4a8600bc9b44e/b7d51fb7e838ee9b60dcdb34b953bc07/subtitles/ara-6.vtt",
+       "format": "vtt",
+       "default": true
+      },
+      {
+       "language": "en",
+       "label": "English",
+       "file": "https://sggwk.moonridge.website/anime/bb6d2babd7797d94d8f4a8600bc9b44e/b7d51fb7e838ee9b60dcdb34b953bc07/subtitles/eng-2.vtt",
+       "format": "vtt",
+       "default": true
+      },
+      {
+       "language": "fr",
+       "label": "French",
+       "file": "https://sggwk.moonridge.website/anime/bb6d2babd7797d94d8f4a8600bc9b44e/b7d51fb7e838ee9b60dcdb34b953bc07/subtitles/fre-7.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "de",
+       "label": "German",
+       "file": "https://sggwk.moonridge.website/anime/bb6d2babd7797d94d8f4a8600bc9b44e/b7d51fb7e838ee9b60dcdb34b953bc07/subtitles/ger-8.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "it",
+       "label": "Italian",
+       "file": "https://sggwk.moonridge.website/anime/bb6d2babd7797d94d8f4a8600bc9b44e/b7d51fb7e838ee9b60dcdb34b953bc07/subtitles/ita-9.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "po",
+       "label": "Portuguese (- Portuguese(Brazil))",
+       "file": "https://sggwk.moonridge.website/anime/bb6d2babd7797d94d8f4a8600bc9b44e/b7d51fb7e838ee9b60dcdb34b953bc07/subtitles/por-3.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "ru",
+       "label": "Russian",
+       "file": "https://sggwk.moonridge.website/anime/bb6d2babd7797d94d8f4a8600bc9b44e/b7d51fb7e838ee9b60dcdb34b953bc07/subtitles/rus-10.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "es",
+       "label": "Spanish",
+       "file": "https://sggwk.moonridge.website/anime/bb6d2babd7797d94d8f4a8600bc9b44e/b7d51fb7e838ee9b60dcdb34b953bc07/subtitles/spa-5.vtt",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "sp",
+       "label": "Spanish (- Spanish(Latin America))",
+       "file": "https://sggwk.moonridge.website/anime/bb6d2babd7797d94d8f4a8600bc9b44e/b7d51fb7e838ee9b60dcdb34b953bc07/subtitles/spa-4.vtt",
+       "format": "vtt",
+       "default": false
+      }
+     ],
+     "thumbnails": null,
+     "downloads": [],
+     "servers": [
+      {
+       "server": "Vidstream-2",
+       "headers": {
+        "Referer": "https://megaplay.buzz/"
+       },
+       "streams": [
+        {
+         "url": "https://fetch.nexabloom.top/anime/bb6d2babd7797d94d8f4a8600bc9b44e/b7d51fb7e838ee9b60dcdb34b953bc07/master.m3u8?token=MTc5MDc5OTU2NXxiYjZkMmJhYmQ3Nzk3ZDk0ZDhmNGE4NjAwYmM5YjQ0ZS9iN2Q1MWZiN2U4MzhlZTliNjBkY2RiMzRiOTUzYmMwNw.yQ1QGAYzQqXOqY2zh8DFMHLn1qqQdhRItssx1Kbda14",
+         "format": "hls",
+         "quality": null,
+         "resolution": null,
+         "codec": null,
+         "embed": null
+        }
+       ],
+       "embed": {
+        "url": "https://megaplay.buzz/stream/s-2/107257/sub"
+       }
+      },
+      {
+       "server": "HD-1",
+       "headers": {
+        "Referer": "https://megaplay.buzz/"
+       },
+       "streams": [
+        {
+         "url": "https://megap.shiora.top/bb6d2babd7797d94d8f4a8600bc9b44e/b7d51fb7e838ee9b60dcdb34b953bc07/master.m3u8?token=MTc5MDc5OTU2NXxiYjZkMmJhYmQ3Nzk3ZDk0ZDhmNGE4NjAwYmM5YjQ0ZS9iN2Q1MWZiN2U4MzhlZTliNjBkY2RiMzRiOTUzYmMwNw.yQ1QGAYzQqXOqY2zh8DFMHLn1qqQdhRItssx1Kbda14",
+         "format": "hls",
+         "quality": null,
+         "resolution": null,
+         "codec": null,
+         "embed": null
+        }
+       ],
+       "embed": {
+        "url": "https://megaplay.buzz/stream/s-2/107257/sub?s=tcdn"
+       }
+      },
+      {
+       "server": "Vidstream-1 beta",
+       "headers": {
+        "Referer": "https://megaplay.buzz/"
+       },
+       "streams": [],
+       "embed": {
+        "url": "https://megaplay.buzz/videojs/stream/s-2/107257/sub"
+       }
+      }
+     ]
+    },
+    {
+     "provider": "icarus",
+     "subtitles": [
+      {
+       "language": "ar",
+       "label": "Arabic.vtt",
+       "file": "https://vault-7.keeply.top/a/47f5870205f8300ffe286f47a66faa8a00a866e9f8b4c4c19bed77f30389ee793.jpeg",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "en",
+       "label": "English.vtt",
+       "file": "https://vault-7.keeply.top/a/4d036ed9564d27e6b93d39f1013c7c89d03c06628babea3d32e05aec92ac8751e.jpeg",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "fr",
+       "label": "French.vtt",
+       "file": "https://vault-7.keeply.top/a/488cff18537257bd52e60fd97c2bb6d9265044b0e64e0d01a33249c5722d70c0a.jpeg",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "ge",
+       "label": "German.vtt",
+       "file": "https://vault-7.keeply.top/a/47de41c99288e7c7e7452322230fd0e740cce8d1f9ced6b5ad5deacc5f2e56fa6.jpeg",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "it",
+       "label": "Italian.vtt",
+       "file": "https://vault-7.keeply.top/a/46eeba7d422e6d514b9eb155f2d8856b64270994149b2dbd6925a494a268af053.jpeg",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "po",
+       "label": "Portuguese - Portuguese Brazil.vtt",
+       "file": "https://vault-7.keeply.top/a/48acf454201e270e996ace2d1a8e7932301e1fcfd615e72357c1ee7545dfc7d58.jpeg",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "ru",
+       "label": "Russian.vtt",
+       "file": "https://vault-7.keeply.top/a/4aafff712a997b29a26b0b36e95d010d9d00acde21bf2ae9db1cddaef37ef3739.jpeg",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "sp",
+       "label": "Spanish - Spanish Latin America.vtt",
+       "file": "https://vault-7.keeply.top/a/439e5e712ffcf7cd7939208b0aea1a0709e893bf4c8be0b92c5aa55d94a4c0fd7.jpeg",
+       "format": "vtt",
+       "default": false
+      },
+      {
+       "language": "sp",
+       "label": "Spanish.vtt",
+       "file": "https://vault-7.keeply.top/a/4c35dd34be42694e2c47588ccdb2a821e78d386cab962092f37e7378ebca5daa7.jpeg",
+       "format": "vtt",
+       "default": false
+      }
+     ],
+     "thumbnails": {
+      "vtt": "https://vault-7.keeply.top/a/4f950db841d75ca587f0300f262ee61720f101d13578f3437f3bbc8871a9088bf.jpeg",
+      "sprite": null
+     },
+     "downloads": [
+      {
+       "url": "https://ultracloud.cc/d/Aa9-jsQBYy8kgbWL5I-js1bSrV7Dp-ueGDxvHdblzuK5idKGRBH5kAeLEF2VBVBfEXZnqwu06fr8pEaKlO9QbomIpkWgz00EIhXvh34zBPKR-VOxXM_HM-fNmvFKjGJGKwZvpki9pr8qVR4eHyF-Ew0mKVGOGuLgaYDr0uGazU-L0z8QOCwAHr5rZHfALzG-n8SuMzrVgxgIToJSN9mzXxZsv_O5MusMT-tY",
+       "quality": null,
+       "size": null,
+       "fansub": null
+      }
+     ],
+     "servers": [
+      {
+       "server": "icarus-2-1",
+       "headers": {
+        "Origin": "https://ultracloud.cc",
+        "Referer": "https://ultracloud.cc/"
+       },
+       "embed": null,
+       "streams": [
+        {
+         "url": "https://vault-7.keeply.top/m/AWqAEyY3Hs2xf5qLRMtcTLF8039-O6dx2zPjCgcQq3lmbVOWHwKuoDyV6bcAek35-O-b-IvYefh9PM4mShwhphGFOheMQpqR-rU_AkvtHwoK8Rq959Se5Uyf9FjTEtRRRIO_U2ARmvcJH9mKM1GSBJVYDxOBgi4y_T6dBOp2AnvzmJTm54ZE_Y730fvwgaL2MWQ-_PS5XEvvrJctTzPs50n6V3d0J01rLjYN2dcujSn3HwXV9iyxtqAODd3vSJlJ53bIH_g1SE6USN2fOJAq_u0H35AYtg.m3u8",
+         "format": "hls",
+         "quality": null,
+         "resolution": null,
+         "codec": null,
+         "embed": null
+        }
+       ]
+      },
+      {
+       "server": "vault-6-direct-2",
+       "headers": {
+        "Origin": "https://ultracloud.cc",
+        "Referer": "https://ultracloud.cc/"
+       },
+       "embed": null,
+       "streams": [
+        {
+         "url": "https://vault-6.keeply.top/m/AcgPpz9syDkFKafojBytkZxe_8qQQS39lmbcFYuVauPS5PYjCC8k76Qgn8NTDvb2-Yb4kvLb-vpg7y57SjrzMDJ6LSOJhrFJAOJG45QBQbZRs2r7oMnZ4bwcJPIkeGOCSLzcYGzZZWRozwXYdMzBaRCW_JFEcLbTnEpuWjpG8EnJDVladfc9OVgkz3H5LG9YS8uUWBrofUXu58dqrIjT_r_cChsd5wfW7Q6_CrTYSOj4VAPAGCLl0OY9sS8Qfkl0kegRp1ngci8dlsDW2uZgOCxyA1wdKw.m3u8",
+         "format": "hls",
+         "quality": null,
+         "resolution": null,
+         "codec": null,
+         "embed": null
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

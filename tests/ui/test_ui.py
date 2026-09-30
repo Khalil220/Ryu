@@ -523,31 +523,31 @@ def run(app, speech_log):
     check(wait_for(preferences.exists, 10) is not None, "Preferences opens again")
     if preferences.exists():
         provider = preferences.child_window(title="Provider", control_type="ComboBox")
-        provider.select("KickAssAnime")
+        provider.select("AniZone")
         base_url = preferences.child_window(title="Base URL", control_type="Edit")
-        check(wait_for(lambda: base_url.get_value() == "https://kaa.lt", 5) is not None,
-              f"choosing KickAssAnime shows its base URL ({base_url.get_value()})")
+        check(wait_for(lambda: base_url.get_value() == "https://anizone.to", 5) is not None,
+              f"choosing AniZone shows its base URL ({base_url.get_value()})")
         preferences.child_window(title="OK", control_type="Button").invoke()
-        check(wait_for(lambda: main.window_text() == "Ryu - KickAssAnime", 10) is not None,
+        check(wait_for(lambda: main.window_text() == "Ryu - AniZone", 10) is not None,
               f"the window title follows the provider ({main.window_text()})")
         check(wait_for(search.has_keyboard_focus, 5) is not None, "switching provider returns focus to where it was")
         check(wait_for(lambda: not poster_shown(main) and not synopsis_text(), 5) is not None,
               "switching provider hides the emptied details panel")
         search.set_edit_text("frieren")
         main.child_window(title="Search", control_type="Button").invoke()
-        first_kaa = wait_for(lambda: items(results)[0])
-        check(first_kaa is not None and first_kaa.window_text() ==
-              "Frieren: Beyond Journey's End, TV, 2023, subbed and dubbed",
-              f"KickAssAnime results read well ({first_kaa.window_text() if first_kaa else None})")
-        if first_kaa is not None:
+        first_other = wait_for(lambda: items(results)[0])
+        check(first_other is not None and first_other.window_text() ==
+              "Frieren: Beyond Journey's End, TV, 2023, 28 episodes",
+              f"AniZone results read well ({first_other.window_text() if first_other else None})")
+        if first_other is not None:
             results.set_focus()
-            first_kaa.select()
+            first_other.select()
             send_keys("{ENTER}")
             wait_for(lambda: items(episodes) or None, 30)
             items(episodes)[0].select()
             main.child_window(title="Play", control_type="Button").invoke()
             check(wait_for(lambda: seconds(time_box.get_value()) >= 3, 60) is not None,
-                  f"a KickAssAnime episode plays ({time_box.get_value()})")
+                  f"an AniZone episode plays ({time_box.get_value()})")
             audio_track = main.child_window(title="Audio", control_type="ComboBox")
             check(wait_for(audio_track.exists, 10) is not None, "the Audio box shows for an episode with several dubs")
             if audio_track.exists():
@@ -571,8 +571,8 @@ def run(app, speech_log):
             check(seconds(time_box.get_value()) < before_skip + 10,
                   f"I does not seek without an intro ({before_skip} to {time_box.get_value()})")
             send_keys("{ESC}")
-            check(wait_for(lambda: main.window_text() == "Ryu - KickAssAnime", 15) is not None,
-                  "Escape leaves the KickAssAnime episode")
+            check(wait_for(lambda: main.window_text() == "Ryu - AniZone", 15) is not None,
+                  "Escape leaves the AniZone episode")
 
     lines = spoken(speech_log)
     for expected in ["Loading episodes", "Loading Episode 1: The Journey's End", "Paused", "Playing",

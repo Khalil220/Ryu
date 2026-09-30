@@ -76,7 +76,7 @@ TEST_CASE("the primary provider's stream is used when it works") {
         return std::vector<Stream>{streamAt("https://primary.example/master.m3u8")};
     };
 
-    const auto found = findStream(http, server, {{"HiAnime", &primary}, {"KickAssAnime", &backup}}, frieren,
+    const auto found = findStream(http, server, {{"HiAnime", &primary}, {"AniZone", &backup}}, frieren,
                                   episodeTwo, Audio::Sub);
 
     CHECK(found.providerName == "HiAnime");
@@ -100,10 +100,10 @@ TEST_CASE("an episode the primary cannot play is found on the fallback by title 
         return std::vector<Stream>{streamAt("https://backup.example/master.m3u8")};
     };
 
-    const auto found = findStream(http, server, {{"HiAnime", &primary}, {"KickAssAnime", &backup}}, frieren,
+    const auto found = findStream(http, server, {{"HiAnime", &primary}, {"AniZone", &backup}}, frieren,
                                   episodeTwo, Audio::Dub);
 
-    CHECK(found.providerName == "KickAssAnime");
+    CHECK(found.providerName == "AniZone");
     CHECK(found.fromFallback);
     CHECK(found.stream.url == "https://backup.example/master.m3u8");
 }

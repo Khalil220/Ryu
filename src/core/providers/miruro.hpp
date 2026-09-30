@@ -4,19 +4,20 @@
 
 namespace ryu {
 
-class KickAssAnimeProvider : public Provider {
-public:
-    static constexpr const char* defaultBaseUrl = "https://kaa.lt";
+std::string decodeMiruroResponse(std::string_view body);
 
-    KickAssAnimeProvider(HttpClient& http, std::string baseUrl = defaultBaseUrl);
+class MiruroProvider : public Provider {
+public:
+    static constexpr const char* defaultBaseUrl = "https://www.miruro.tv";
+
+    MiruroProvider(HttpClient& http, std::string baseUrl = defaultBaseUrl);
 
     std::vector<Show> search(std::string_view query) override;
     std::vector<Episode> episodes(const Show& show) override;
     std::vector<Stream> streams(std::string_view episodeId, Audio audio) override;
 
 private:
-    std::string fetch(const std::string& url);
-    Stream resolvePlayer(const std::string& playerUrl, const std::string& server, Audio audio);
+    std::string fetch(const std::string& path);
 
     HttpClient& http_;
     std::string baseUrl_;

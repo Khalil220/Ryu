@@ -1,0 +1,666 @@
+{
+ "data": [
+  {
+   "episode_number": 1,
+   "absolute_number": 1,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "The Journey's End",
+   "synopsis": "The world celebrates the Demon King's defeat at the hands of the Hero and his companions. Now that their great adventure is over, what will Frieren the mage do next?",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/7SfqQVmW125ugsktoRVTnRXpAkd.jpg",
+   "aired_on": "2023-09-29",
+   "duration_seconds": 1800,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 3.221,
+     "end_seconds": 93.221
+    },
+    {
+     "kind": "mixed_op",
+     "start_seconds": 58.713,
+     "end_seconds": 148.713
+    },
+    {
+     "kind": "ed",
+     "start_seconds": 1417.135,
+     "end_seconds": 1507.135
+    }
+   ]
+  },
+  {
+   "episode_number": 2,
+   "absolute_number": 2,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "It Didn't Have to Be Magic...",
+   "synopsis": "Frieren instructs Fern in the use of magic while deciphering a grimoire for Heiter.",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/jVeDv4dZI5KbRQw3eD8RRiojUZ5.jpg",
+   "aired_on": "2023-09-29",
+   "duration_seconds": 1800,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 6.576,
+     "end_seconds": 96.576
+    },
+    {
+     "kind": "ed",
+     "start_seconds": 1460.445,
+     "end_seconds": 1550.197
+    }
+   ]
+  },
+  {
+   "episode_number": 3,
+   "absolute_number": 3,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "Killing Magic",
+   "synopsis": "While retracing the path she took on her adventure with her former traveling companions, Frieren confronts an old enemy.",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/5uVpkiIoMRCDaLcAxfG8Gc7VJWo.jpg",
+   "aired_on": "2023-09-29",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 1.35,
+     "end_seconds": 91.35
+    },
+    {
+     "kind": "ed",
+     "start_seconds": 1367,
+     "end_seconds": 1459
+    }
+   ]
+  },
+  {
+   "episode_number": 4,
+   "absolute_number": 4,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "The Land Where Souls Rest",
+   "synopsis": "Frieren and Fern pay a visit to Eisen, who requests their help in finding the notes of Flamme the Legendary Mage.",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/nYFUXvyrxCRwcOdIiqRdLJtVScj.jpg",
+   "aired_on": "2023-09-29",
+   "duration_seconds": 1800,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 1.679,
+     "end_seconds": 91.679
+    }
+   ]
+  },
+  {
+   "episode_number": 5,
+   "absolute_number": 5,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "Phantoms of the Dead",
+   "synopsis": "Frieren and Fern investigate ghost sightings at a village where people have started going missing.",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/ioJWXpvWXAEjK1ues1ZZBwdYOA0.jpg",
+   "aired_on": "2023-10-06",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 153.346,
+     "end_seconds": 243.346
+    },
+    {
+     "kind": "ed",
+     "start_seconds": 1370,
+     "end_seconds": 1460
+    }
+   ]
+  },
+  {
+   "episode_number": 6,
+   "absolute_number": 6,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "The Hero of the Village",
+   "synopsis": "Frieren and Fern enlist Stark's help to fight the solar dragon - but is he up to the task?",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/veuq90RbYrizOYc6RWjZHqhf2ii.jpg",
+   "aired_on": "2023-10-13",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 13.275496,
+     "end_seconds": 105.06922
+    },
+    {
+     "kind": "ed",
+     "start_seconds": 1371,
+     "end_seconds": 1460
+    }
+   ]
+  },
+  {
+   "episode_number": 7,
+   "absolute_number": 7,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "Like a Fairy Tale",
+   "synopsis": "After reflecting on the transient nature of the past as it exists in people's collective memories, Frieren unexpectedly runs into a sworn enemy.",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/qTS0N4eauUgqa64LVXJoJjfvpo6.jpg",
+   "aired_on": "2023-10-20",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 86.74038,
+     "end_seconds": 176.39885
+    },
+    {
+     "kind": "ed",
+     "start_seconds": 1370,
+     "end_seconds": 1470
+    }
+   ]
+  },
+  {
+   "episode_number": 8,
+   "absolute_number": 8,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "Frieren the Slayer",
+   "synopsis": "As tensions in Graf Granat's domain reach a breaking point, Fern and Stark find their own resolve - and Frieren resumes an old duty.",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/6m8vHkqJ8lESCxneLeXPNq5V08f.jpg",
+   "aired_on": "2023-10-27",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 153.58698,
+     "end_seconds": 243.53606
+    },
+    {
+     "kind": "ed",
+     "start_seconds": 1370,
+     "end_seconds": 1460
+    }
+   ]
+  },
+  {
+   "episode_number": 9,
+   "absolute_number": 9,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "Aura the Guillotine",
+   "synopsis": "While Fern and Stark make a temporary retreat with Graf Granat, Frieren's true foe awaits her outside the city.",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/yUeaBIwxbsPSri1oVBr2hNXVPYQ.jpg",
+   "aired_on": "2023-11-03",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 0.9698206,
+     "end_seconds": 90.268265
+    },
+    {
+     "kind": "ed",
+     "start_seconds": 1370,
+     "end_seconds": 1460
+    }
+   ]
+  },
+  {
+   "episode_number": 10,
+   "absolute_number": 10,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "A Powerful Mage",
+   "synopsis": "Frieren's many years of training under her teacher Flamme are tested in her confrontation with Aura the Guillotine. Will Aura's scales find her wanting?",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/5Sryn4O6eO6bsdWbz30NK84PrnQ.jpg",
+   "aired_on": "2023-11-10",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 67.1,
+     "end_seconds": 157.1
+    }
+   ]
+  },
+  {
+   "episode_number": 11,
+   "absolute_number": 11,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "Winter in the Northern Lands",
+   "synopsis": "Frieren and her companions continue their journey through the northern lands, but obstacles both natural and manmade still stand in their way.",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/jUtZqIcrvFhI7XkBA3I1tZtCWDH.jpg",
+   "aired_on": "2023-11-17",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 47,
+     "end_seconds": 136
+    },
+    {
+     "kind": "ed",
+     "start_seconds": 1370,
+     "end_seconds": 1460
+    }
+   ]
+  },
+  {
+   "episode_number": 12,
+   "absolute_number": 12,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "A Real Hero",
+   "synopsis": "Deep in the mountains of the northern lands, Frieren and her party arrive at the Village of the Sword, where they have another job to do.",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/4YV6QgyVjXx0KcmPoT535hOhCWv.jpg",
+   "aired_on": "2023-11-24",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 0,
+     "end_seconds": 90
+    },
+    {
+     "kind": "ed",
+     "start_seconds": 1370,
+     "end_seconds": 1470
+    }
+   ]
+  },
+  {
+   "episode_number": 13,
+   "absolute_number": 13,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "Aversion to One's Own Kind",
+   "synopsis": "While passing by a village in the woods of the northern lands, Frieren and party meet Sein, a gifted priest who is nonetheless corrupt enough to give even Heiter a run for his money. But what happened in his past?",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/jwkQw81qj1CNYEkW4ukZmK1YePC.jpg",
+   "aired_on": "2023-12-01",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 22.579144,
+     "end_seconds": 112.39057
+    }
+   ]
+  },
+  {
+   "episode_number": 14,
+   "absolute_number": 14,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "Privilege of the Young",
+   "synopsis": "The party arrives in a large and lively town with a bustling shopping district that Frieren once visited with Himmel, but something seems to have come up between Fern and Stark.",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/mQEU8qSpVEadU4Dl9j0Wkpfgwuv.jpg",
+   "aired_on": "2023-12-08",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 45.13643,
+     "end_seconds": 135.13643
+    },
+    {
+     "kind": "ed",
+     "start_seconds": 1370,
+     "end_seconds": 1460
+    }
+   ]
+  },
+  {
+   "episode_number": 15,
+   "absolute_number": 15,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "Smells Like Trouble",
+   "synopsis": "When the party happens upon a town whose inhabitants are all mysteriously asleep, it's time for their newest traveling companion to prove his mettle.",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/cOfKOSmmgXgvO0Mu2OwlVKsj7hU.jpg",
+   "aired_on": "2023-12-15",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 0,
+     "end_seconds": 90
+    },
+    {
+     "kind": "ed",
+     "start_seconds": 1460,
+     "end_seconds": 1470
+    }
+   ]
+  },
+  {
+   "episode_number": 16,
+   "absolute_number": 16,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "Long-Lived Friends",
+   "synopsis": "Frieren pays a visit to Old Man Voll, a long-lived friend of hers, with traveling companions in tow.",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/k8lmaH6EWTTGiRUKJVWx44Ydhhh.jpg",
+   "aired_on": "2023-12-22",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 85,
+     "end_seconds": 175
+    }
+   ]
+  },
+  {
+   "episode_number": 17,
+   "absolute_number": 17,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "Take Care",
+   "synopsis": "Now that Sein finally has a lead on the whereabouts of his long-lost friend, is it time for him and Frieren's party to part ways?",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/2LGPjsA3qfxrQRNyA1Hy2J6pMPY.jpg",
+   "aired_on": "2024-01-05",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "ed",
+     "start_seconds": 1370.9427,
+     "end_seconds": 1468.6957
+    }
+   ]
+  },
+  {
+   "episode_number": 18,
+   "absolute_number": 18,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "First-Class Mage Exam",
+   "synopsis": "Frieren and party finally arrive in Äußerst, ready to undergo the first-class mage exam, and meet a number of colorful characters who are there to do the same.",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/91NiTkE2yWsplPPI8LrjhAqRRfG.jpg",
+   "aired_on": "2024-01-12",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 0,
+     "end_seconds": 90
+    },
+    {
+     "kind": "ed",
+     "start_seconds": 1370,
+     "end_seconds": 1469
+    }
+   ]
+  },
+  {
+   "episode_number": 19,
+   "absolute_number": 19,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "Well-Laid Plans",
+   "synopsis": "Frieren and her new teammates hatch a plan to capture a Stille - but are the other teams just going to stand by and let it happen?",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/xJKt0TxvyUw9QjTiRNYJXmD5Gl5.jpg",
+   "aired_on": "2024-01-19",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 17.835108,
+     "end_seconds": 107.835106
+    }
+   ]
+  },
+  {
+   "episode_number": 20,
+   "absolute_number": 20,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "Necessary Killing",
+   "synopsis": "The first-class mage exam intensifies as fighting breaks out between the participants - and what's at stake might even be worth killing for.",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/8jNWhj11csvsG0wctcSso9phJkF.jpg",
+   "aired_on": "2024-01-26",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 104.47168,
+     "end_seconds": 194.47168
+    },
+    {
+     "kind": "ed",
+     "start_seconds": 1370,
+     "end_seconds": 1464
+    }
+   ]
+  },
+  {
+   "episode_number": 21,
+   "absolute_number": 21,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "The World of Magic",
+   "synopsis": "Frieren, Kanne, and Lawine struggle with the 13th party over possession of the Stille, but there'll be more surprises in store before their battle, and the first test, reach their conclusion.",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/piGXoFe6uSWRqiV1Kv40fJnepGb.jpg",
+   "aired_on": "2024-02-02",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 45.363644,
+     "end_seconds": 135.36365
+    }
+   ]
+  },
+  {
+   "episode_number": 22,
+   "absolute_number": 22,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "Future Enemies",
+   "synopsis": "After the conclusion of the first test, the exam participants have some time to kill in town. What do mages get up to on their days off?",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/xUbTT9y3ZsDh2HEmyQd8UfvNEA1.jpg",
+   "aired_on": "2024-02-09",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 25.397306,
+     "end_seconds": 115.39731
+    }
+   ]
+  },
+  {
+   "episode_number": 23,
+   "absolute_number": 23,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "Conquering the Labyrinth",
+   "synopsis": "The aspiring first-class mages now face their second test: conquering the Ruins of the King's Tomb. A simple task, or so the proctor claims, but there's a reason this particular dungeon remains unexplored.",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/tafHSu4qbxNwyRCKFhSBJgtJUhN.jpg",
+   "aired_on": "2024-02-16",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 45.378853,
+     "end_seconds": 135.37886
+    },
+    {
+     "kind": "ed",
+     "start_seconds": 1370,
+     "end_seconds": 1460
+    }
+   ]
+  },
+  {
+   "episode_number": 24,
+   "absolute_number": 24,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "Perfect Replicas",
+   "synopsis": "Due to the Spiegel, a legendary monster that can create perfect replicas of others, the test-takers who would conquer the Ruins of the King's Tomb must first face the ultimate enemy: themselves.",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/ynN96chZ1anKjrmeFlkWvHGLK0O.jpg",
+   "aired_on": "2024-02-23",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 54.467236,
+     "end_seconds": 144.46724
+    }
+   ]
+  },
+  {
+   "episode_number": 25,
+   "absolute_number": 25,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "A Fatal Vulnerability",
+   "synopsis": "A perfect imitation of Frieren stands between the test-takers and victory, but Fern believes she knows how to win. Is it time for the student to surpass the master?",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/t7NXmWJL9a4uyPQuv0vAvPvd5td.jpg",
+   "aired_on": "2024-03-01",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 45.641964,
+     "end_seconds": 135.64197
+    },
+    {
+     "kind": "ed",
+     "start_seconds": 1370,
+     "end_seconds": 1459
+    }
+   ]
+  },
+  {
+   "episode_number": 26,
+   "absolute_number": 26,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "The Height of Magic",
+   "synopsis": "To defeat Spiegel, Frieren and Fern fight against Frieren's replica, but have a tough time. Meanwhile, Denken, Lavine, and the others fight against the replicas, but the magic of Sense, a first-class mage and the exam's proctor, rages.",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/kovGQEJxKlJwG0YBvQn4JPLqwtP.jpg",
+   "aired_on": "2024-03-08",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 13.417,
+     "end_seconds": 103.417
+    },
+    {
+     "kind": "ed",
+     "start_seconds": 1370,
+     "end_seconds": 1459
+    }
+   ]
+  },
+  {
+   "episode_number": 27,
+   "absolute_number": 27,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "An Era of Humans",
+   "synopsis": "With the second test behind them, only one remains - but first, Frieren and Fern need to settle an important matter in town. What awaits them in the third test?",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/gU8G4cvHREYWQa3d0EhUvJSP2T8.jpg",
+   "aired_on": "2024-03-15",
+   "duration_seconds": 1500,
+   "finale_type": null,
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 26.682886,
+     "end_seconds": 116.682884
+    },
+    {
+     "kind": "ed",
+     "start_seconds": 1370,
+     "end_seconds": 1459
+    }
+   ]
+  },
+  {
+   "episode_number": 28,
+   "absolute_number": 28,
+   "aired_season_number": 1,
+   "kind": "regular",
+   "canon_type": "manga_canon",
+   "title": "It Would Be Embarrassing When We Met Again",
+   "synopsis": "As the first-class mage exam concludes and the test-takers go their separate ways, farewell leads to departure - but the next stage of Frieren's journey has only just begun.",
+   "thumbnail_url": "https://image.tmdb.org/t/p/original/rwVIbR6WXbsslVHcG3t4nvS1T53.jpg",
+   "aired_on": "2024-03-22",
+   "duration_seconds": 1500,
+   "finale_type": "season",
+   "skip_times": [
+    {
+     "kind": "op",
+     "start_seconds": 14.368892,
+     "end_seconds": 104.36889
+    },
+    {
+     "kind": "ed",
+     "start_seconds": 1372,
+     "end_seconds": 1438
+    }
+   ]
+  }
+ ],
+ "next_cursor": null,
+ "has_more": false
+}

@@ -52,7 +52,7 @@ TEST_CASE("saved settings load back unchanged") {
     settings.window = {-8, 40, 1600, 900, true};
     settings.readSubtitlesSubbed = false;
     settings.readSubtitlesDubbed = true;
-    settings.providerId = "kickassanime";
+    settings.providerId = "anizone";
     settings.baseUrlOverrides["hianime"] = "https://mirror.example";
     settings.subtitlesSubbed = {SubtitlePreference::Kind::Track, "Spanish (- Spanish(Latin America))", "spa"};
     settings.subtitlesDubbed = {SubtitlePreference::Kind::Off, "", ""};
@@ -67,8 +67,8 @@ TEST_CASE("saved settings load back unchanged") {
     CHECK(loaded.window == settings.window);
     CHECK_FALSE(loaded.readSubtitlesFor(Audio::Sub));
     CHECK(loaded.readSubtitlesFor(Audio::Dub));
-    CHECK(loaded.providerId == "kickassanime");
-    CHECK(loaded.baseUrl() == "https://kaa.lt");
+    CHECK(loaded.providerId == "anizone");
+    CHECK(loaded.baseUrl() == "https://anizone.to");
     CHECK(loaded.baseUrlFor(*findProvider("hianime")) == "https://mirror.example");
     CHECK(loaded.subtitlesFor(Audio::Sub) == settings.subtitlesSubbed);
     CHECK(loaded.subtitlesFor(Audio::Dub).kind == SubtitlePreference::Kind::Off);
@@ -148,11 +148,11 @@ TEST_CASE("rapid saves end with the last one on disk, and closing the store writ
             settings.audio = i % 2 == 0 ? Audio::Dub : Audio::Sub;
             store.save(settings);
         }
-        settings.providerId = "kickassanime";
+        settings.providerId = "anizone";
         store.save(settings);
     }
     const auto text = readText(path);
-    CHECK(text.find("Provider=kickassanime") != std::string::npos);
+    CHECK(text.find("Provider=anizone") != std::string::npos);
     CHECK(text.find("Audio=sub") != std::string::npos);
     CHECK_FALSE(std::filesystem::exists(directory / "settings.ini.tmp"));
     std::filesystem::remove_all(directory);

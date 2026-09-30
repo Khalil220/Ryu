@@ -4,7 +4,7 @@ An accessible anime player for Windows, written in C++ with wxWidgets and libmpv
 
 ## Features
 
-- Streams from HiAnime, KickAssAnime and AniZone, falling back to the other sites when an episode won't play
+- Streams from HiAnime, AniZone and Miruro, falling back to the other sites when an episode won't play
 - Subbed and dubbed audio, with the episode list limited to what's available in each
 - Every subtitle track an episode offers, and optional reading of subtitle lines through the screen reader
 - Audio language choice on episodes with several dubs

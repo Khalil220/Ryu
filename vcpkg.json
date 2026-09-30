@@ -6,6 +6,7 @@
     "doctest",
     "lexbor",
     "nlohmann-json",
-    "wxwidgets"
+    "wxwidgets",
+    "zlib"
   ]
 }

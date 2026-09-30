@@ -8,9 +8,9 @@ add_executable(ryu_unit_tests
     unit/test_encoding.cpp
     unit/test_format.cpp
     unit/test_html.cpp
-    unit/test_kickassanime.cpp
     unit/test_language.cpp
     unit/test_log.cpp
+    unit/test_miruro.cpp
     unit/test_hianime.cpp
     unit/test_hls.cpp
     unit/test_host_repair.cpp
@@ -31,7 +31,7 @@ add_executable(ryu_live_tests
     live/test_live_anizone.cpp
     live/test_live_fallback.cpp
     live/test_live_hianime.cpp
-    live/test_live_kickassanime.cpp
+    live/test_live_miruro.cpp
     live/test_live_repair.cpp
     live/test_live_update.cpp
 )

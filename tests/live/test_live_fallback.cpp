@@ -1,7 +1,7 @@
 #include "http.hpp"
 #include "playlist_server.hpp"
 #include "providers/hianime.hpp"
-#include "providers/kickassanime.hpp"
+#include "providers/miruro.hpp"
 #include "stream_finder.hpp"
 
 #include <doctest/doctest.h>
@@ -19,11 +19,11 @@ public:
 
 }
 
-TEST_CASE("live: a HiAnime episode that the primary cannot play is found on KickAssAnime") {
+TEST_CASE("live: a HiAnime episode that the primary cannot play is found on Miruro") {
     CurlHttpClient http;
     PlaylistServer server;
     HiAnimeProvider hianime(http);
-    KickAssAnimeProvider kickass(http);
+    MiruroProvider miruro(http);
     EmptyProvider nothing;
 
     const auto shows = hianime.search("frieren");
@@ -32,16 +32,13 @@ TEST_CASE("live: a HiAnime episode that the primary cannot play is found on Kick
     const auto episodes = hianime.episodes(show);
     REQUIRE(episodes.size() > 1);
 
-    const auto found = findStream(http, server, {{"Nothing", &nothing}, {"KickAssAnime", &kickass}}, show,
-                                  episodes[1], Audio::Dub);
+    const auto found = findStream(http, server, {{"Nothing", &nothing}, {"Miruro", &miruro}}, show, episodes[1],
+                                  Audio::Dub);
 
-    CHECK(found.providerName == "KickAssAnime");
+    CHECK(found.providerName == "Miruro");
     CHECK(found.fromFallback);
-    const bool direct = found.stream.url.find("krussdomi") != std::string::npos;
-    const bool repaired = found.stream.url.starts_with("http://127.0.0.1:") && !found.repairedHosts.empty();
-    CHECK((direct || repaired));
-    CHECK(found.stream.audioLanguage == "eng,en");
-    MESSAGE("Fallback stream: " << found.stream.url);
+    CHECK(found.stream.audioLanguage == "eng,en,English");
+    MESSAGE("Fallback stream: " << found.stream.server << " " << found.stream.url);
     for (const auto& host : found.repairedHosts) {
         MESSAGE("Routed around dead host: " << host);
     }

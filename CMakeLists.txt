@@ -10,6 +10,7 @@ if(MSVC)
 endif()
 
 find_package(CURL CONFIG REQUIRED)
+find_package(ZLIB REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(lexbor CONFIG REQUIRED)
 find_package(wxWidgets CONFIG REQUIRED)
