@@ -81,7 +81,7 @@ try {
         $notes = if ($previous) {
             (git log --pretty='- %s' "$previous..HEAD") -join "`n"
         } else {
-            'First release of Ryu.'
+            'Initial release.'
         }
         $notesFile = Join-Path $dist 'notes.md'
         [IO.File]::WriteAllText($notesFile, "$notes`n")
