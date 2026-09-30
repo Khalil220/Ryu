@@ -106,3 +106,19 @@ TEST_CASE("distinctTracks keeps tracks that share a language but not a name") {
     const std::vector<TrackEntry> tracks{{1, "English", "eng", true}, {2, "English (CC)", "eng", false}};
     CHECK(distinctTracks(tracks).size() == 2);
 }
+
+TEST_CASE("inRequestedOrder puts added tracks back in the order they were requested") {
+    const std::vector<std::string> requested{"https://x/ar.vtt", "https://x/en.vtt", "https://x/fr.vtt"};
+    const std::vector<TrackEntry> tracks{{1, "Embedded", "ja", false, ""},
+                                         {2, "French", "fr", false, "https://x/fr.vtt"},
+                                         {3, "Arabic", "ar", false, "https://x/ar.vtt"},
+                                         {4, "English", "en", true, "https://x/en.vtt"}};
+
+    const auto ordered = inRequestedOrder(tracks, requested);
+
+    REQUIRE(ordered.size() == 4);
+    CHECK(ordered[0].label == "Embedded");
+    CHECK(ordered[1].label == "Arabic");
+    CHECK(ordered[2].label == "English");
+    CHECK(ordered[3].label == "French");
+}

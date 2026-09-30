@@ -74,6 +74,7 @@ private:
     std::function<void(const std::string&)> onAudioChosen_;
     mpv_handle* mpv_ = nullptr;
     std::vector<Subtitle> pendingSubtitles_;
+    std::vector<std::string> subtitleOrder_;
     std::vector<int64_t> subtitleTracks_;
     std::vector<std::string> subtitleLanguages_;
     SubtitlePreference subtitlePreference_;

@@ -442,6 +442,9 @@ def run(app, speech_log):
     check(read.get_toggle_state() == 1, "subtitles are read aloud by default for a subbed episode")
     check(wait_for(lambda: choice_count(subtitles) > 2, 20) is not None,
           f"the subbed episode brings its own subtitle tracks ({choice_count(subtitles) - 1} tracks)")
+    wait_for(lambda: choice_count(subtitles) == 10, 20)
+    loaded = choice_texts(subtitles)[1:]
+    check(loaded == sorted(loaded), f"subtitle tracks keep the site's alphabetical order ({loaded})")
     mark = len(spoken(speech_log))
     known = re.compile(r"^(\d+:\d\d( of \d+:\d\d)?|Volume \d+|Paused|Playing|Reading subtitles|Not reading subtitles|"
                        r"Skipped intro|Intro|End of episode|Loading .*|From .*|\[backend\].*)$")

@@ -183,4 +183,13 @@ std::vector<TrackEntry> distinctTracks(const std::vector<TrackEntry>& tracks) {
     return result;
 }
 
+std::vector<TrackEntry> inRequestedOrder(std::vector<TrackEntry> tracks, const std::vector<std::string>& requested) {
+    const auto rank = [&](const TrackEntry& track) {
+        const auto it = std::ranges::find(requested, track.source);
+        return it == requested.end() ? 0 : std::distance(requested.begin(), it) + 1;
+    };
+    std::ranges::stable_sort(tracks, {}, rank);
+    return tracks;
+}
+
 }

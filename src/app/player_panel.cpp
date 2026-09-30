@@ -458,6 +458,10 @@ void PlayerPanel::processEvents() {
             }
             break;
         case MPV_EVENT_FILE_LOADED:
+            subtitleOrder_.clear();
+            for (const auto& subtitle : pendingSubtitles_) {
+                subtitleOrder_.push_back(subtitle.url);
+            }
             if (const auto chosen = pickSubtitle(pendingSubtitles_, subtitlePreference_)) {
                 for (size_t i = 0; i < pendingSubtitles_.size(); ++i) {
                     const auto& subtitle = pendingSubtitles_[i];
@@ -564,25 +568,28 @@ void PlayerPanel::refreshSubtitles(const mpv_node& tracks) {
     if (tracks.format != MPV_FORMAT_NODE_ARRAY) {
         return;
     }
+    std::vector<TrackEntry> found;
+    for (int i = 0; i < tracks.u.list->num; ++i) {
+        const auto& track = tracks.u.list->values[i];
+        const auto* id = field(track, "id");
+        if (text(field(track, "type")) != "sub" || !id || id->format != MPV_FORMAT_INT64) {
+            continue;
+        }
+        const auto language = text(field(track, "lang"));
+        const auto* isSelected = field(track, "selected");
+        found.push_back({id->u.int64, trackLabel(text(field(track, "title")), language, id->u.int64), language,
+                         isSelected && isSelected->format == MPV_FORMAT_FLAG && isSelected->u.flag,
+                         text(field(track, "external-filename"))});
+    }
     std::vector<int64_t> ids;
     std::vector<std::string> languages;
     wxArrayString labels;
     int selected = 0;
-    for (int i = 0; i < tracks.u.list->num; ++i) {
-        const auto& track = tracks.u.list->values[i];
-        if (text(field(track, "type")) != "sub") {
-            continue;
-        }
-        const auto* id = field(track, "id");
-        if (!id || id->format != MPV_FORMAT_INT64) {
-            continue;
-        }
-        const auto label = trackLabel(text(field(track, "title")), text(field(track, "lang")), id->u.int64);
-        ids.push_back(id->u.int64);
-        languages.push_back(text(field(track, "lang")));
-        labels.Add(wxString::FromUTF8(label));
-        const auto* isSelected = field(track, "selected");
-        if (isSelected && isSelected->format == MPV_FORMAT_FLAG && isSelected->u.flag) {
+    for (const auto& track : inRequestedOrder(std::move(found), subtitleOrder_)) {
+        ids.push_back(track.id);
+        languages.push_back(track.language);
+        labels.Add(wxString::FromUTF8(track.label));
+        if (track.selected) {
             selected = static_cast<int>(ids.size());
         }
     }
