@@ -34,6 +34,12 @@
 
 namespace ryu {
 
+namespace {
+
+constexpr int slowLoadMilliseconds = 700;
+
+}
+
 struct ProviderSession {
     std::shared_ptr<HttpClient> http;
     std::vector<std::unique_ptr<Provider>> providers;
@@ -67,6 +73,8 @@ MainFrame::MainFrame(SettingsStore& store)
     normalRect_ = GetRect();
     detailsTimer_.SetOwner(this);
     Bind(wxEVT_TIMER, [this](wxTimerEvent&) { loadDetails(); }, detailsTimer_.GetId());
+    loadingTimer_.SetOwner(this);
+    Bind(wxEVT_TIMER, [this](wxTimerEvent&) { announce(loadingMessage_); }, loadingTimer_.GetId());
     const auto trackNormalRect = [this](wxEvent& event) {
         if (!IsMaximized() && !IsFullScreen() && !IsIconized()) {
             normalRect_ = GetRect();
@@ -263,6 +271,7 @@ void MainFrame::startSearch() {
 
     const unsigned generation = ++searchGeneration_;
     ++episodeGeneration_;
+    loadFinished();
     shows_.clear();
     episodes_.clear();
     visibleEpisodes_.clear();
@@ -318,7 +327,7 @@ void MainFrame::loadEpisodes() {
     episodeList_->setItems({});
     const auto title = wxString::FromUTF8(currentShow_.title);
     setStatus("Loading episodes of " + title + "...");
-    announce("Loading episodes");
+    announceIfSlow("Loading episodes");
 
     auto session = session_;
     runInBackground<std::vector<Episode>>(
@@ -327,6 +336,7 @@ void MainFrame::loadEpisodes() {
             if (generation != episodeGeneration_) {
                 return;
             }
+            loadFinished();
             episodes_ = std::move(episodes);
             showEpisodes(0);
             setStatus(episodes_.empty() ? "No episodes available for " + title
@@ -338,6 +348,7 @@ void MainFrame::loadEpisodes() {
         },
         [this, generation](const std::string& message) {
             if (generation == episodeGeneration_) {
+                loadFinished();
                 setStatus("Could not load episodes");
                 showError("Could not load episodes", message);
             }
@@ -471,7 +482,7 @@ void MainFrame::loadPoster(const std::string& url, unsigned generation) {
         [](const std::string&) {});
 }
 
-void MainFrame::playEpisode(size_t row) {
+void MainFrame::playEpisode(size_t row, bool announceNow) {
     if (row >= visibleEpisodes_.size()) {
         return;
     }
@@ -483,7 +494,12 @@ void MainFrame::playEpisode(size_t row) {
     const unsigned generation = ++streamGeneration_;
     pendingEpisode_ = index;
     setStatus("Loading " + title + "...");
-    announce("Loading " + label);
+    if (announceNow) {
+        loadFinished();
+        announce("Loading " + label);
+    } else {
+        announceIfSlow("Loading " + label);
+    }
 
     auto session = session_;
     auto server = playlistServer_;
@@ -498,6 +514,7 @@ void MainFrame::playEpisode(size_t row) {
                 return;
             }
             pendingEpisode_.reset();
+            loadFinished();
             try {
                 playingAudio_ = found.stream.audio;
                 player_->play(found.stream, label.utf8_string(), settings_.readSubtitlesFor(found.stream.audio),
@@ -520,6 +537,7 @@ void MainFrame::playEpisode(size_t row) {
             logLine("Could not load the episode: " + message);
             if (generation == streamGeneration_) {
                 pendingEpisode_.reset();
+                loadFinished();
                 setStatus("Could not load the episode");
                 showError("Could not load the episode", message);
             }
@@ -543,7 +561,7 @@ void MainFrame::stepEpisode(int delta) {
         announce("This is the last episode");
         return;
     }
-    playEpisode(static_cast<size_t>(target));
+    playEpisode(static_cast<size_t>(target), true);
 }
 
 void MainFrame::showPlayer(const wxString& title) {
@@ -558,6 +576,7 @@ void MainFrame::showPlayer(const wxString& title) {
 void MainFrame::showBrowser() {
     ++streamGeneration_;
     pendingEpisode_.reset();
+    loadFinished();
     player_->stop();
     book_->ChangeSelection(0);
     SetTitle("Ryu - " + wxString::FromUTF8(settings_.provider().name));
@@ -590,6 +609,7 @@ void MainFrame::showPreferences() {
     if (providerChanged) {
         ++searchGeneration_;
         ++episodeGeneration_;
+        loadFinished();
         shows_.clear();
         episodes_.clear();
         visibleEpisodes_.clear();
@@ -600,6 +620,16 @@ void MainFrame::showPreferences() {
         episodeList_->setItems({});
         setStatus("Using " + wxString::FromUTF8(settings_.provider().name));
     }
+}
+
+void MainFrame::announceIfSlow(const wxString& message) {
+    loadingMessage_ = message;
+    loadingTimer_.StartOnce(slowLoadMilliseconds);
+}
+
+void MainFrame::loadFinished() {
+    loadingTimer_.Stop();
+    loadingMessage_.clear();
 }
 
 void MainFrame::setStatus(const wxString& text) {

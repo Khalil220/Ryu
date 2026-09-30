@@ -575,8 +575,7 @@ def run(app, speech_log):
                   "Escape leaves the AniZone episode")
 
     lines = spoken(speech_log)
-    for expected in ["Loading episodes", "Loading Episode 1: The Journey's End", "Paused", "Playing",
-                     "This is the first episode", "Loading Episode 2: It Didn't Have to Be Magic..."]:
+    for expected in ["Paused", "Playing", "This is the first episode", "Loading Episode 2: It Didn't Have to Be Magic..."]:
         check(expected in lines, f"announced: {expected}")
     for unexpected in ["Searching for frieren", "4 results", "28 episodes"]:
         check(unexpected not in lines, f"not announced: {unexpected}")

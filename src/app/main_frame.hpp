@@ -47,7 +47,9 @@ private:
     void loadDetails();
     void loadPoster(const std::string& url, unsigned generation);
     wxString episodeCountLabel(bool mentionAudio) const;
-    void playEpisode(size_t index);
+    void playEpisode(size_t index, bool announceNow = false);
+    void announceIfSlow(const wxString& message);
+    void loadFinished();
     void stepEpisode(int delta);
     void showPlayer(const wxString& title);
     void showBrowser();
@@ -77,6 +79,8 @@ private:
     unsigned posterGeneration_ = 0;
     std::map<std::string, wxBitmap> posterCache_;
     wxTimer detailsTimer_;
+    wxTimer loadingTimer_;
+    wxString loadingMessage_;
     std::set<std::string> described_;
 
     wxSimplebook* book_ = nullptr;
