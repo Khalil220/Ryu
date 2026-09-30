@@ -21,6 +21,7 @@ An accessible anime player for Windows, written in C++ with wxWidgets and libmpv
 - N and P: next and previous episode
 - F11: full screen
 - Escape: leave full screen, or go back to the episode list
+- Ctrl+D in the results: speak the selected show's synopsis
 - Ctrl+P: preferences
 - F1: all keyboard shortcuts
 

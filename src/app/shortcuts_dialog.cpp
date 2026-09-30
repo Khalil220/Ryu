@@ -13,11 +13,12 @@ namespace ryu {
 
 namespace {
 
-constexpr std::array<std::pair<const char*, const char*>, 22> shortcuts{{
+constexpr std::array<std::pair<const char*, const char*>, 23> shortcuts{{
     {"Enter", "Search, open the selected show, or play the selected episode"},
     {"Alt+S", "Search box"},
     {"Alt+R", "Results"},
-    {"Alt+Y", "Synopsis"},
+    {"Ctrl+D in Results", "Speak the synopsis"},
+    {"Applications key in Results", "Menu for the selected show"},
     {"Alt+E", "Episodes"},
     {"Alt+A", "Audio"},
     {"Ctrl+P", "Preferences"},

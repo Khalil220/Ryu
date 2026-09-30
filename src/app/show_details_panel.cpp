@@ -1,19 +1,70 @@
 #include "show_details_panel.hpp"
 
-#include "accessibility.hpp"
 #include "format.hpp"
 
 #include <wx/image.h>
+#include <wx/scrolwin.h>
 #include <wx/settings.h>
 #include <wx/simplebook.h>
 #include <wx/sizer.h>
 #include <wx/statbmp.h>
 #include <wx/stattext.h>
-#include <wx/textctrl.h>
+#include <wx/textwrapper.h>
 
 #include <algorithm>
 
 namespace ryu {
+
+namespace {
+
+class LineCounter : public wxTextWrapper {
+public:
+    int lines = 1;
+
+protected:
+    void OnOutputLine(const wxString&) override {}
+    void OnNewLine() override { ++lines; }
+};
+
+}
+
+class SynopsisView : public wxScrolled<wxWindow> {
+public:
+    explicit SynopsisView(wxWindow* parent) : wxScrolled<wxWindow>(parent) {
+        text_ = new wxStaticText(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
+                                 wxST_NO_AUTORESIZE);
+        SetScrollRate(0, FromDIP(8));
+        ShowScrollbars(wxSHOW_SB_NEVER, wxSHOW_SB_DEFAULT);
+        Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
+            event.Skip();
+            CallAfter([this] { fit(); });
+        });
+    }
+
+    bool AcceptsFocus() const override { return false; }
+    bool AcceptsFocusFromKeyboard() const override { return false; }
+
+    void setText(const wxString& text) {
+        text_->SetLabelText(text);
+        Scroll(0, 0);
+        fit();
+    }
+
+private:
+    void fit() {
+        const int width = GetClientSize().GetWidth();
+        if (width <= 0) {
+            return;
+        }
+        LineCounter counter;
+        counter.Wrap(text_, text_->GetLabelText(), width);
+        const int height = (counter.lines + 1) * text_->GetCharHeight();
+        text_->SetSize(0, 0, width, height);
+        SetVirtualSize(width, height);
+    }
+
+    wxStaticText* text_ = nullptr;
+};
 
 ShowDetailsPanel::ShowDetailsPanel(wxWindow* parent) : wxPanel(parent), posterSize_(FromDIP(wxSize(160, 240))) {
     book_ = new wxSimplebook(this);
@@ -39,9 +90,7 @@ ShowDetailsPanel::ShowDetailsPanel(wxWindow* parent) : wxPanel(parent), posterSi
     info_ = new wxStaticText(page, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxST_ELLIPSIZE_END);
     info_->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT));
     text->Add(info_, 0, wxEXPAND | wxBOTTOM, FromDIP(10));
-    synopsis_ = new wxTextCtrl(page, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
-                               wxTE_MULTILINE | wxTE_READONLY | wxBORDER_NONE);
-    synopsis_->SetBackgroundColour(page->GetBackgroundColour());
+    synopsis_ = new SynopsisView(page);
     text->Add(synopsis_, 1, wxEXPAND);
     row->Add(text, 1, wxEXPAND);
     page->SetSizer(row);
@@ -51,15 +100,13 @@ ShowDetailsPanel::ShowDetailsPanel(wxWindow* parent) : wxPanel(parent), posterSi
     auto* sizer = new wxBoxSizer(wxVERTICAL);
     sizer->Add(book_, 1, wxEXPAND);
     SetSizer(sizer);
-    setAccessibleName(synopsis_, "Synopsis");
-    setAccessibleShortcut(synopsis_, "Alt+Y");
 }
 
 void ShowDetailsPanel::showDetails(const ryu::Show& show) {
     book_->ChangeSelection(1);
     title_->SetLabelText(wxString::FromUTF8(show.title));
     info_->SetLabelText(wxString::FromUTF8(showDetailsLine(show)));
-    synopsis_->ChangeValue(show.synopsis.empty() ? wxString("No synopsis available.") : wxString::FromUTF8(show.synopsis));
+    synopsis_->setText(show.synopsis.empty() ? wxString("No synopsis available.") : wxString::FromUTF8(show.synopsis));
     poster_->SetBitmap(wxBitmapBundle());
     book_->GetPage(1)->Layout();
 }
@@ -79,7 +126,7 @@ void ShowDetailsPanel::setPoster(const wxImage& image) {
 void ShowDetailsPanel::clear() {
     title_->SetLabelText(wxEmptyString);
     info_->SetLabelText(wxEmptyString);
-    synopsis_->ChangeValue(wxEmptyString);
+    synopsis_->setText(wxEmptyString);
     poster_->SetBitmap(wxBitmapBundle());
     book_->ChangeSelection(0);
 }

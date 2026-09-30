@@ -40,6 +40,7 @@ private:
     void loadEpisodes();
     void showEpisodes(size_t preferred);
     void showDetailsFor(long row);
+    void speakSynopsis();
     void loadPoster(const std::string& url, unsigned generation);
     wxString episodeCountLabel(bool mentionAudio) const;
     void playEpisode(size_t index);

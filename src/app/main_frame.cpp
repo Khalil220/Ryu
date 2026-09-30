@@ -150,10 +150,6 @@ void MainFrame::createControls() {
     playRow->Add(playButton_, 0, wxALIGN_CENTER_VERTICAL);
     sizer->Add(playRow, 0, wxALL, gap);
 
-    const int synopsisId = wxWindow::NewControlId();
-    wxAcceleratorEntry browseKeys[] = {{wxACCEL_ALT, 'Y', synopsisId}};
-    panel->SetAcceleratorTable(wxAcceleratorTable(1, browseKeys));
-    panel->Bind(wxEVT_MENU, [this](wxCommandEvent&) { details_->synopsis()->SetFocus(); }, synopsisId);
 
     panel->SetSizer(sizer);
 
@@ -179,6 +175,30 @@ void MainFrame::createControls() {
     searchButton_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { startSearch(); });
     results_->Bind(wxEVT_LIST_ITEM_ACTIVATED, [this](wxListEvent&) { loadEpisodes(); });
     results_->Bind(wxEVT_LIST_ITEM_SELECTED, [this](wxListEvent& event) { showDetailsFor(event.GetIndex()); });
+    results_->Bind(wxEVT_KEY_DOWN, [this](wxKeyEvent& event) {
+        if (event.GetKeyCode() == 'D' && event.GetModifiers() == wxMOD_CONTROL) {
+            speakSynopsis();
+            return;
+        }
+        event.Skip();
+    });
+    const int speakSynopsisId = wxWindow::NewControlId();
+    results_->Bind(wxEVT_CONTEXT_MENU, [this, speakSynopsisId](wxContextMenuEvent& event) {
+        const long row = results_->GetFirstSelected();
+        if (row < 0 || static_cast<size_t>(row) >= shows_.size()) {
+            return;
+        }
+        wxMenu menu;
+        menu.Append(speakSynopsisId, "&Speak synopsis\tCtrl+D");
+        auto position = event.GetPosition();
+        if (position == wxDefaultPosition) {
+            wxRect item;
+            results_->GetItemRect(row, item);
+            position = results_->ClientToScreen(item.GetBottomLeft());
+        }
+        results_->PopupMenu(&menu, results_->ScreenToClient(position));
+    });
+    results_->Bind(wxEVT_MENU, [this](wxCommandEvent&) { speakSynopsis(); }, speakSynopsisId);
     episodeList_->Bind(wxEVT_LIST_ITEM_ACTIVATED,
                        [this](wxListEvent& event) { playEpisode(static_cast<size_t>(event.GetIndex())); });
     playButton_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { playEpisode(episodeList_->selectedIndex()); });
@@ -335,6 +355,15 @@ wxString MainFrame::episodeCountLabel(bool mentionAudio) const {
                           : selectedAudio() == Audio::Dub ? wxString("dubbed ")
                                                           : wxString("subbed ");
     return count == 1 ? "1 " + kind + "episode" : wxString::Format("%zu %sepisodes", count, kind);
+}
+
+void MainFrame::speakSynopsis() {
+    const auto row = results_->selectedIndex();
+    if (row >= shows_.size()) {
+        return;
+    }
+    const auto& synopsis = shows_[row].synopsis;
+    announce(synopsis.empty() ? wxString("No synopsis available") : wxString::FromUTF8(synopsis));
 }
 
 void MainFrame::showDetailsFor(long row) {

@@ -114,15 +114,36 @@ def run(app, speech_log):
         check(any(first.window_text() in line and re.search(r"\b1 of 4\b", line) for line in heard),
               f"NVDA says the first result with its position when tabbing into the list ({heard})")
 
-    synopsis = main.child_window(title="Synopsis", control_type="Edit")
-    check(wait_for(lambda: synopsis.get_value().startswith("During their decade-long quest"), 10) is not None,
-          "the selected result's synopsis is shown")
-    check(wait_for(lambda: synopsis.get_value().endswith("a new tale is about to begin."), 15) is not None,
-          f"the full synopsis loads from the show page ({synopsis.get_value()[-40:]})")
+    def synopsis_text():
+        return next((text.window_text() for text in main.descendants(control_type="Text")
+                     if text.window_text().startswith("During their decade-long quest")), "")
+
+    check(wait_for(lambda: synopsis_text() or None, 10) is not None, "the selected result's synopsis is shown")
+    check(wait_for(lambda: synopsis_text().endswith("a new tale is about to begin."), 15) is not None,
+          f"the full synopsis loads from the show page ({synopsis_text()[-40:]})")
+    check("\n" not in synopsis_text(), "the synopsis keeps its sentences whole instead of hard line breaks")
+
+    def spoke_synopsis(mark):
+        return any(line.startswith("During their decade-long quest") for line in spoken(speech_log)[mark:])
+
     results.set_focus()
     wait_for(lambda: results.has_keyboard_focus() or first.has_keyboard_focus(), 5)
-    send_keys("%y", vk_packet=False)
-    check(wait_for(synopsis.has_keyboard_focus, 5) is not None, "Alt+Y moves to the synopsis")
+    mark = len(spoken(speech_log))
+    send_keys("^d", vk_packet=False)
+    check(wait_for(lambda: spoke_synopsis(mark), 5) is not None, "Ctrl+D in the results speaks the synopsis")
+    mark = len(spoken(speech_log))
+    send_keys("+{F10}")
+    menu_item = Desktop(backend="uia").window(control_type="Menu").child_window(title_re="Speak synopsis.*",
+                                                                                control_type="MenuItem")
+    check(wait_for(menu_item.exists, 5) is not None, "the results context menu offers Speak synopsis")
+    if menu_item.exists():
+        send_keys("{DOWN}{ENTER}")
+        check(wait_for(lambda: spoke_synopsis(mark), 5) is not None, "Speak synopsis in the menu speaks it")
+    search.set_focus()
+    mark = len(spoken(speech_log))
+    send_keys("^d", vk_packet=False)
+    time.sleep(1)
+    check(not spoke_synopsis(mark), "Ctrl+D outside the results does nothing")
 
     results.set_focus()
     first.select()

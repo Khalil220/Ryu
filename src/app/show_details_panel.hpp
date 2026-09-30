@@ -8,9 +8,10 @@ class wxImage;
 class wxSimplebook;
 class wxStaticBitmap;
 class wxStaticText;
-class wxTextCtrl;
 
 namespace ryu {
+
+class SynopsisView;
 
 class ShowDetailsPanel : public wxPanel {
 public:
@@ -19,7 +20,6 @@ public:
     void showDetails(const ryu::Show& show);
     void setPoster(const wxImage& image);
     void clear();
-    wxTextCtrl* synopsis() const { return synopsis_; }
 
 private:
     wxSize posterSize_;
@@ -27,7 +27,7 @@ private:
     wxStaticBitmap* poster_ = nullptr;
     wxStaticText* title_ = nullptr;
     wxStaticText* info_ = nullptr;
-    wxTextCtrl* synopsis_ = nullptr;
+    SynopsisView* synopsis_ = nullptr;
 };
 
 }
