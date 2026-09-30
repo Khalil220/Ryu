@@ -2,6 +2,7 @@
 
 #include <doctest/doctest.h>
 
+using ryu::isLanguageName;
 using ryu::languageName;
 
 TEST_CASE("languageName names language codes in English") {
@@ -21,4 +22,14 @@ TEST_CASE("languageName gives nothing for codes Windows does not know") {
     CHECK(languageName("eng").empty());
     CHECK(languageName("Default").empty());
     CHECK(languageName("en US").empty());
+}
+
+TEST_CASE("isLanguageName recognises the English names of languages") {
+    CHECK(isLanguageName("English"));
+    CHECK(isLanguageName("Malay"));
+    CHECK(isLanguageName("Filipino"));
+    CHECK(isLanguageName("Norwegian"));
+    CHECK(isLanguageName("Chinese"));
+    CHECK_FALSE(isLanguageName("wowmdildo"));
+    CHECK_FALSE(isLanguageName(""));
 }

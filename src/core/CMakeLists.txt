@@ -8,6 +8,7 @@ add_library(ryu_core STATIC
     log.cpp
     playlist_server.cpp
     registry.cpp
+    providers/anizone.cpp
     providers/hianime.cpp
     providers/kickassanime.cpp
     resolvers/megaplay.cpp

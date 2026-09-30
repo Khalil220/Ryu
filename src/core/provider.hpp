@@ -26,6 +26,7 @@ struct Show {
     std::string synopsis;
     std::vector<std::string> genres;
     std::string pageUrl;
+    int episodeCount = 0;
 };
 
 struct Episode {

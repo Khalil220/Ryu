@@ -4,6 +4,7 @@ add_library(ryu_test_main OBJECT test_main.cpp)
 target_link_libraries(ryu_test_main PUBLIC doctest::doctest)
 
 add_executable(ryu_unit_tests
+    unit/test_anizone.cpp
     unit/test_encoding.cpp
     unit/test_format.cpp
     unit/test_html.cpp
@@ -26,6 +27,7 @@ add_test(NAME unit COMMAND ryu_unit_tests)
 set_tests_properties(unit PROPERTIES LABELS unit)
 
 add_executable(ryu_live_tests
+    live/test_live_anizone.cpp
     live/test_live_fallback.cpp
     live/test_live_hianime.cpp
     live/test_live_kickassanime.cpp

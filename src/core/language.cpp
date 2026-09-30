@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <set>
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -10,6 +11,40 @@
 #endif
 
 namespace ryu {
+
+namespace {
+
+#ifdef _WIN32
+std::string narrow(const wchar_t* text, int length) {
+    const int size = WideCharToMultiByte(CP_UTF8, 0, text, length, nullptr, 0, nullptr, nullptr);
+    std::string result(static_cast<size_t>(size), '\0');
+    WideCharToMultiByte(CP_UTF8, 0, text, length, result.data(), size, nullptr, nullptr);
+    return result;
+}
+
+BOOL CALLBACK collectLanguage(LPWSTR locale, DWORD, LPARAM names) {
+    wchar_t name[128];
+    const int length = GetLocaleInfoEx(locale, LOCALE_SENGLISHLANGUAGENAME, name, 128);
+    if (length > 1) {
+        const auto text = narrow(name, length - 1);
+        reinterpret_cast<std::set<std::string>*>(names)->insert(text.substr(0, text.find_first_of(" (")));
+    }
+    return TRUE;
+}
+#endif
+
+const std::set<std::string>& languageNames() {
+    static const std::set<std::string> names = [] {
+        std::set<std::string> collected;
+#ifdef _WIN32
+        EnumSystemLocalesEx(collectLanguage, LOCALE_ALL, reinterpret_cast<LPARAM>(&collected), nullptr);
+#endif
+        return collected;
+    }();
+    return names;
+}
+
+}
 
 std::string languageName(std::string_view code) {
     if (code == "tl") {
@@ -32,13 +67,14 @@ std::string languageName(std::string_view code) {
     if (length <= 1) {
         return {};
     }
-    const int size = WideCharToMultiByte(CP_UTF8, 0, name, length - 1, nullptr, 0, nullptr, nullptr);
-    std::string result(static_cast<size_t>(size), '\0');
-    WideCharToMultiByte(CP_UTF8, 0, name, length - 1, result.data(), size, nullptr, nullptr);
-    return result;
+    return narrow(name, length - 1);
 #else
     return {};
 #endif
+}
+
+bool isLanguageName(std::string_view name) {
+    return !name.empty() && languageNames().contains(std::string(name));
 }
 
 }

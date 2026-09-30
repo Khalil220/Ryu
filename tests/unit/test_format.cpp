@@ -15,6 +15,16 @@ TEST_CASE("showLabel lists format and episode counts") {
           "Sousou no Frieren 3rd Season, TV (? eps), no episodes yet");
 }
 
+TEST_CASE("showLabel falls back to the total episode count when audio is unknown") {
+    Show show{"mdkytdqp", "Frieren: Beyond Journey's End", "Sousou no Frieren", "TV"};
+    show.year = 2023;
+    show.episodeCount = 28;
+    CHECK(showLabel(show) == "Frieren: Beyond Journey's End, TV, 2023, 28 episodes");
+    CHECK(showDetailsLine(show) == "TV  ·  2023  ·  28 episodes");
+    show.episodeCount = 1;
+    CHECK(showLabel(show) == "Frieren: Beyond Journey's End, TV, 2023, 1 episode");
+}
+
 TEST_CASE("showDetailsLine joins format, year, audio and genres") {
     Show frieren{"481", "Frieren", "", "TV", 28, 28, 2023};
     CHECK(showDetailsLine(frieren) == "TV  \u00b7  2023  \u00b7  28 subbed, 28 dubbed");
