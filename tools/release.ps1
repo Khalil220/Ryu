@@ -12,9 +12,15 @@ if (-not $VcpkgRoot -or -not (Test-Path (Join-Path $VcpkgRoot 'scripts\buildsyst
 }
 $env:VCPKG_ROOT = $VcpkgRoot
 
+function Invoke-Native {
+    param([string]$Command, [string[]]$Arguments)
+    $ErrorActionPreference = 'Continue'
+    & $Command @Arguments 2>&1 | ForEach-Object { "$_" }
+}
+
 function Invoke-Checked {
     param([string]$Command, [string[]]$Arguments)
-    & $Command @Arguments
+    Invoke-Native $Command $Arguments
     if ($LASTEXITCODE -ne 0) {
         throw "$Command $($Arguments -join ' ') failed with exit code $LASTEXITCODE"
     }
@@ -44,7 +50,7 @@ try {
 
     $work = Join-Path ([IO.Path]::GetTempPath()) "ryu-release-$version"
     if (Test-Path $work) {
-        git worktree remove --force $work 2>$null
+        Invoke-Native git @('worktree', 'remove', '--force', $work) | Out-Null
         Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue
     }
     Invoke-Checked git @('worktree', 'add', '--detach', $work, 'HEAD')
@@ -73,7 +79,7 @@ try {
         [IO.File]::WriteAllText($sums, "$hash  $name`n")
         Write-Host "Built $package"
     } finally {
-        git worktree remove --force $work
+        Invoke-Native git @('worktree', 'remove', '--force', $work)
     }
 
     if ($Publish) {
