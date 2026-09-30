@@ -17,10 +17,24 @@ constexpr const char* watchUrl = "https://anizone.to/anime/mdkytdqp/1";
 constexpr const char* eijiUrl = "https://anizone.to/anime/qtskwpje/1";
 constexpr const char* frierenMaster = "https://seiryuu.vid-cdn.xyz/a7305a5d-5bc8-4944-843a-f8675561b940/master.m3u8";
 
-std::string playerPage(const std::string& subtitles, const std::string& audio) {
+std::string playerPage(const std::string& subtitles, const std::string& audio, const std::string& chapter = "") {
     return R"(<div class="flex gap-1"><div class="text-sm">Audio:</div><div class="text-xs">)" + audio +
            R"(</div></div><script>vidstackPlayer(JSON.parse('{"src":"https:\/\/cdn.example\/master.m3u8","subtitles":[)" +
-           subtitles + R"(]}'))</script>)";
+           subtitles + R"(],"chapter":")" + chapter + R"("}'))</script>)";
+}
+
+constexpr const char* chaptersUrl = "https://cdn.example/chapters.vtt";
+
+std::optional<TimeRange> introFor(const char* fixture) {
+    FakeHttpClient http;
+    http.serve("https://anizone.to/anime/x/1", playerPage("", "", chaptersUrl));
+    if (fixture) {
+        http.serve(chaptersUrl, readFixture(fixture));
+    }
+    AniZoneProvider provider(http);
+    const auto streams = provider.streams("x/1", Audio::Sub);
+    REQUIRE(streams.size() == 1);
+    return streams[0].intro;
 }
 
 std::string track(const std::string& title, const std::string& language, bool isDefault) {
@@ -176,4 +190,26 @@ TEST_CASE("AniZone dub streams default to the English signs and songs track") {
     const auto sub = provider.streams("op/1", Audio::Sub);
     REQUIRE(sub.size() == 1);
     CHECK(std::ranges::find_if(sub[0].subtitles, &Subtitle::isDefault)->label == "English - Full Subtitles");
+}
+
+TEST_CASE("AniZone takes the intro from a chapter named Opening") {
+    const auto intro = introFor("anizone/chapters_one_piece_1.vtt");
+    REQUIRE(intro.has_value());
+    CHECK(intro->start == doctest::Approx(31.398));
+    CHECK(intro->end == doctest::Approx(111.044));
+}
+
+TEST_CASE("AniZone takes the intro from a chapter named Intro when there is no Opening") {
+    const auto intro = introFor("anizone/chapters_dandadan_1.vtt");
+    REQUIRE(intro.has_value());
+    CHECK(intro->start == doctest::Approx(0));
+    CHECK(intro->end == doctest::Approx(88.541));
+}
+
+TEST_CASE("AniZone offers no intro when the chapters don't mark one") {
+    CHECK_FALSE(introFor("anizone/chapters_sakamoto_1.vtt").has_value());
+}
+
+TEST_CASE("AniZone still plays an episode whose chapters can't be read") {
+    CHECK_FALSE(introFor(nullptr).has_value());
 }

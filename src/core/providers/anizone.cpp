@@ -3,6 +3,7 @@
 #include "../encoding.hpp"
 #include "../html.hpp"
 #include "../language.hpp"
+#include "../log.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -186,6 +187,69 @@ bool containsWord(std::string_view text, std::string_view word) {
     return text.find(word) != std::string_view::npos;
 }
 
+std::optional<double> clockSeconds(std::string_view text) {
+    double total = 0;
+    int parts = 0;
+    size_t start = 0;
+    while (true) {
+        const auto colon = text.find(':', start);
+        const auto piece = text.substr(start, colon == std::string_view::npos ? std::string_view::npos : colon - start);
+        double value = 0;
+        const auto result = std::from_chars(piece.data(), piece.data() + piece.size(), value);
+        if (piece.empty() || result.ec != std::errc() || result.ptr != piece.data() + piece.size() || ++parts > 3) {
+            return std::nullopt;
+        }
+        total = total * 60 + value;
+        if (colon == std::string_view::npos) {
+            return total;
+        }
+        start = colon + 1;
+    }
+}
+
+std::string lowered(std::string text) {
+    std::ranges::transform(text, text.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return text;
+}
+
+std::optional<TimeRange> introFromChapters(std::string_view vtt) {
+    std::vector<std::string_view> lines;
+    for (size_t start = 0; start < vtt.size();) {
+        const auto end = std::min(vtt.find('\n', start), vtt.size());
+        auto line = vtt.substr(start, end - start);
+        if (line.ends_with('\r')) {
+            line.remove_suffix(1);
+        }
+        lines.push_back(line);
+        start = end + 1;
+    }
+    std::optional<TimeRange> opening;
+    std::optional<TimeRange> intro;
+    for (size_t i = 0; i + 1 < lines.size(); ++i) {
+        const auto arrow = lines[i].find("-->");
+        if (arrow == std::string_view::npos) {
+            continue;
+        }
+        auto first = lines[i].substr(0, arrow);
+        auto second = lines[i].substr(arrow + 3);
+        first = first.substr(0, first.find_last_not_of(' ') + 1);
+        second = second.substr(second.find_first_not_of(' '));
+        second = second.substr(0, second.find(' '));
+        const auto start = clockSeconds(first);
+        const auto end = clockSeconds(second);
+        if (!start || !end || *end - *start < 20 || *end - *start > 180) {
+            continue;
+        }
+        const auto title = lowered(std::string(lines[i + 1]));
+        if (!opening && title.starts_with("opening")) {
+            opening = TimeRange{*start, *end};
+        } else if (!intro && title == "intro") {
+            intro = TimeRange{*start, *end};
+        }
+    }
+    return opening ? opening : intro;
+}
+
 void requireSuccess(const HttpResponse& response, const std::string& url) {
     if (response.status < 200 || response.status >= 300) {
         throw ProviderError("AniZone returned HTTP " + std::to_string(response.status) + " for " + url);
@@ -336,6 +400,15 @@ std::vector<Stream> AniZoneProvider::streams(std::string_view episodeId, Audio a
                 subtitle.isDefault = audio == Audio::Sub && flagField(track, "default");
                 stream.subtitles.push_back(std::move(subtitle));
             }
+        }
+    }
+    if (const auto chapters = stringField(*player, "chapter"); !chapters.empty()) {
+        try {
+            if (const auto file = http_.get(chapters); file.status >= 200 && file.status < 300) {
+                stream.intro = introFromChapters(file.body);
+            }
+        } catch (const std::exception& error) {
+            logLine(std::string("AniZone chapters could not be read: ") + error.what());
         }
     }
     const auto english = [](const Subtitle& subtitle) { return subtitle.language == "en"; };
