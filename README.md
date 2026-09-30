@@ -19,8 +19,10 @@ An accessible anime player for Windows, written in C++ with wxWidgets and libmpv
 - I: skip intro
 - R: toggle subtitle reading
 - N and P: next and previous episode
-- Escape: back to the episode list
+- F11: full screen
+- Escape: leave full screen, or go back to the episode list
 - Ctrl+P: preferences
+- F1: all keyboard shortcuts
 
 ## Building
 
