@@ -3,6 +3,7 @@
 #include "hls.hpp"
 
 #include <algorithm>
+#include <future>
 #include <map>
 #include <set>
 
@@ -51,28 +52,42 @@ RepairReport repairStreamHosts(HttpClient& http, PlaylistServer& server, const S
         return report;
     }
     std::map<std::string, std::string> mediaBodies;
-    mediaBodies[mediaUrls.front()] = hasMaster ? fetchPlaylist(http, mediaUrls.front(), stream.headers) : master;
-    const auto& firstMedia = mediaBodies[mediaUrls.front()];
-    if (firstMedia.empty()) {
+    if (hasMaster) {
+        std::vector<std::future<std::string>> fetches;
+        for (const auto& url : mediaUrls) {
+            fetches.push_back(std::async(std::launch::async,
+                                         [&http, &stream, url] { return fetchPlaylist(http, url, stream.headers); }));
+        }
+        for (size_t i = 0; i < mediaUrls.size(); ++i) {
+            mediaBodies[mediaUrls[i]] = fetches[i].get();
+        }
+    } else {
+        mediaBodies[stream.url] = master;
+    }
+    if (std::ranges::all_of(mediaUrls, [&](const std::string& url) { return mediaBodies[url].empty(); })) {
         return report;
     }
 
     std::vector<std::string> hosts;
     std::map<std::string, std::string> sampleFor;
-    for (const auto& segment : segmentUris(firstMedia, mediaUrls.front())) {
-        const auto host = hostOf(segment);
-        if (!host.empty() && sampleFor.emplace(host, segment).second) {
-            hosts.push_back(host);
+    for (const auto& url : mediaUrls) {
+        for (const auto& segment : segmentUris(mediaBodies[url], url)) {
+            const auto host = hostOf(segment);
+            if (!host.empty() && sampleFor.emplace(host, segment).second) {
+                hosts.push_back(host);
+            }
         }
     }
 
-    std::vector<std::string> living;
+    std::vector<std::future<bool>> probes;
     for (const auto& host : hosts) {
-        if (probeAlive(http, sampleFor[host], stream.headers)) {
-            living.push_back(host);
-        } else {
-            report.deadHosts.push_back(host);
-        }
+        probes.push_back(std::async(std::launch::async, [&http, &stream, sample = sampleFor[host]] {
+            return probeAlive(http, sample, stream.headers);
+        }));
+    }
+    std::vector<std::string> living;
+    for (size_t i = 0; i < hosts.size(); ++i) {
+        (probes[i].get() ? living : report.deadHosts).push_back(hosts[i]);
     }
     if (report.deadHosts.empty()) {
         return report;
@@ -104,9 +119,6 @@ RepairReport repairStreamHosts(HttpClient& http, PlaylistServer& server, const S
     std::map<std::string, std::string> files;
     for (size_t i = 0; i < mediaUrls.size(); ++i) {
         const auto& url = mediaUrls[i];
-        if (!mediaBodies.contains(url)) {
-            mediaBodies[url] = fetchPlaylist(http, url, stream.headers);
-        }
         if (mediaBodies[url].empty()) {
             continue;
         }

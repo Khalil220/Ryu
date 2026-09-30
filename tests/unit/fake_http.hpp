@@ -4,6 +4,7 @@
 
 #include <fstream>
 #include <map>
+#include <mutex>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -74,6 +75,7 @@ public:
 private:
     HttpResponse respond(const std::string& method, const std::string& url, const Headers& headers,
                          const std::string& body) {
+        std::scoped_lock lock(mutex_);
         requests.push_back({method, url, headers, body});
         const auto it = routes_.find(url);
         if (it == routes_.end()) {
@@ -83,6 +85,7 @@ private:
     }
 
     std::map<std::string, HttpResponse> routes_;
+    std::mutex mutex_;
 };
 
 }

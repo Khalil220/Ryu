@@ -94,6 +94,37 @@ TEST_CASE("a banned host is swapped for a working alternate and served from loop
     CHECK(media.find("dead.example.online") == std::string::npos);
 }
 
+TEST_CASE("a dead host behind any quality level is swapped, not only the first level's") {
+    FakeHttpClient http;
+    http.serve(masterUrl, "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=5500000,RESOLUTION=1920x1080\nindex-f1.m3u8\n"
+                          "#EXT-X-STREAM-INF:BANDWIDTH=2800000,RESOLUTION=1280x720\nindex-f2.m3u8\n"
+                          "#EXT-X-STREAM-INF:BANDWIDTH=800000,RESOLUTION=640x360\nindex-f3.m3u8\n");
+    const auto level = [&](const std::string& name, const std::string& host) {
+        http.serve("https://fetch.example.top/anime/a/b/index-" + name + ".m3u8",
+                   "#EXTM3U\n#EXTINF:10,\nhttps://" + host + "/anime/a/b/seg-" + name + "-00000.jpg\n#EXT-X-ENDLIST\n");
+    };
+    level("f1", "one.example.top");
+    level("f2", "two.example.shop");
+    level("f3", "gone.example.shop");
+    http.serve("https://one.example.top/anime/a/b/seg-f1-00000.jpg", tsBytes);
+    http.serve("https://two.example.shop/anime/a/b/seg-f2-00000.jpg", tsBytes);
+    http.serve("https://gone.example.shop/anime/a/b/seg-f3-00000.jpg", "<html>404</html>", 404);
+    PlaylistServer server;
+
+    const auto report = repairStreamHosts(http, server, megaplayStream());
+
+    REQUIRE(report.deadHosts == std::vector<std::string>{"gone.example.shop"});
+    CHECK(report.replacementHost == "one.example.top");
+    CurlHttpClient loopback;
+    const auto base = report.stream.url.substr(0, report.stream.url.size() - 11);
+    CHECK(loopback.get(base + "media-0.m3u8").body.find("https://one.example.top/anime/a/b/seg-f1-00000.jpg") !=
+          std::string::npos);
+    CHECK(loopback.get(base + "media-1.m3u8").body.find("https://two.example.shop/anime/a/b/seg-f2-00000.jpg") !=
+          std::string::npos);
+    CHECK(loopback.get(base + "media-2.m3u8").body.find("https://one.example.top/anime/a/b/seg-f3-00000.jpg") !=
+          std::string::npos);
+}
+
 TEST_CASE("only the dead hosts in a rotating playlist are swapped, onto a living one") {
     FakeHttpClient http;
     http.serve(mediaUrl, "#EXTM3U\n#EXTINF:6,\n//st1.alpha.xyz/v/000.jpg\n#EXTINF:6,\n//st1.beta.xyz/v/001.jpg\n"
