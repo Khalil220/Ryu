@@ -58,6 +58,10 @@ private:
     void announceIntro();
     bool inIntro() const;
     void updateIntroButton();
+    void showVolume(double volume);
+    void showPaused(bool paused);
+    bool isFullScreen();
+    void setFullScreen(bool fullScreen);
 
     std::function<void()> onLeave_;
     std::function<void(int)> onStep_;
@@ -91,6 +95,7 @@ private:
     wxSlider* volumeSlider_ = nullptr;
     wxChoice* subtitleChoice_ = nullptr;
     wxButton* skipIntroButton_ = nullptr;
+    wxButton* fullScreenButton_ = nullptr;
     wxCheckBox* readCheck_ = nullptr;
 };
 

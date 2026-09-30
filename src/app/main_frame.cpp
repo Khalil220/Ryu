@@ -41,9 +41,9 @@ MainFrame::MainFrame(SettingsStore& store)
     createMenu();
     createControls();
     CreateStatusBar();
-    SetMinSize(FromDIP(wxSize(480, 420)));
+    SetMinSize(FromDIP(wxSize(760, 480)));
     const auto area = wxDisplay().GetClientArea();
-    auto size = FromDIP(wxSize(800, 640));
+    auto size = FromDIP(wxSize(1000, 680));
     size.DecTo(area.GetSize());
     SetSize(wxRect(area.GetTopLeft() + (area.GetSize() - size) / 2, size));
     applySettings();

@@ -7,7 +7,7 @@ import sys
 import tempfile
 import time
 
-from pywinauto import Application, Desktop
+from pywinauto import Application, Desktop, mouse
 from pywinauto.keyboard import send_keys
 
 failures = 0
@@ -292,6 +292,37 @@ def run(app, speech_log):
           f"each press announces the episode it moves to ({loads})")
     check(wait_for(lambda: 1 <= seconds(time_box.get_value()) < 60, 60) is not None,
           f"the episode two ahead plays ({time_box.get_value()})")
+
+    main.child_window(title="Pause", control_type="Button").set_focus()
+    send_keys("%v", vk_packet=False)
+    volume = player.child_window(title="Volume", control_type="Slider")
+    check(wait_for(volume.has_keyboard_focus, 5) is not None, "Alt+V moves to the volume slider")
+    send_keys("%s", vk_packet=False)
+    check(wait_for(subtitles.has_keyboard_focus, 5) is not None, "Alt+S moves to the subtitles choice")
+    before_key = seconds(time_box.get_value())
+    send_keys("%f", vk_packet=False)
+    check(wait_for(lambda: seconds(time_box.get_value()) >= before_key + 8, 15) is not None,
+          f"Alt+F seeks forward ({before_key} to {time_box.get_value()})")
+    after_forward = seconds(time_box.get_value())
+    send_keys("%b", vk_packet=False)
+    check(wait_for(lambda: seconds(time_box.get_value()) <= after_forward - 5, 15) is not None,
+          f"Alt+B seeks back ({after_forward} to {time_box.get_value()})")
+
+    screen = (ctypes.windll.user32.GetSystemMetrics(0), ctypes.windll.user32.GetSystemMetrics(1))
+    full_screen = lambda: (main.rectangle().width(), main.rectangle().height()) == screen
+    main.child_window(title="Pause", control_type="Button").set_focus()
+    send_keys("{F11}")
+    check(wait_for(full_screen, 5) is not None, f"F11 fills the screen ({main.rectangle()})")
+    check(main.child_window(title="Exit full screen", control_type="Button").exists(),
+          "the full screen button offers to exit full screen")
+    send_keys("{ESC}")
+    check(wait_for(lambda: not full_screen(), 5) is not None, "Escape leaves full screen")
+    check(main.window_text().startswith("Episode 4:"), f"Escape in full screen stays in the player ({main.window_text()})")
+    frame = main.rectangle()
+    mouse.double_click(coords=((frame.left + frame.right) // 2, frame.top + frame.height() // 3))
+    check(wait_for(full_screen, 5) is not None, "double-clicking the video goes full screen")
+    mouse.double_click(coords=(screen[0] // 2, screen[1] // 3))
+    check(wait_for(lambda: not full_screen(), 5) is not None, "double-clicking it again leaves full screen")
 
     check(player.child_window(title="Close", control_type="Button", class_name="Button").exists(),
           "player has a Close button")

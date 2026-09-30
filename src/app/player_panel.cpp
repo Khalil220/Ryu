@@ -12,12 +12,15 @@
 #include <wx/button.h>
 #include <wx/checkbox.h>
 #include <wx/choice.h>
+#include <wx/font.h>
+#include <wx/fontenum.h>
 #include <wx/msgdlg.h>
 #include <wx/sizer.h>
 #include <wx/slider.h>
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
 #include <wx/tokenzr.h>
+#include <wx/toplevel.h>
 #include <wx/utils.h>
 
 #include <algorithm>
@@ -35,6 +38,40 @@ public:
     bool AcceptsFocus() const override { return false; }
     bool AcceptsFocusFromKeyboard() const override { return false; }
 };
+
+constexpr wchar_t playGlyph = 0xE768;
+constexpr wchar_t pauseGlyph = 0xE769;
+constexpr wchar_t previousGlyph = 0xE892;
+constexpr wchar_t nextGlyph = 0xE893;
+constexpr wchar_t rewindGlyph = 0xEB9E;
+constexpr wchar_t forwardGlyph = 0xEB9D;
+constexpr wchar_t fullScreenGlyph = 0xE740;
+constexpr wchar_t windowGlyph = 0xE73F;
+constexpr wchar_t closeGlyph = 0xE711;
+constexpr wchar_t volumeGlyph = 0xE767;
+constexpr wchar_t captionsGlyph = 0xE7F0;
+
+wxFont iconFont(double points) {
+    static const wxString face = wxFontEnumerator::IsValidFacename("Segoe Fluent Icons") ? "Segoe Fluent Icons"
+                                                                                         : "Segoe MDL2 Assets";
+    return wxFont(wxFontInfo(points).FaceName(face));
+}
+
+wxButton* iconButton(wxWindow* parent, wchar_t glyph, const wxString& name, const wxString& shortcut,
+                     const wxString& tip, double points = 13) {
+    auto* button = new wxButton(parent, wxID_ANY, wxString(glyph), wxDefaultPosition, parent->FromDIP(wxSize(46, 38)));
+    button->SetFont(iconFont(points));
+    button->SetToolTip(tip);
+    setAccessibleName(button, name);
+    setAccessibleShortcut(button, shortcut);
+    return button;
+}
+
+wxStaticText* iconLabel(wxWindow* parent, wchar_t glyph) {
+    auto* label = new wxStaticText(parent, wxID_ANY, wxString(glyph));
+    label->SetFont(iconFont(13));
+    return label;
+}
 
 enum PropertyId : uint64_t { TimePos = 1, Duration, Pause, Volume, TrackList, EndReached, SubText };
 
@@ -88,12 +125,32 @@ PlayerPanel::PlayerPanel(wxWindow* parent, std::function<void()> onLeave, std::f
     const int previousId = wxWindow::NewControlId();
     const int skipIntroId = wxWindow::NewControlId();
     const int readId = wxWindow::NewControlId();
+    const int pauseId = wxWindow::NewControlId();
+    const int backId = wxWindow::NewControlId();
+    const int forwardId = wxWindow::NewControlId();
+    const int closeId = wxWindow::NewControlId();
+    const int fullScreenId = wxWindow::NewControlId();
+    const int positionId = wxWindow::NewControlId();
+    const int timeId = wxWindow::NewControlId();
+    const int volumeId = wxWindow::NewControlId();
+    const int subtitlesId = wxWindow::NewControlId();
     wxAcceleratorEntry keys[] = {
         {wxACCEL_NORMAL, 'T', speakTimeId},
         {wxACCEL_NORMAL, 'N', nextId},
         {wxACCEL_NORMAL, 'P', previousId},
         {wxACCEL_NORMAL, 'I', skipIntroId},
         {wxACCEL_NORMAL, 'R', readId},
+        {wxACCEL_ALT, 'P', pauseId},
+        {wxACCEL_ALT, 'B', backId},
+        {wxACCEL_ALT, 'F', forwardId},
+        {wxACCEL_ALT, 'R', previousId},
+        {wxACCEL_ALT, 'N', nextId},
+        {wxACCEL_ALT, 'C', closeId},
+        {wxACCEL_ALT, 'T', positionId},
+        {wxACCEL_ALT, 'M', timeId},
+        {wxACCEL_ALT, 'V', volumeId},
+        {wxACCEL_ALT, 'S', subtitlesId},
+        {wxACCEL_NORMAL, WXK_F11, fullScreenId},
     };
     SetAcceleratorTable(wxAcceleratorTable(static_cast<int>(std::size(keys)), keys));
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { announce(wxString::FromUTF8(timeLabel(position_, duration_))); },
@@ -102,6 +159,15 @@ PlayerPanel::PlayerPanel(wxWindow* parent, std::function<void()> onLeave, std::f
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { onStep_(-1); }, previousId);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { skipIntro(); }, skipIntroId);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { toggleReadSubtitles(); }, readId);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { togglePause(); }, pauseId);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { seek(-10); }, backId);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { seek(10); }, forwardId);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { onLeave_(); }, closeId);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { setFullScreen(!isFullScreen()); }, fullScreenId);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { positionSlider_->SetFocus(); }, positionId);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { timeText_->SetFocus(); }, timeId);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { volumeSlider_->SetFocus(); }, volumeId);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { subtitleChoice_->SetFocus(); }, subtitlesId);
 }
 
 PlayerPanel::~PlayerPanel() {
@@ -116,49 +182,63 @@ void PlayerPanel::createControls() {
     video_->SetBackgroundColour(*wxBLACK);
     video_->SetMinSize(FromDIP(wxSize(320, 180)));
     sizer->Add(video_, 1, wxEXPAND);
+    video_->Bind(wxEVT_LEFT_DCLICK, [this](wxMouseEvent&) { setFullScreen(!isFullScreen()); });
 
-    auto* buttons = new wxBoxSizer(wxHORIZONTAL);
-    pauseButton_ = new wxButton(this, wxID_ANY, "&Pause");
-    auto* back = new wxButton(this, wxID_ANY, "&Back 10 seconds");
-    auto* forward = new wxButton(this, wxID_ANY, "&Forward 10 seconds");
-    skipIntroButton_ = new wxButton(this, wxID_ANY, "Skip &intro");
-    auto* previous = new wxButton(this, wxID_ANY, "P&revious episode");
-    auto* next = new wxButton(this, wxID_ANY, "&Next episode");
-    auto* close = new wxButton(this, wxID_ANY, "&Close");
-    for (auto* button : {pauseButton_, back, forward, skipIntroButton_, previous, next, close}) {
-        buttons->Add(button, 0, wxRIGHT, 6);
-    }
-    sizer->Add(buttons, 0, wxALL, 8);
-
-    auto* info = new wxBoxSizer(wxHORIZONTAL);
-    info->Add(new wxStaticText(this, wxID_ANY, "Posi&tion:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
+    auto* seekRow = new wxBoxSizer(wxHORIZONTAL);
     positionSlider_ = new wxSlider(this, wxID_ANY, 0, 0, 1);
     positionSlider_->SetLineSize(10);
     positionSlider_->SetPageSize(60);
-    info->Add(positionSlider_, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 12);
-    info->Add(new wxStaticText(this, wxID_ANY, "Ti&me:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
-    timeText_ = new wxTextCtrl(this, wxID_ANY, "Stopped", wxDefaultPosition, FromDIP(wxSize(140, -1)), wxTE_READONLY);
-    info->Add(timeText_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 12);
-    info->Add(new wxStaticText(this, wxID_ANY, "&Volume:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
-    volumeSlider_ = new wxSlider(this, wxID_ANY, 100, 0, 100);
+    seekRow->Add(positionSlider_, 1, wxALIGN_CENTER_VERTICAL);
+    timeText_ = new wxTextCtrl(this, wxID_ANY, "Stopped", wxDefaultPosition, FromDIP(wxSize(130, -1)),
+                               wxTE_READONLY | wxTE_RIGHT | wxBORDER_NONE);
+    timeText_->SetBackgroundColour(GetBackgroundColour());
+    seekRow->Add(timeText_, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(8));
+    sizer->Add(seekRow, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(10));
+
+    auto* controls = new wxBoxSizer(wxHORIZONTAL);
+    auto* previous = iconButton(this, previousGlyph, "Previous episode", "Alt+R", "Previous episode (P)");
+    auto* back = iconButton(this, rewindGlyph, "Back 10 seconds", "Alt+B", "Back 10 seconds (Left)");
+    pauseButton_ = iconButton(this, pauseGlyph, "Pause", "Alt+P", "Play or pause (Space)", 16);
+    auto* forward = iconButton(this, forwardGlyph, "Forward 10 seconds", "Alt+F", "Forward 10 seconds (Right)");
+    auto* next = iconButton(this, nextGlyph, "Next episode", "Alt+N", "Next episode (N)");
+    for (auto* button : {previous, back, pauseButton_, forward, next}) {
+        controls->Add(button, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(4));
+    }
+    skipIntroButton_ = new wxButton(this, wxID_ANY, "Skip &intro");
+    skipIntroButton_->SetToolTip("Skip the intro (I)");
+    controls->Add(skipIntroButton_, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(12));
+    controls->AddStretchSpacer();
+
+    controls->Add(iconLabel(this, volumeGlyph), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(4));
+    volumeSlider_ = new wxSlider(this, wxID_ANY, 100, 0, 100, wxDefaultPosition, FromDIP(wxSize(100, -1)));
     volumeSlider_->SetLineSize(5);
     volumeSlider_->SetPageSize(20);
-    info->Add(volumeSlider_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 12);
-    info->Add(new wxStaticText(this, wxID_ANY, "&Subtitles:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
+    controls->Add(volumeSlider_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(12));
+    controls->Add(iconLabel(this, captionsGlyph), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(6));
     subtitleChoice_ = new wxChoice(this, wxID_ANY);
-    subtitleChoice_->SetMinSize(FromDIP(wxSize(200, -1)));
+    subtitleChoice_->SetMinSize(FromDIP(wxSize(150, -1)));
     subtitleChoice_->Append("Off");
     subtitleChoice_->SetSelection(0);
-    info->Add(subtitleChoice_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 12);
-    readCheck_ = new wxCheckBox(this, wxID_ANY, "Read subtitles alou&d");
-    info->Add(readCheck_, 0, wxALIGN_CENTER_VERTICAL);
-    sizer->Add(info, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 8);
+    controls->Add(subtitleChoice_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
+    readCheck_ = new wxCheckBox(this, wxID_ANY, "Read alou&d");
+    readCheck_->SetToolTip("Read subtitles aloud (R)");
+    controls->Add(readCheck_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(12));
+    fullScreenButton_ = iconButton(this, fullScreenGlyph, "Full screen", "F11", "Full screen (F11)");
+    auto* close = iconButton(this, closeGlyph, "Close", "Alt+C", "Close the player (Escape)");
+    controls->Add(fullScreenButton_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(4));
+    controls->Add(close, 0, wxALIGN_CENTER_VERTICAL);
+    sizer->Add(controls, 0, wxEXPAND | wxALL, FromDIP(10));
 
     SetSizer(sizer);
     setAccessibleName(positionSlider_, "Position");
+    setAccessibleShortcut(positionSlider_, "Alt+T");
     setAccessibleName(timeText_, "Time");
+    setAccessibleShortcut(timeText_, "Alt+M");
     setAccessibleName(volumeSlider_, "Volume");
+    setAccessibleShortcut(volumeSlider_, "Alt+V");
     setAccessibleName(subtitleChoice_, "Subtitles");
+    setAccessibleShortcut(subtitleChoice_, "Alt+S");
+    setAccessibleName(readCheck_, "Read subtitles aloud");
 
     pauseButton_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { togglePause(); });
     back->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { seek(-10); });
@@ -170,6 +250,7 @@ void PlayerPanel::createControls() {
     });
     previous->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { onStep_(-1); });
     next->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { onStep_(1); });
+    fullScreenButton_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { setFullScreen(!isFullScreen()); });
     close->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { onLeave_(); });
     positionSlider_->Bind(wxEVT_SLIDER, [this](wxCommandEvent&) {
         command({"seek", std::to_string(positionSlider_->GetValue()), "absolute"});
@@ -178,6 +259,7 @@ void PlayerPanel::createControls() {
         if (mpv_) {
             double volume = volumeSlider_->GetValue();
             mpv_set_property(mpv_, "volume", MPV_FORMAT_DOUBLE, &volume);
+            showVolume(volume);
         }
     });
     subtitleChoice_->Bind(wxEVT_CHOICE, [this](wxCommandEvent&) {
@@ -211,7 +293,7 @@ void PlayerPanel::startMpv() {
     mpv_set_option_string(mpv_, "force-window", "yes");
     mpv_set_option_string(mpv_, "hwdec", "auto-safe");
     mpv_set_option_string(mpv_, "cache-secs", "60");
-    mpv_set_option_string(mpv_, "osc", "yes");
+    mpv_set_option_string(mpv_, "osc", "no");
     mpv_set_option_string(mpv_, "ytdl", "no");
     mpv_set_option_string(mpv_, "user-agent", CurlHttpClient::defaultUserAgent);
 
@@ -299,6 +381,7 @@ void PlayerPanel::stop() {
     pendingSubtitles_.clear();
     command({"stop"});
     resetState("Stopped");
+    setFullScreen(false);
 }
 
 void PlayerPanel::focusControls() {
@@ -323,7 +406,7 @@ void PlayerPanel::resetState(const wxString& timeText) {
     lastSubtitle_.clear();
     stallWatch_.reset();
     positionSlider_->SetValue(0);
-    pauseButton_->SetLabel("&Pause");
+    showPaused(false);
     timeText_->ChangeValue(timeText);
 }
 
@@ -406,7 +489,7 @@ void PlayerPanel::onPropertyChange(uint64_t id, const mpv_event_property& proper
     case Pause:
         if (isFlag) {
             const int paused = *static_cast<int*>(property.data) ? 1 : 0;
-            pauseButton_->SetLabel(paused ? "&Play" : "&Pause");
+            showPaused(paused);
             if (paused_ != -1 && paused != paused_ && FindFocus() != pauseButton_) {
                 announce(paused ? "Paused" : "Playing");
             }
@@ -599,6 +682,32 @@ void PlayerPanel::changeVolume(double delta) {
     double volume = std::clamp(volume_ + delta, 0.0, 100.0);
     announce(wxString::Format("Volume %d", static_cast<int>(std::lround(volume))));
     mpv_set_property(mpv_, "volume", MPV_FORMAT_DOUBLE, &volume);
+    showVolume(volume);
+}
+
+void PlayerPanel::showVolume(double volume) {
+    commandAsync({"show-text", "Volume " + std::to_string(std::lround(volume)) + "%"});
+}
+
+void PlayerPanel::showPaused(bool paused) {
+    setAccessibleName(pauseButton_, paused ? "Play" : "Pause");
+    pauseButton_->SetLabel(wxString(paused ? playGlyph : pauseGlyph));
+}
+
+bool PlayerPanel::isFullScreen() {
+    const auto* frame = wxDynamicCast(wxGetTopLevelParent(this), wxTopLevelWindow);
+    return frame && frame->IsFullScreen();
+}
+
+void PlayerPanel::setFullScreen(bool fullScreen) {
+    auto* frame = wxDynamicCast(wxGetTopLevelParent(this), wxTopLevelWindow);
+    if (!frame || frame->IsFullScreen() == fullScreen) {
+        return;
+    }
+    frame->ShowFullScreen(fullScreen, wxFULLSCREEN_ALL);
+    setAccessibleName(fullScreenButton_, fullScreen ? "Exit full screen" : "Full screen");
+    fullScreenButton_->SetLabel(wxString(fullScreen ? windowGlyph : fullScreenGlyph));
+    fullScreenButton_->SetToolTip(fullScreen ? "Exit full screen (F11 or Escape)" : "Full screen (F11)");
 }
 
 void PlayerPanel::onCharHook(wxKeyEvent& event) {
@@ -607,7 +716,11 @@ void PlayerPanel::onCharHook(wxKeyEvent& event) {
     auto* focus = FindFocus();
 
     if (key == WXK_ESCAPE && plain) {
-        onLeave_();
+        if (isFullScreen()) {
+            setFullScreen(false);
+        } else {
+            onLeave_();
+        }
         return;
     }
     if (key == WXK_SPACE && plain && !dynamic_cast<wxButton*>(focus) && !dynamic_cast<wxCheckBox*>(focus)) {

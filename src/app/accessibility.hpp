@@ -6,5 +6,6 @@ class wxWindow;
 namespace ryu {
 
 void setAccessibleName(wxWindow* window, const wxString& name);
+void setAccessibleShortcut(wxWindow* window, const wxString& shortcut);
 
 }
