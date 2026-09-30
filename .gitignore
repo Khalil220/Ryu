@@ -2,5 +2,14 @@
 /out/
 /vcpkg_installed/
 /.vs/
+/.vscode/
+/.cache/
+/.claude/
 CMakeUserPresets.json
+compile_commands.json
+CLAUDE.md
 __pycache__/
+*.pyc
+*.user
+Thumbs.db
+desktop.ini
