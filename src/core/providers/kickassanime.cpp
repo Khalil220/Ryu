@@ -327,7 +327,7 @@ Stream KickAssAnimeProvider::resolvePlayer(const std::string& playerUrl, const s
             if (subtitle.label.empty() || subtitle.label == "Default") {
                 subtitle.label = languageName(subtitle.language);
             }
-            if (audio == Audio::Sub && !haveDefault && subtitle.language == "en") {
+            if (audio == Audio::Sub && !haveDefault && (subtitle.language == "en" || subtitle.language == "eng")) {
                 subtitle.isDefault = true;
                 haveDefault = true;
             }
