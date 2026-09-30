@@ -1,5 +1,7 @@
 #include "settings.hpp"
 
+#include <algorithm>
+
 #include <wx/fileconf.h>
 #include <wx/sstream.h>
 #include <wx/wfstream.h>
@@ -73,6 +75,15 @@ std::string Settings::baseUrl() const {
 std::string Settings::baseUrlFor(const ProviderInfo& info) const {
     const auto it = baseUrlOverrides.find(info.id);
     return it != baseUrlOverrides.end() && !it->second.empty() ? it->second : info.defaultBaseUrl;
+}
+
+WindowPlacement fitToArea(const WindowPlacement& saved, const ScreenArea& area, int minWidth, int minHeight) {
+    WindowPlacement fitted = saved;
+    fitted.width = std::clamp(saved.width, std::min(minWidth, area.width), area.width);
+    fitted.height = std::clamp(saved.height, std::min(minHeight, area.height), area.height);
+    fitted.x = std::clamp(saved.x, area.x, area.x + area.width - fitted.width);
+    fitted.y = std::clamp(saved.y, area.y, area.y + area.height - fitted.height);
+    return fitted;
 }
 
 Settings loadSettings(wxConfigBase& config) {

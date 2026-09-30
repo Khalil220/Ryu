@@ -157,3 +157,31 @@ TEST_CASE("rapid saves end with the last one on disk, and closing the store writ
     CHECK_FALSE(std::filesystem::exists(directory / "settings.ini.tmp"));
     std::filesystem::remove_all(directory);
 }
+
+TEST_CASE("fitToArea leaves a window that already fits alone") {
+    const WindowPlacement saved{420, 0, 1500, 1000, true};
+    CHECK(fitToArea(saved, {0, 0, 3840, 2080}, 1140, 720) == saved);
+}
+
+TEST_CASE("fitToArea shrinks a window that's larger than its screen") {
+    const auto fitted = fitToArea({420, 0, 3000, 2016, false}, {0, 0, 1920, 1040}, 1140, 720);
+    CHECK(fitted == WindowPlacement{0, 0, 1920, 1040, false});
+}
+
+TEST_CASE("fitToArea moves a window hanging off an edge back onto its screen") {
+    CHECK(fitToArea({1500, 700, 1000, 680, false}, {0, 0, 1920, 1040}, 760, 480) ==
+          WindowPlacement{920, 360, 1000, 680, false});
+    CHECK(fitToArea({-300, -40, 1000, 680, false}, {0, 0, 1920, 1040}, 760, 480) ==
+          WindowPlacement{0, 0, 1000, 680, false});
+    CHECK(fitToArea({-1500, 100, 1000, 680, false}, {-1920, 0, 1920, 1040}, 760, 480) ==
+          WindowPlacement{-1500, 100, 1000, 680, false});
+}
+
+TEST_CASE("fitToArea never makes a window bigger than a screen smaller than the minimum size") {
+    CHECK(fitToArea({0, 0, 1000, 680, false}, {0, 0, 640, 440}, 760, 480) == WindowPlacement{0, 0, 640, 440, false});
+}
+
+TEST_CASE("fitToArea grows a window saved below the minimum size") {
+    CHECK(fitToArea({100, 100, 300, 200, false}, {0, 0, 1920, 1040}, 760, 480) ==
+          WindowPlacement{100, 100, 760, 480, false});
+}

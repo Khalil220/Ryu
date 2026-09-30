@@ -59,16 +59,29 @@ MainFrame::MainFrame(SettingsStore& store)
     SetMinSize(FromDIP(wxSize(760, 480)));
     const auto& saved = settings_.window;
     const wxRect savedRect(saved.x, saved.y, saved.width, saved.height);
-    if (saved.width > 0 && wxDisplay::GetFromPoint(savedRect.GetPosition() + savedRect.GetSize() / 2) != wxNOT_FOUND) {
-        SetSize(savedRect);
-        if (saved.maximized) {
-            Maximize();
+    int display = wxNOT_FOUND;
+    long largestOverlap = 0;
+    for (unsigned i = 0; saved.width > 0 && saved.height > 0 && i < wxDisplay::GetCount(); ++i) {
+        const auto overlap = wxDisplay(i).GetClientArea().Intersect(savedRect);
+        const long size = static_cast<long>(std::max(0, overlap.width)) * std::max(0, overlap.height);
+        if (size > largestOverlap) {
+            largestOverlap = size;
+            display = static_cast<int>(i);
         }
+    }
+    if (display != wxNOT_FOUND) {
+        const auto area = wxDisplay(static_cast<unsigned>(display)).GetClientArea();
+        const auto minimum = GetMinSize();
+        const auto fitted = fitToArea(saved, {area.x, area.y, area.width, area.height}, minimum.x, minimum.y);
+        SetSize(wxRect(fitted.x, fitted.y, fitted.width, fitted.height));
     } else {
         const auto area = wxDisplay().GetClientArea();
         auto size = FromDIP(wxSize(1000, 680));
         size.DecTo(area.GetSize());
         SetSize(wxRect(area.GetTopLeft() + (area.GetSize() - size) / 2, size));
+    }
+    if (saved.width > 0 && saved.maximized) {
+        Maximize();
     }
     normalRect_ = GetRect();
     detailsTimer_.SetOwner(this);

@@ -30,6 +30,15 @@ struct WindowPlacement {
     bool operator==(const WindowPlacement&) const = default;
 };
 
+struct ScreenArea {
+    int x = 0;
+    int y = 0;
+    int width = 0;
+    int height = 0;
+};
+
+WindowPlacement fitToArea(const WindowPlacement& saved, const ScreenArea& area, int minWidth, int minHeight);
+
 struct Settings {
     std::string providerId = "hianime";
     Theme theme = Theme::Dark;
