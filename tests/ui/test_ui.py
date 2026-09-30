@@ -418,6 +418,17 @@ def run(app, speech_log):
         check(wait_for(lambda: not preferences.exists(), 10) is not None, "Cancel closes Preferences")
 
     search.set_focus()
+    send_keys("{F1}")
+    shortcuts = main.child_window(title="Keyboard shortcuts", control_type="Window")
+    check(wait_for(shortcuts.exists, 10) is not None, "F1 opens the keyboard shortcuts")
+    if shortcuts.exists():
+        rows = shortcuts.child_window(title="Keyboard shortcuts", control_type="List").children(control_type="ListItem")
+        check(len(rows) > 10 and rows[0].window_text() == "Enter",
+              f"the shortcuts list starts with the Enter key ({len(rows)} rows)")
+        send_keys("{ESC}")
+        check(wait_for(lambda: not shortcuts.exists(), 5) is not None, "Escape closes the keyboard shortcuts")
+
+    search.set_focus()
     send_keys("^p", vk_packet=False)
     check(wait_for(preferences.exists, 10) is not None, "Preferences opens again")
     if preferences.exists():

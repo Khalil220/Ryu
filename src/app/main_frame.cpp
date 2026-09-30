@@ -8,12 +8,14 @@
 #include "playlist_server.hpp"
 #include "player_panel.hpp"
 #include "preferences_dialog.hpp"
+#include "shortcuts_dialog.hpp"
 #include "show_details_panel.hpp"
 #include "speech.hpp"
 #include "text_list.hpp"
 
 #include <algorithm>
 
+#include <wx/aboutdlg.h>
 #include <wx/button.h>
 #include <wx/choice.h>
 #include <wx/display.h>
@@ -84,11 +86,27 @@ void MainFrame::createMenu() {
     file->Append(wxID_PREFERENCES, "&Preferences...\tCtrl+P");
     file->AppendSeparator();
     file->Append(wxID_EXIT, "E&xit");
+    auto* help = new wxMenu;
+    const int shortcutsId = wxWindow::NewControlId();
+    help->Append(shortcutsId, "&Keyboard shortcuts\tF1");
+    help->Append(wxID_ABOUT, "&About Ryu");
     auto* bar = new wxMenuBar;
     bar->Append(file, "&File");
+    bar->Append(help, "&Help");
     SetMenuBar(bar);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { showPreferences(); }, wxID_PREFERENCES);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { Close(); }, wxID_EXIT);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShortcutsDialog(this).ShowModal(); }, shortcutsId);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) {
+        wxAboutDialogInfo about;
+        about.SetName("Ryu");
+        about.SetVersion(RYU_VERSION);
+        about.SetDescription("An accessible anime player for Windows.");
+        about.SetWebSite("https://github.com/Khalil220/Ryu");
+        about.SetLicence("Ryu is licensed under the GNU General Public License v3.0.");
+        about.SetIcon(GetIcon());
+        wxAboutBox(about, this);
+    }, wxID_ABOUT);
 }
 
 void MainFrame::createControls() {
