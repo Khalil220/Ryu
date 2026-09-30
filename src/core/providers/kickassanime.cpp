@@ -3,6 +3,7 @@
 #include "../encoding.hpp"
 #include "../hls.hpp"
 #include "../html.hpp"
+#include "../language.hpp"
 #include "../log.hpp"
 
 #include <nlohmann/json.hpp>
@@ -322,6 +323,9 @@ Stream KickAssAnimeProvider::resolvePlayer(const std::string& playerUrl, const s
                               false};
             if (subtitle.url.empty()) {
                 continue;
+            }
+            if (subtitle.label.empty() || subtitle.label == "Default") {
+                subtitle.label = languageName(subtitle.language);
             }
             if (audio == Audio::Sub && !haveDefault && subtitle.language == "en") {
                 subtitle.isDefault = true;

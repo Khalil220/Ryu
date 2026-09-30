@@ -179,6 +179,25 @@ TEST_CASE("streams resolves the VidStreaming player into a manifest with headers
     CHECK_FALSE(stream.subtitles[1].isDefault);
 }
 
+TEST_CASE("streams names a subtitle track the site only calls Default after its language") {
+    FakeHttpClient http;
+    http.serve(jaListUrl, readFixture("kickassanime/episodes_frieren_ja.json"));
+    http.serve(jaEpisodeUrl, readFixture("kickassanime/episode_1_ja.json"));
+    http.serve(jaPlayerUrl, readFixture("kickassanime/player_sakamoto.html"));
+    KickAssAnimeProvider provider(http);
+
+    const auto streams = provider.streams("sousou-no-frieren-2d15|1", Audio::Sub);
+
+    REQUIRE(streams.size() == 1);
+    const auto& subtitles = streams[0].subtitles;
+    REQUIRE(subtitles.size() == 30);
+    const auto filipino = std::ranges::find(subtitles, "fil", &Subtitle::language);
+    REQUIRE(filipino != subtitles.end());
+    CHECK(filipino->label == "Filipino");
+    CHECK(std::ranges::none_of(subtitles, [](const Subtitle& s) { return s.label == "Default"; }));
+    CHECK(subtitles[3].label == "Czech");
+}
+
 TEST_CASE("dub streams use the English episode list and ask for English audio without forcing subtitles") {
     FakeHttpClient http;
     http.serve(enListUrl, readFixture("kickassanime/episodes_frieren_en.json"));
