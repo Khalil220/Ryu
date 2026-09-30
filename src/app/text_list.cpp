@@ -1,5 +1,7 @@
 #include "text_list.hpp"
 
+#include <algorithm>
+
 namespace ryu {
 
 TextList::TextList(wxWindow* parent)
@@ -16,6 +18,7 @@ void TextList::setItems(std::vector<wxString> items) {
     items_ = std::move(items);
     SetItemCount(static_cast<long>(items_.size()));
     fitColumn();
+    CallAfter([this] { fitColumn(); });
     Refresh();
 }
 
@@ -37,7 +40,7 @@ wxString TextList::OnGetItemText(long item, long) const {
 }
 
 void TextList::fitColumn() {
-    SetColumnWidth(0, wxLIST_AUTOSIZE_USEHEADER);
+    SetColumnWidth(0, std::max(1, GetClientSize().GetWidth()));
 }
 
 }
