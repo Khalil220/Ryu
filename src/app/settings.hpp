@@ -36,6 +36,7 @@ struct Settings {
     std::map<std::string, std::string> baseUrlOverrides;
     Audio audio = Audio::Sub;
     bool useFallback = true;
+    bool checkForUpdates = true;
     bool readSubtitlesSubbed = true;
     bool readSubtitlesDubbed = false;
     SubtitlePreference subtitlesSubbed;

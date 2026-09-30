@@ -28,6 +28,7 @@ private:
     wxChoice* audioChoice_ = nullptr;
     wxChoice* themeChoice_ = nullptr;
     wxCheckBox* fallbackCheck_ = nullptr;
+    wxCheckBox* updatesCheck_ = nullptr;
 };
 
 }

@@ -51,15 +51,15 @@ Visual Studio's developer prompts point `VCPKG_ROOT` at the bundled copy. Buildi
 
 The first configure builds wxWidgets, libcurl, lexbor and nlohmann-json through vcpkg, and downloads prebuilt libmpv and Prism. The result is `build\windows\src\app\Release\ryu.exe`, which needs `libmpv-2.dll` and `prism.dll` beside it.
 
-`tools\release.ps1` builds a release from a clean checkout of the current commit, runs the unit tests, and writes `dist\Ryu-<version>-win64.zip` with a `SHA256SUMS` file. With `-Publish` it also tags the version from `CMakeLists.txt` and uploads both files as a GitHub release.
+`tools\release.ps1` builds a release from a clean checkout of the current commit, runs the unit tests, and writes `dist\Ryu-<version>-win64.zip` with a `SHA256SUMS` file. With `-Publish` it also tags the version from `CMakeLists.txt` and uploads both files as a GitHub release, which is what the built-in updater reads.
 
 ## Tests
 
 The test presets use the debug build (`cmake --build --preset debug`).
 
 - `ctest --preset unit`: offline, against saved site responses
-- `ctest --preset live`: resolves real episodes from both sites
-- `ctest --preset ui`: drives the app through UI Automation and takes over the keyboard for about two minutes
+- `ctest --preset live`: resolves real episodes from all three sites
+- `ctest --preset ui`: drives the app through UI Automation, including a full update from a local test server, and takes over the keyboard for about three minutes
 
 The UI tests need Python with pywinauto:
 
@@ -71,7 +71,7 @@ cmake --preset windows -DRYU_UI_TEST_PYTHON=%CD%\build\ui-venv\Scripts\python.ex
 
 ## Files
 
-Settings are stored in `%APPDATA%\Ryu\settings.ini`. Each session is logged to `%APPDATA%\Ryu\ryu.log`, with the previous session kept in `ryu.old.log`.
+Settings are stored in `%APPDATA%\Ryu\settings.ini`. Updates replace the program's files in place, so Ryu needs to live in a folder you can write to. Each session is logged to `%APPDATA%\Ryu\ryu.log`, with the previous session kept in `ryu.old.log`.
 
 These environment variables override the defaults:
 
@@ -79,6 +79,7 @@ These environment variables override the defaults:
 - `RYU_LOG`: log file
 - `RYU_SPEECH_LOG`: file that receives every spoken announcement
 - `RYU_MPV_OPTIONS`: extra mpv options as comma-separated `name=value` pairs
+- `RYU_UPDATE_FEED`: address of the release feed the updater reads
 
 ## Command-line tool
 

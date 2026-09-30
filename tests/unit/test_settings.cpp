@@ -30,6 +30,7 @@ TEST_CASE("empty settings fall back to HiAnime, subs and the default base URL") 
     CHECK(settings.audio == Audio::Sub);
     CHECK(settings.baseUrl() == "https://hianime.at");
     CHECK(settings.useFallback);
+    CHECK(settings.checkForUpdates);
     CHECK(settings.theme == Theme::Dark);
     CHECK(settings.window.width == 0);
     CHECK(settings.readSubtitlesFor(Audio::Sub));
@@ -46,6 +47,7 @@ TEST_CASE("saved settings load back unchanged") {
     Settings settings;
     settings.audio = Audio::Dub;
     settings.useFallback = false;
+    settings.checkForUpdates = false;
     settings.theme = Theme::System;
     settings.window = {-8, 40, 1600, 900, true};
     settings.readSubtitlesSubbed = false;
@@ -60,6 +62,7 @@ TEST_CASE("saved settings load back unchanged") {
     const auto loaded = loadSettings(config);
     CHECK(loaded.audio == Audio::Dub);
     CHECK_FALSE(loaded.useFallback);
+    CHECK_FALSE(loaded.checkForUpdates);
     CHECK(loaded.theme == Theme::System);
     CHECK(loaded.window == settings.window);
     CHECK_FALSE(loaded.readSubtitlesFor(Audio::Sub));

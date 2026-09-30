@@ -12,6 +12,7 @@
 #include "show_details_panel.hpp"
 #include "speech.hpp"
 #include "text_list.hpp"
+#include "updater.hpp"
 
 #include <algorithm>
 
@@ -82,7 +83,14 @@ MainFrame::MainFrame(SettingsStore& store)
     applySettings();
     setStatus("Ready");
     searchBox_->SetFocus();
+    updater_ = std::make_unique<Updater>(this, alive_, [this](const wxString& text) { setStatus(text); });
+    Updater::cleanUp();
+    if (settings_.checkForUpdates) {
+        CallAfter([this] { updater_->check(false); });
+    }
 }
+
+MainFrame::~MainFrame() = default;
 
 void MainFrame::createMenu() {
     auto* file = new wxMenu;
@@ -92,6 +100,8 @@ void MainFrame::createMenu() {
     auto* help = new wxMenu;
     const int shortcutsId = wxWindow::NewControlId();
     help->Append(shortcutsId, "&Keyboard shortcuts\tF1");
+    const int updatesId = wxWindow::NewControlId();
+    help->Append(updatesId, "Check for &updates");
     help->Append(wxID_ABOUT, "&About Ryu");
     auto* bar = new wxMenuBar;
     bar->Append(file, "&File");
@@ -100,6 +110,7 @@ void MainFrame::createMenu() {
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { showPreferences(); }, wxID_PREFERENCES);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { Close(); }, wxID_EXIT);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShortcutsDialog(this).ShowModal(); }, shortcutsId);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { updater_->check(true); }, updatesId);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) {
         wxAboutDialogInfo about;
         about.SetName("Ryu");

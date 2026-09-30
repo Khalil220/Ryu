@@ -13,6 +13,7 @@ add_library(ryu_core STATIC
     providers/kickassanime.cpp
     resolvers/megaplay.cpp
     stream_finder.cpp
+    update.cpp
 )
 target_include_directories(ryu_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ryu_core

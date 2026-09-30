@@ -28,10 +28,12 @@ class PlayerPanel;
 class TextList;
 class PlaylistServer;
 struct ProviderSession;
+class Updater;
 
 class MainFrame : public wxFrame {
 public:
     explicit MainFrame(SettingsStore& store);
+    ~MainFrame() override;
 
 private:
     void createMenu();
@@ -60,6 +62,7 @@ private:
     std::shared_ptr<ProviderSession> session_;
     std::shared_ptr<PlaylistServer> playlistServer_;
     std::shared_ptr<int> alive_;
+    std::unique_ptr<Updater> updater_;
     std::vector<ryu::Show> shows_;
     std::vector<Episode> episodes_;
     std::vector<size_t> visibleEpisodes_;

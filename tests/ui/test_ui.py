@@ -585,7 +585,8 @@ def main(exe):
     speech_log = os.path.join(tempfile.gettempdir(), f"ryu-ui-speech-{os.getpid()}.log")
     ryu_log = os.path.join(tempfile.gettempdir(), f"ryu-test-{os.getpid()}.log")
     env = dict(os.environ, RYU_CONFIG_FILE=config, RYU_MPV_OPTIONS="ao=null", RYU_LOG=ryu_log,
-               RYU_SPEECH_LOG=speech_log)
+               RYU_SPEECH_LOG=speech_log,
+               RYU_UPDATE_FEED="http://127.0.0.1:9/none")
     process = subprocess.Popen([os.path.abspath(exe)], env=env)
     try:
         run(Application(backend="uia").connect(process=process.pid, timeout=20), speech_log)

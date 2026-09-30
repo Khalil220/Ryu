@@ -56,10 +56,13 @@ PreferencesDialog::PreferencesDialog(wxWindow* parent, const Settings& settings)
 
     fallbackCheck_ = new wxCheckBox(this, wxID_ANY, "&Try other providers when an episode won't play");
     fallbackCheck_->SetValue(settings_.useFallback);
+    updatesCheck_ = new wxCheckBox(this, wxID_ANY, "Check for &updates when Ryu starts");
+    updatesCheck_->SetValue(settings_.checkForUpdates);
 
     auto* sizer = new wxBoxSizer(wxVERTICAL);
     sizer->Add(grid, 1, wxEXPAND | wxALL, 12);
     sizer->Add(fallbackCheck_, 0, wxLEFT | wxRIGHT | wxBOTTOM, 12);
+    sizer->Add(updatesCheck_, 0, wxLEFT | wxRIGHT | wxBOTTOM, 12);
     sizer->Add(CreateStdDialogButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 12);
     SetSizerAndFit(sizer);
     setAccessibleName(providerChoice_, "Provider");
@@ -124,6 +127,7 @@ void PreferencesDialog::onOk(wxCommandEvent& event) {
     settings_.providerId = availableProviders()[shownProvider_].id;
     settings_.audio = audioChoice_->GetSelection() == 1 ? Audio::Dub : Audio::Sub;
     settings_.useFallback = fallbackCheck_->GetValue();
+    settings_.checkForUpdates = updatesCheck_->GetValue();
     settings_.theme = static_cast<Theme>(themeChoice_->GetSelection());
     event.Skip();
 }

@@ -17,6 +17,7 @@ add_executable(ryu WIN32
     show_details_panel.cpp
     speech.cpp
     text_list.cpp
+    updater.cpp
     ryu.rc
     ryu.manifest
 )

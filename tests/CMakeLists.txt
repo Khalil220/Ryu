@@ -20,6 +20,7 @@ add_executable(ryu_unit_tests
     unit/test_stall_watch.cpp
     unit/test_stream_finder.cpp
     unit/test_subtitle_choice.cpp
+    unit/test_update.cpp
 )
 target_link_libraries(ryu_unit_tests PRIVATE ryu_core ryu_ui_support ryu_test_main)
 target_compile_definitions(ryu_unit_tests PRIVATE RYU_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -32,6 +33,7 @@ add_executable(ryu_live_tests
     live/test_live_hianime.cpp
     live/test_live_kickassanime.cpp
     live/test_live_repair.cpp
+    live/test_live_update.cpp
 )
 target_link_libraries(ryu_live_tests PRIVATE ryu_core ryu_test_main)
 add_test(NAME live COMMAND ryu_live_tests)
@@ -44,4 +46,6 @@ if(RYU_UI_TEST_PYTHON)
     add_test(NAME ui-responsiveness
              COMMAND "${RYU_UI_TEST_PYTHON}" "${CMAKE_CURRENT_SOURCE_DIR}/ui/test_responsiveness.py" $<TARGET_FILE:ryu>)
     set_tests_properties(ui-responsiveness PROPERTIES LABELS ui TIMEOUT 180)
+    add_test(NAME ui-update COMMAND "${RYU_UI_TEST_PYTHON}" "${CMAKE_CURRENT_SOURCE_DIR}/ui/test_update.py" $<TARGET_FILE:ryu>)
+    set_tests_properties(ui-update PROPERTIES LABELS ui TIMEOUT 180)
 endif()

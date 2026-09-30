@@ -1,0 +1,33 @@
+{
+  "url": "https://api.github.com/repos/Khalil220/Ryu/releases/250000000",
+  "html_url": "https://github.com/Khalil220/Ryu/releases/tag/v0.2.0",
+  "id": 250000000,
+  "tag_name": "v0.2.0",
+  "target_commitish": "main",
+  "name": "Ryu 0.2.0",
+  "draft": false,
+  "prerelease": false,
+  "created_at": "2026-10-01T09:00:00Z",
+  "published_at": "2026-10-01T09:05:00Z",
+  "assets": [
+    {
+      "url": "https://api.github.com/repos/Khalil220/Ryu/releases/assets/300000000",
+      "id": 300000000,
+      "name": "Ryu-0.2.0-win64.zip",
+      "content_type": "application/x-zip-compressed",
+      "state": "uploaded",
+      "size": 41234567,
+      "browser_download_url": "https://github.com/Khalil220/Ryu/releases/download/v0.2.0/Ryu-0.2.0-win64.zip"
+    },
+    {
+      "url": "https://api.github.com/repos/Khalil220/Ryu/releases/assets/300000001",
+      "id": 300000001,
+      "name": "SHA256SUMS",
+      "content_type": "application/octet-stream",
+      "state": "uploaded",
+      "size": 86,
+      "browser_download_url": "https://github.com/Khalil220/Ryu/releases/download/v0.2.0/SHA256SUMS"
+    }
+  ],
+  "body": "- Add an audio language box to the player\n- Add AniZone as a third provider"
+}
