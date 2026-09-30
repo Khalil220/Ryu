@@ -146,6 +146,7 @@ void PlayerPanel::createControls() {
     info->Add(volumeSlider_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 12);
     info->Add(new wxStaticText(this, wxID_ANY, "&Subtitles:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
     subtitleChoice_ = new wxChoice(this, wxID_ANY);
+    subtitleChoice_->SetMinSize(FromDIP(wxSize(200, -1)));
     subtitleChoice_->Append("Off");
     subtitleChoice_->SetSelection(0);
     info->Add(subtitleChoice_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 12);

@@ -15,6 +15,7 @@
 
 #include <wx/button.h>
 #include <wx/choice.h>
+#include <wx/display.h>
 #include <wx/menu.h>
 #include <wx/msgdlg.h>
 #include <wx/panel.h>
@@ -41,7 +42,10 @@ MainFrame::MainFrame(SettingsStore& store)
     createControls();
     CreateStatusBar();
     SetMinSize(FromDIP(wxSize(480, 420)));
-    SetSize(FromDIP(wxSize(800, 640)));
+    const auto area = wxDisplay().GetClientArea();
+    auto size = FromDIP(wxSize(800, 640));
+    size.DecTo(area.GetSize());
+    SetSize(wxRect(area.GetTopLeft() + (area.GetSize() - size) / 2, size));
     applySettings();
     setStatus("Ready");
     searchBox_->SetFocus();

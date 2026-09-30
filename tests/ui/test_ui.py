@@ -1,4 +1,5 @@
 import ctypes
+import ctypes.wintypes
 import os
 import re
 import subprocess
@@ -76,6 +77,12 @@ def run(app, speech_log):
     app.window(title_re="Ryu.*").wait("visible", timeout=20)
     main = app.window(handle=app.window(title_re="Ryu.*").handle)
     check(main.window_text() == "Ryu - HiAnime", f"main window title names the provider ({main.window_text()})")
+    area = ctypes.wintypes.RECT()
+    ctypes.windll.user32.SystemParametersInfoW(0x0030, 0, ctypes.byref(area), 0)
+    frame = main.rectangle()
+    check(frame.left >= area.left and frame.top >= area.top and frame.right <= area.right and
+          frame.bottom <= area.bottom,
+          f"the window opens inside the usable screen area ({frame} within {area.left},{area.top},{area.right},{area.bottom})")
 
     search = main.child_window(title="Search", control_type="Edit")
     check(search.exists(), "search box is labelled Search")
