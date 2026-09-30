@@ -28,6 +28,17 @@ protected:
 
 }
 
+wxImage fitPoster(const wxImage& image, wxSize box) {
+    if (!image.IsOk() || image.GetWidth() <= 0 || image.GetHeight() <= 0) {
+        return {};
+    }
+    const double scale = std::min(static_cast<double>(box.x) / image.GetWidth(),
+                                  static_cast<double>(box.y) / image.GetHeight());
+    const int width = std::max(1, static_cast<int>(image.GetWidth() * scale));
+    const int height = std::max(1, static_cast<int>(image.GetHeight() * scale));
+    return image.Scale(width, height, wxIMAGE_QUALITY_HIGH);
+}
+
 class PlainPanel : public wxPanel {
 public:
     explicit PlainPanel(wxWindow* parent) : wxPanel(parent) { m_container.DisableSelfFocus(); }
@@ -118,20 +129,16 @@ void ShowDetailsPanel::showDetails(const ryu::Show& show) {
     title_->SetLabelText(wxString::FromUTF8(show.title));
     info_->SetLabelText(wxString::FromUTF8(showDetailsLine(show)));
     synopsis_->setText(show.synopsis.empty() ? wxString("No synopsis available.") : wxString::FromUTF8(show.synopsis));
-    poster_->SetBitmap(wxBitmapBundle());
     book_->GetPage(1)->Layout();
 }
 
-void ShowDetailsPanel::setPoster(const wxImage& image) {
-    if (!image.IsOk() || image.GetWidth() <= 0 || image.GetHeight() <= 0) {
-        return;
-    }
-    const double scale = std::min(static_cast<double>(posterSize_.x) / image.GetWidth(),
-                                  static_cast<double>(posterSize_.y) / image.GetHeight());
-    const int width = std::max(1, static_cast<int>(image.GetWidth() * scale));
-    const int height = std::max(1, static_cast<int>(image.GetHeight() * scale));
-    poster_->SetBitmap(wxBitmap(image.Scale(width, height, wxIMAGE_QUALITY_HIGH)));
+void ShowDetailsPanel::setPoster(const wxBitmap& poster) {
+    poster_->SetBitmap(poster);
     book_->GetPage(1)->Layout();
+}
+
+void ShowDetailsPanel::clearPoster() {
+    poster_->SetBitmap(wxBitmapBundle());
 }
 
 void ShowDetailsPanel::clear() {

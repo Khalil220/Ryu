@@ -3,8 +3,9 @@
 #include "provider.hpp"
 #include "settings.hpp"
 
+#include <wx/bitmap.h>
 #include <wx/frame.h>
-#include <wx/image.h>
+#include <wx/timer.h>
 
 #include <map>
 #include <memory>
@@ -41,6 +42,7 @@ private:
     void showEpisodes(size_t preferred);
     void showDetailsFor(long row);
     void speakSynopsis();
+    void loadDetails();
     void loadPoster(const std::string& url, unsigned generation);
     wxString episodeCountLabel(bool mentionAudio) const;
     void playEpisode(size_t index);
@@ -70,7 +72,8 @@ private:
     unsigned episodeGeneration_ = 0;
     unsigned streamGeneration_ = 0;
     unsigned posterGeneration_ = 0;
-    std::map<std::string, wxImage> posterCache_;
+    std::map<std::string, wxBitmap> posterCache_;
+    wxTimer detailsTimer_;
     std::set<std::string> described_;
 
     wxSimplebook* book_ = nullptr;

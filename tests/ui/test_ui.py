@@ -65,6 +65,32 @@ def choice_count(combo):
     return ctypes.windll.user32.SendMessageW(combo.handle, CB_GETCOUNT, 0, 0)
 
 
+SS_TYPEMASK = 0x1F
+SS_BITMAP = 0x0E
+STM_GETIMAGE = 0x0173
+EnumChildProc = ctypes.WINFUNCTYPE(ctypes.wintypes.BOOL, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM)
+
+
+def poster_shown(window):
+    user32 = ctypes.windll.user32
+    user32.GetWindowLongW.restype = ctypes.c_long
+    user32.SendMessageW.restype = ctypes.c_ssize_t
+    user32.SendMessageW.argtypes = [ctypes.wintypes.HWND, ctypes.wintypes.UINT, ctypes.wintypes.WPARAM,
+                                    ctypes.wintypes.LPARAM]
+    found = []
+
+    def visit(hwnd, _):
+        name = ctypes.create_unicode_buffer(64)
+        user32.GetClassNameW(hwnd, name, 64)
+        if (name.value == "Static" and user32.IsWindowVisible(hwnd) and
+                user32.GetWindowLongW(hwnd, -16) & SS_TYPEMASK == SS_BITMAP):
+            found.append(user32.SendMessageW(hwnd, STM_GETIMAGE, 0, 0) != 0)
+        return True
+
+    user32.EnumChildWindows(window.handle, EnumChildProc(visit), 0)
+    return any(found)
+
+
 def spoken(log_path):
     try:
         with open(log_path, encoding="utf-8") as log:
@@ -122,6 +148,15 @@ def run(app, speech_log):
     check(wait_for(lambda: synopsis_text().endswith("a new tale is about to begin."), 15) is not None,
           f"the full synopsis loads from the show page ({synopsis_text()[-40:]})")
     check("\n" not in synopsis_text(), "the synopsis keeps its sentences whole instead of hard line breaks")
+    check(wait_for(lambda: poster_shown(main), 15) is not None, "the selected result's poster is shown")
+    results.set_focus()
+    wait_for(lambda: results.has_keyboard_focus() or first.has_keyboard_focus(), 5)
+    send_keys("{DOWN}")
+    check(wait_for(lambda: poster_shown(main) and not synopsis_text(), 15) is not None,
+          "the next result's poster loads once the selection rests")
+    send_keys("{UP}")
+    check(wait_for(lambda: poster_shown(main) and synopsis_text(), 5) is not None,
+          "going back to a result shows its poster again")
 
     def spoke_synopsis(mark):
         return any(line.startswith("During their decade-long quest") for line in spoken(speech_log)[mark:])

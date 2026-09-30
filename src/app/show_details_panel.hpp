@@ -4,6 +4,7 @@
 
 #include <wx/panel.h>
 
+class wxBitmap;
 class wxImage;
 class wxSimplebook;
 class wxStaticBitmap;
@@ -13,13 +14,17 @@ namespace ryu {
 
 class SynopsisView;
 
+wxImage fitPoster(const wxImage& image, wxSize box);
+
 class ShowDetailsPanel : public wxPanel {
 public:
     explicit ShowDetailsPanel(wxWindow* parent);
 
     void showDetails(const ryu::Show& show);
-    void setPoster(const wxImage& image);
+    void setPoster(const wxBitmap& poster);
+    void clearPoster();
     void clear();
+    wxSize posterSize() const { return posterSize_; }
 
 private:
     wxSize posterSize_;

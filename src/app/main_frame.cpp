@@ -20,6 +20,7 @@
 #include <wx/choice.h>
 #include <wx/display.h>
 #include <wx/iconbndl.h>
+#include <wx/image.h>
 #include <wx/log.h>
 #include <wx/mstream.h>
 #include <wx/menu.h>
@@ -63,6 +64,8 @@ MainFrame::MainFrame(SettingsStore& store)
         SetSize(wxRect(area.GetTopLeft() + (area.GetSize() - size) / 2, size));
     }
     normalRect_ = GetRect();
+    detailsTimer_.SetOwner(this);
+    Bind(wxEVT_TIMER, [this](wxTimerEvent&) { loadDetails(); }, detailsTimer_.GetId());
     const auto trackNormalRect = [this](wxEvent& event) {
         if (!IsMaximized() && !IsFullScreen() && !IsIconized()) {
             normalRect_ = GetRect();
@@ -367,13 +370,31 @@ void MainFrame::speakSynopsis() {
 }
 
 void MainFrame::showDetailsFor(long row) {
-    const unsigned generation = ++posterGeneration_;
+    ++posterGeneration_;
+    detailsTimer_.Stop();
     if (row < 0 || static_cast<size_t>(row) >= shows_.size()) {
         details_->clear();
         return;
     }
-    const auto index = static_cast<size_t>(row);
-    details_->showDetails(shows_[index]);
+    const auto& show = shows_[static_cast<size_t>(row)];
+    details_->showDetails(show);
+    const auto cached = posterCache_.find(show.posterUrl);
+    if (cached != posterCache_.end()) {
+        details_->setPoster(cached->second);
+    } else {
+        details_->clearPoster();
+    }
+    if (!described_.contains(show.id) || (cached == posterCache_.end() && !show.posterUrl.empty())) {
+        detailsTimer_.StartOnce(150);
+    }
+}
+
+void MainFrame::loadDetails() {
+    const auto index = results_->selectedIndex();
+    if (index >= shows_.size()) {
+        return;
+    }
+    const unsigned generation = posterGeneration_;
     if (described_.contains(shows_[index].id)) {
         loadPoster(shows_[index].posterUrl, generation);
         return;
@@ -410,25 +431,26 @@ void MainFrame::loadPoster(const std::string& url, unsigned generation) {
         return;
     }
     auto session = session_;
-    runInBackground<std::string>(
+    runInBackground<wxImage>(
         alive_,
-        [session, url] {
+        [session, url, box = details_->posterSize()] {
             auto response = session->http->get(url);
             if (response.status < 200 || response.status >= 300) {
                 throw HttpError("The poster returned HTTP " + std::to_string(response.status));
             }
-            return std::move(response.body);
-        },
-        [this, generation, url](std::string bytes) {
             wxLogNull quiet;
-            wxMemoryInputStream stream(bytes.data(), bytes.size());
-            wxImage image(stream, wxBITMAP_TYPE_ANY);
+            wxMemoryInputStream stream(response.body.data(), response.body.size());
+            const wxImage image(stream, wxBITMAP_TYPE_ANY);
             if (!image.IsOk()) {
-                return;
+                throw HttpError("The poster could not be decoded");
             }
-            posterCache_[url] = image;
+            return fitPoster(image, box);
+        },
+        [this, generation, url](wxImage poster) {
+            const wxBitmap bitmap(poster);
+            posterCache_[url] = bitmap;
             if (generation == posterGeneration_) {
-                details_->setPoster(image);
+                details_->setPoster(bitmap);
             }
         },
         [](const std::string&) {});
