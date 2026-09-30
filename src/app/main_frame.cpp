@@ -598,7 +598,6 @@ void MainFrame::showPreferences() {
         details_->clear();
         results_->setItems({});
         episodeList_->setItems({});
-        searchBox_->SetFocus();
         setStatus("Using " + wxString::FromUTF8(settings_.provider().name));
     }
 }

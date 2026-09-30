@@ -530,7 +530,7 @@ def run(app, speech_log):
         preferences.child_window(title="OK", control_type="Button").invoke()
         check(wait_for(lambda: main.window_text() == "Ryu - KickAssAnime", 10) is not None,
               f"the window title follows the provider ({main.window_text()})")
-        check(wait_for(search.has_keyboard_focus, 5) is not None, "switching provider puts focus in the search box")
+        check(wait_for(search.has_keyboard_focus, 5) is not None, "switching provider returns focus to where it was")
         check(wait_for(lambda: not poster_shown(main) and not synopsis_text(), 5) is not None,
               "switching provider hides the emptied details panel")
         search.set_edit_text("frieren")
