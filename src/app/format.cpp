@@ -1,5 +1,6 @@
 #include "format.hpp"
 
+#include "language.hpp"
 #include "stream_finder.hpp"
 
 #include <algorithm>
@@ -139,6 +140,41 @@ std::string timeLabel(double position, double duration) {
         return formatClock(position);
     }
     return formatClock(position) + " of " + formatClock(duration);
+}
+
+std::string trackLabel(std::string_view title, std::string_view language, int64_t id) {
+    if (!title.empty()) {
+        return std::string(title);
+    }
+    if (auto name = languageName(language); !name.empty()) {
+        return name;
+    }
+    return language.empty() ? "Track " + std::to_string(id) : std::string(language);
+}
+
+std::string preferredAudioLanguages(std::string_view preferred, std::string_view fallback) {
+    if (preferred.empty()) {
+        return std::string(fallback);
+    }
+    if (fallback.empty()) {
+        return std::string(preferred);
+    }
+    return std::string(preferred) + "," + std::string(fallback);
+}
+
+std::vector<TrackEntry> distinctTracks(const std::vector<TrackEntry>& tracks) {
+    std::vector<TrackEntry> result;
+    for (const auto& track : tracks) {
+        const auto same = std::ranges::find_if(result, [&](const TrackEntry& kept) {
+            return kept.label == track.label && kept.language == track.language;
+        });
+        if (same == result.end()) {
+            result.push_back(track);
+        } else if (track.selected) {
+            *same = track;
+        }
+    }
+    return result;
 }
 
 }

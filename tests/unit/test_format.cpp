@@ -64,3 +64,35 @@ TEST_CASE("timeLabel includes the duration once it is known") {
     CHECK(timeLabel(201, 1450) == "3:21 of 24:10");
     CHECK(timeLabel(201, 0) == "3:21");
 }
+
+TEST_CASE("trackLabel prefers the title, then the language's name, then its code") {
+    CHECK(trackLabel("English (US)", "en", 1) == "English (US)");
+    CHECK(trackLabel("", "fil", 2) == "Filipino");
+    CHECK(trackLabel("", "hin", 3) == "hin");
+    CHECK(trackLabel("", "", 4) == "Track 4");
+}
+
+TEST_CASE("preferredAudioLanguages puts the chosen language ahead of the stream's own") {
+    CHECK(preferredAudioLanguages("", "jpn,ja") == "jpn,ja");
+    CHECK(preferredAudioLanguages("de", "eng,en") == "de,eng,en");
+    CHECK(preferredAudioLanguages("hin", "") == "hin");
+}
+
+TEST_CASE("distinctTracks merges tracks with the same name and language, keeping the playing copy") {
+    const std::vector<TrackEntry> tracks{{1, "Hindi", "hin", false},   {2, "Japanese", "jpn", false},
+                                         {3, "English", "eng", false}, {4, "Hindi", "hin", false},
+                                         {5, "Japanese", "jpn", true}, {6, "English", "eng", false}};
+
+    const auto distinct = distinctTracks(tracks);
+
+    REQUIRE(distinct.size() == 3);
+    CHECK(distinct[0].id == 1);
+    CHECK(distinct[1].id == 5);
+    CHECK(distinct[1].selected);
+    CHECK(distinct[2].id == 3);
+}
+
+TEST_CASE("distinctTracks keeps tracks that share a language but not a name") {
+    const std::vector<TrackEntry> tracks{{1, "English", "eng", true}, {2, "English (CC)", "eng", false}};
+    CHECK(distinctTracks(tracks).size() == 2);
+}

@@ -87,6 +87,8 @@ Settings loadSettings(wxConfigBase& config) {
     settings.readSubtitlesDubbed = config.ReadBool("/ReadSubtitles/Dubbed", false);
     settings.subtitlesSubbed = readSubtitlePreference(config, "Subbed");
     settings.subtitlesDubbed = readSubtitlePreference(config, "Dubbed");
+    settings.audioLanguageSubbed = config.Read("/AudioLanguage/Subbed", wxString()).utf8_string();
+    settings.audioLanguageDubbed = config.Read("/AudioLanguage/Dubbed", wxString()).utf8_string();
     settings.window.x = config.ReadLong("/Window/X", 0);
     settings.window.y = config.ReadLong("/Window/Y", 0);
     settings.window.width = config.ReadLong("/Window/Width", 0);
@@ -112,6 +114,8 @@ void saveSettings(wxConfigBase& config, const Settings& settings) {
     config.Write("/ReadSubtitles/Dubbed", settings.readSubtitlesDubbed);
     writeSubtitlePreference(config, "Subbed", settings.subtitlesSubbed);
     writeSubtitlePreference(config, "Dubbed", settings.subtitlesDubbed);
+    config.Write("/AudioLanguage/Subbed", wxString::FromUTF8(settings.audioLanguageSubbed));
+    config.Write("/AudioLanguage/Dubbed", wxString::FromUTF8(settings.audioLanguageDubbed));
     if (settings.window.width > 0 && settings.window.height > 0) {
         config.Write("/Window/X", settings.window.x);
         config.Write("/Window/Y", settings.window.y);

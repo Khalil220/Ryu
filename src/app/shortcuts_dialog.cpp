@@ -13,7 +13,7 @@ namespace ryu {
 
 namespace {
 
-constexpr std::array<std::pair<const char*, const char*>, 23> shortcuts{{
+constexpr std::array<std::pair<const char*, const char*>, 24> shortcuts{{
     {"Enter", "Search, open the selected show, or play the selected episode"},
     {"Alt+S", "Search box"},
     {"Alt+R", "Results"},
@@ -37,6 +37,7 @@ constexpr std::array<std::pair<const char*, const char*>, 23> shortcuts{{
     {"Alt+M", "Time"},
     {"Alt+V", "Volume slider"},
     {"Alt+S in the player", "Subtitles"},
+    {"Alt+A in the player", "Audio language, when the episode has more than one"},
 }};
 
 }

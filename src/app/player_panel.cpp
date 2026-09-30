@@ -50,6 +50,7 @@ constexpr wchar_t windowGlyph = 0xE73F;
 constexpr wchar_t closeGlyph = 0xE711;
 constexpr wchar_t volumeGlyph = 0xE767;
 constexpr wchar_t captionsGlyph = 0xE7F0;
+constexpr wchar_t audioGlyph = 0xF2B7;
 
 wxFont iconFont(double points) {
     static const wxString face = wxFontEnumerator::IsValidFacename("Segoe Fluent Icons") ? "Segoe Fluent Icons"
@@ -112,9 +113,11 @@ std::string endReason(const mpv_event_end_file& end) {
 
 PlayerPanel::PlayerPanel(wxWindow* parent, std::function<void()> onLeave, std::function<void(int)> onStep,
                          std::function<void(bool)> onReadSubtitlesChanged,
-                         std::function<void(const SubtitlePreference&)> onSubtitlesChosen)
+                         std::function<void(const SubtitlePreference&)> onSubtitlesChosen,
+                         std::function<void(const std::string&)> onAudioChosen)
     : wxPanel(parent), onLeave_(std::move(onLeave)), onStep_(std::move(onStep)),
-      onReadSubtitlesChanged_(std::move(onReadSubtitlesChanged)), onSubtitlesChosen_(std::move(onSubtitlesChosen)) {
+      onReadSubtitlesChanged_(std::move(onReadSubtitlesChanged)), onSubtitlesChosen_(std::move(onSubtitlesChosen)),
+      onAudioChosen_(std::move(onAudioChosen)) {
     createControls();
     Bind(wxEVT_CHAR_HOOK, &PlayerPanel::onCharHook, this);
     stallTimer_.SetOwner(this);
@@ -134,6 +137,7 @@ PlayerPanel::PlayerPanel(wxWindow* parent, std::function<void()> onLeave, std::f
     const int timeId = wxWindow::NewControlId();
     const int volumeId = wxWindow::NewControlId();
     const int subtitlesId = wxWindow::NewControlId();
+    const int audioId = wxWindow::NewControlId();
     wxAcceleratorEntry keys[] = {
         {wxACCEL_NORMAL, 'T', speakTimeId},
         {wxACCEL_NORMAL, 'N', nextId},
@@ -150,6 +154,7 @@ PlayerPanel::PlayerPanel(wxWindow* parent, std::function<void()> onLeave, std::f
         {wxACCEL_ALT, 'M', timeId},
         {wxACCEL_ALT, 'V', volumeId},
         {wxACCEL_ALT, 'S', subtitlesId},
+        {wxACCEL_ALT, 'A', audioId},
         {wxACCEL_NORMAL, WXK_F11, fullScreenId},
     };
     SetAcceleratorTable(wxAcceleratorTable(static_cast<int>(std::size(keys)), keys));
@@ -168,6 +173,11 @@ PlayerPanel::PlayerPanel(wxWindow* parent, std::function<void()> onLeave, std::f
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { timeText_->SetFocus(); }, timeId);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { volumeSlider_->SetFocus(); }, volumeId);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { subtitleChoice_->SetFocus(); }, subtitlesId);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) {
+        if (audioChoice_->IsShown()) {
+            audioChoice_->SetFocus();
+        }
+    }, audioId);
 }
 
 PlayerPanel::~PlayerPanel() {
@@ -214,6 +224,13 @@ void PlayerPanel::createControls() {
     volumeSlider_->SetLineSize(5);
     volumeSlider_->SetPageSize(20);
     controls->Add(volumeSlider_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(12));
+    audioIcon_ = iconLabel(this, audioGlyph);
+    audioIcon_->Hide();
+    controls->Add(audioIcon_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(6));
+    audioChoice_ = new wxChoice(this, wxID_ANY);
+    audioChoice_->SetMinSize(FromDIP(wxSize(130, -1)));
+    audioChoice_->Hide();
+    controls->Add(audioChoice_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(12));
     controls->Add(iconLabel(this, captionsGlyph), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(6));
     subtitleChoice_ = new wxChoice(this, wxID_ANY);
     subtitleChoice_->SetMinSize(FromDIP(wxSize(150, -1)));
@@ -236,6 +253,8 @@ void PlayerPanel::createControls() {
     setAccessibleShortcut(timeText_, "Alt+M");
     setAccessibleName(volumeSlider_, "Volume");
     setAccessibleShortcut(volumeSlider_, "Alt+V");
+    setAccessibleName(audioChoice_, "Audio");
+    setAccessibleShortcut(audioChoice_, "Alt+A");
     setAccessibleName(subtitleChoice_, "Subtitles");
     setAccessibleShortcut(subtitleChoice_, "Alt+S");
     setAccessibleName(readCheck_, "Read subtitles aloud");
@@ -277,6 +296,15 @@ void PlayerPanel::createControls() {
                                    subtitleLanguages_[index - 1]};
         }
         onSubtitlesChosen_(subtitlePreference_);
+    });
+    audioChoice_->Bind(wxEVT_CHOICE, [this](wxCommandEvent&) {
+        const int index = audioChoice_->GetSelection();
+        if (!mpv_ || index < 0 || static_cast<size_t>(index) >= audioTracks_.size()) {
+            return;
+        }
+        int64_t track = audioTracks_[index];
+        mpv_set_property(mpv_, "aid", MPV_FORMAT_INT64, &track);
+        onAudioChosen_(audioLanguages_[index]);
     });
 }
 
@@ -334,7 +362,7 @@ void PlayerPanel::stopMpv() {
 }
 
 void PlayerPanel::play(const Stream& stream, const std::string& heading, bool readSubtitles,
-                       const SubtitlePreference& subtitles) {
+                       const SubtitlePreference& subtitles, const std::string& audioLanguage) {
     if (!mpv_) {
         startMpv();
     }
@@ -356,7 +384,7 @@ void PlayerPanel::play(const Stream& stream, const std::string& heading, bool re
     node.u.list = &list;
     mpv_set_property(mpv_, "http-header-fields", MPV_FORMAT_NODE, &node);
     mpv_set_property_string(mpv_, "demuxer-lavf-o", stream.disguisedSegments ? "extension_picky=0" : "");
-    mpv_set_property_string(mpv_, "alang", stream.audioLanguage.c_str());
+    mpv_set_property_string(mpv_, "alang", preferredAudioLanguages(audioLanguage, stream.audioLanguage).c_str());
     mpv_set_property_string(mpv_, "pause", "no");
 
     resetState("Loading");
@@ -397,6 +425,10 @@ void PlayerPanel::resetState(const wxString& timeText) {
     subtitleChoice_->Clear();
     subtitleChoice_->Append("Off");
     subtitleChoice_->SetSelection(0);
+    audioTracks_.clear();
+    audioLanguages_.clear();
+    audioChoice_->Clear();
+    showAudioChoice(false);
     lastError_.clear();
     position_ = 0;
     duration_ = 0;
@@ -511,6 +543,7 @@ void PlayerPanel::onPropertyChange(uint64_t id, const mpv_event_property& proper
     case TrackList:
         if (property.format == MPV_FORMAT_NODE) {
             refreshSubtitles(*static_cast<const mpv_node*>(property.data));
+            refreshAudio(*static_cast<const mpv_node*>(property.data));
         }
         break;
     case SubText:
@@ -544,13 +577,7 @@ void PlayerPanel::refreshSubtitles(const mpv_node& tracks) {
         if (!id || id->format != MPV_FORMAT_INT64) {
             continue;
         }
-        auto label = text(field(track, "title"));
-        if (label.empty()) {
-            label = text(field(track, "lang"));
-        }
-        if (label.empty()) {
-            label = "Track " + std::to_string(id->u.int64);
-        }
+        const auto label = trackLabel(text(field(track, "title")), text(field(track, "lang")), id->u.int64);
         ids.push_back(id->u.int64);
         languages.push_back(text(field(track, "lang")));
         labels.Add(wxString::FromUTF8(label));
@@ -568,6 +595,56 @@ void PlayerPanel::refreshSubtitles(const mpv_node& tracks) {
     subtitleChoice_->Append("Off");
     subtitleChoice_->Append(labels);
     subtitleChoice_->SetSelection(selected);
+}
+
+void PlayerPanel::refreshAudio(const mpv_node& tracks) {
+    if (tracks.format != MPV_FORMAT_NODE_ARRAY) {
+        return;
+    }
+    std::vector<TrackEntry> found;
+    for (int i = 0; i < tracks.u.list->num; ++i) {
+        const auto& track = tracks.u.list->values[i];
+        const auto* id = field(track, "id");
+        if (text(field(track, "type")) != "audio" || !id || id->format != MPV_FORMAT_INT64) {
+            continue;
+        }
+        const auto language = text(field(track, "lang"));
+        const auto* isSelected = field(track, "selected");
+        found.push_back({id->u.int64, trackLabel(text(field(track, "title")), language, id->u.int64), language,
+                         isSelected && isSelected->format == MPV_FORMAT_FLAG && isSelected->u.flag});
+    }
+    std::vector<int64_t> ids;
+    std::vector<std::string> languages;
+    wxArrayString labels;
+    int selected = wxNOT_FOUND;
+    for (const auto& track : distinctTracks(found)) {
+        if (track.selected) {
+            selected = static_cast<int>(ids.size());
+        }
+        ids.push_back(track.id);
+        languages.push_back(track.language);
+        labels.Add(wxString::FromUTF8(track.label));
+    }
+    if (ids != audioTracks_ || audioChoice_->GetSelection() != selected) {
+        audioTracks_ = std::move(ids);
+        audioLanguages_ = std::move(languages);
+        audioChoice_->Clear();
+        audioChoice_->Append(labels);
+        audioChoice_->SetSelection(selected);
+    }
+    showAudioChoice(audioTracks_.size() > 1);
+}
+
+void PlayerPanel::showAudioChoice(bool show) {
+    if (audioChoice_->IsShown() == show) {
+        return;
+    }
+    if (!show && FindFocus() == audioChoice_) {
+        pauseButton_->SetFocus();
+    }
+    audioIcon_->Show(show);
+    audioChoice_->Show(show);
+    Layout();
 }
 
 void PlayerPanel::speakSubtitle(const char* raw) {
@@ -733,7 +810,8 @@ void PlayerPanel::onCharHook(wxKeyEvent& event) {
     }
 
     const bool focusUsesArrows =
-        focus == positionSlider_ || focus == volumeSlider_ || focus == timeText_ || focus == subtitleChoice_;
+        focus == positionSlider_ || focus == volumeSlider_ || focus == timeText_ || focus == subtitleChoice_ ||
+        focus == audioChoice_;
     const bool shifted = event.GetModifiers() == wxMOD_SHIFT;
     if (!focusUsesArrows && (plain || shifted)) {
         const double step = shifted ? 60 : 10;

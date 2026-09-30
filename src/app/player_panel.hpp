@@ -29,11 +29,12 @@ class PlayerPanel : public wxPanel {
 public:
     PlayerPanel(wxWindow* parent, std::function<void()> onLeave, std::function<void(int)> onStep,
                 std::function<void(bool)> onReadSubtitlesChanged,
-                std::function<void(const SubtitlePreference&)> onSubtitlesChosen);
+                std::function<void(const SubtitlePreference&)> onSubtitlesChosen,
+                std::function<void(const std::string&)> onAudioChosen);
     ~PlayerPanel() override;
 
     void play(const Stream& stream, const std::string& heading, bool readSubtitles,
-              const SubtitlePreference& subtitles);
+              const SubtitlePreference& subtitles, const std::string& audioLanguage);
     void stop();
     void focusControls();
 
@@ -44,6 +45,8 @@ private:
     void processEvents();
     void onPropertyChange(uint64_t id, const mpv_event_property& property);
     void refreshSubtitles(const mpv_node& tracks);
+    void refreshAudio(const mpv_node& tracks);
+    void showAudioChoice(bool show);
     void command(std::initializer_list<std::string> args);
     void commandAsync(std::initializer_list<std::string> args);
     void togglePause();
@@ -68,11 +71,14 @@ private:
     std::function<void(int)> onStep_;
     std::function<void(bool)> onReadSubtitlesChanged_;
     std::function<void(const SubtitlePreference&)> onSubtitlesChosen_;
+    std::function<void(const std::string&)> onAudioChosen_;
     mpv_handle* mpv_ = nullptr;
     std::vector<Subtitle> pendingSubtitles_;
     std::vector<int64_t> subtitleTracks_;
     std::vector<std::string> subtitleLanguages_;
     SubtitlePreference subtitlePreference_;
+    std::vector<int64_t> audioTracks_;
+    std::vector<std::string> audioLanguages_;
     std::string heading_;
     std::string lastError_;
     double position_ = 0;
@@ -95,6 +101,8 @@ private:
     wxSlider* positionSlider_ = nullptr;
     wxTextCtrl* timeText_ = nullptr;
     wxSlider* volumeSlider_ = nullptr;
+    wxWindow* audioIcon_ = nullptr;
+    wxChoice* audioChoice_ = nullptr;
     wxChoice* subtitleChoice_ = nullptr;
     wxButton* skipIntroButton_ = nullptr;
     wxButton* fullScreenButton_ = nullptr;

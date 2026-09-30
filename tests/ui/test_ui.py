@@ -59,10 +59,22 @@ def items(list_box):
 
 
 CB_GETCOUNT = 0x0146
+CB_GETLBTEXT = 0x0148
+CB_GETLBTEXTLEN = 0x0149
 
 
 def choice_count(combo):
     return ctypes.windll.user32.SendMessageW(combo.handle, CB_GETCOUNT, 0, 0)
+
+
+def choice_texts(combo):
+    user32 = ctypes.windll.user32
+    texts = []
+    for index in range(choice_count(combo)):
+        buffer = ctypes.create_unicode_buffer(user32.SendMessageW(combo.handle, CB_GETLBTEXTLEN, index, 0) + 1)
+        user32.SendMessageW(combo.handle, CB_GETLBTEXT, index, ctypes.addressof(buffer))
+        texts.append(buffer.value)
+    return texts
 
 
 SS_TYPEMASK = 0x1F
@@ -228,6 +240,13 @@ def run(app, speech_log):
           f"English subtitles load and are selected ({subtitles.selected_text()})")
     time.sleep(2)
     check(choice_count(subtitles) == 2, f"the dub offers only its own English track ({choice_count(subtitles) - 1} tracks)")
+    check(not player.child_window(title="Audio", control_type="ComboBox").exists(),
+          "the Audio box stays hidden when the episode has a single audio track")
+    main.child_window(title="Pause", control_type="Button").set_focus()
+    send_keys("%a")
+    time.sleep(0.5)
+    check(main.child_window(title="Pause", control_type="Button").has_keyboard_focus(),
+          "Alt+A does nothing while the Audio box is hidden")
 
     check(wait_for(lambda: "Intro" in spoken(speech_log), 10) is not None, "the intro is announced")
     skip_button = player.child_window(title="Skip intro", control_type="Button")
@@ -520,6 +539,17 @@ def run(app, speech_log):
             main.child_window(title="Play", control_type="Button").invoke()
             check(wait_for(lambda: seconds(time_box.get_value()) >= 3, 60) is not None,
                   f"a KickAssAnime episode plays ({time_box.get_value()})")
+            audio_track = main.child_window(title="Audio", control_type="ComboBox")
+            check(wait_for(audio_track.exists, 10) is not None, "the Audio box shows for an episode with several dubs")
+            if audio_track.exists():
+                names = choice_texts(audio_track)
+                check(len(names) > 1 and len(names) == len(set(names)),
+                      f"the Audio box lists each language once ({names})")
+                check(audio_track.selected_text() in names,
+                      f"the Audio box shows the playing track ({audio_track.selected_text()})")
+                main.child_window(title="Pause", control_type="Button").set_focus()
+                send_keys("%a")
+                check(wait_for(audio_track.has_keyboard_focus, 5) is not None, "Alt+A moves to the Audio box")
             check(not main.child_window(title="Skip intro", control_type="Button").exists(),
                   "Skip intro is hidden for an episode without intro data")
             main.child_window(title="Pause", control_type="Button").set_focus()

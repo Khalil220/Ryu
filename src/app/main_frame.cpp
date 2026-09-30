@@ -165,6 +165,10 @@ void MainFrame::createControls() {
         [this](const SubtitlePreference& subtitles) {
             settings_.subtitlesFor(playingAudio_) = subtitles;
             store_.save(settings_);
+        },
+        [this](const std::string& language) {
+            settings_.audioLanguageFor(playingAudio_) = language;
+            store_.save(settings_);
         });
     book_->AddPage(browsePage_, "Browse", true);
     book_->AddPage(player_, "Player");
@@ -486,7 +490,8 @@ void MainFrame::playEpisode(size_t row) {
             try {
                 playingAudio_ = found.stream.audio;
                 player_->play(found.stream, label.utf8_string(), settings_.readSubtitlesFor(found.stream.audio),
-                              settings_.subtitlesFor(found.stream.audio));
+                              settings_.subtitlesFor(found.stream.audio),
+                              settings_.audioLanguageFor(found.stream.audio));
                 currentEpisode_ = index;
                 showPlayer(title);
                 if (found.fromFallback) {

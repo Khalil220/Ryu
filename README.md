@@ -7,6 +7,7 @@ An accessible anime player for Windows, written in C++ with wxWidgets and libmpv
 - Streams from HiAnime and KickAssAnime, falling back to the other site when an episode won't play
 - Subbed and dubbed audio, with the episode list limited to what's available in each
 - Every subtitle track an episode offers, and optional reading of subtitle lines through the screen reader
+- Audio language choice on episodes with several dubs
 - Skip intro on episodes that have intro times
 - Swaps banned video hosts for working ones before playback
 

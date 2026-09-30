@@ -36,6 +36,8 @@ TEST_CASE("empty settings fall back to HiAnime, subs and the default base URL") 
     CHECK_FALSE(settings.readSubtitlesFor(Audio::Dub));
     CHECK(settings.subtitlesFor(Audio::Sub) == SubtitlePreference{});
     CHECK(settings.subtitlesFor(Audio::Dub) == SubtitlePreference{});
+    CHECK(settings.audioLanguageFor(Audio::Sub).empty());
+    CHECK(settings.audioLanguageFor(Audio::Dub).empty());
 }
 
 TEST_CASE("saved settings load back unchanged") {
@@ -52,6 +54,7 @@ TEST_CASE("saved settings load back unchanged") {
     settings.baseUrlOverrides["hianime"] = "https://mirror.example";
     settings.subtitlesSubbed = {SubtitlePreference::Kind::Track, "Spanish (- Spanish(Latin America))", "spa"};
     settings.subtitlesDubbed = {SubtitlePreference::Kind::Off, "", ""};
+    settings.audioLanguageDubbed = "de";
     saveSettings(config, settings);
 
     const auto loaded = loadSettings(config);
@@ -66,6 +69,8 @@ TEST_CASE("saved settings load back unchanged") {
     CHECK(loaded.baseUrlFor(*findProvider("hianime")) == "https://mirror.example");
     CHECK(loaded.subtitlesFor(Audio::Sub) == settings.subtitlesSubbed);
     CHECK(loaded.subtitlesFor(Audio::Dub).kind == SubtitlePreference::Kind::Off);
+    CHECK(loaded.audioLanguageFor(Audio::Sub).empty());
+    CHECK(loaded.audioLanguageFor(Audio::Dub) == "de");
 }
 
 TEST_CASE("an override equal to the default is not stored") {

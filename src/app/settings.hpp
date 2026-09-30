@@ -40,6 +40,8 @@ struct Settings {
     bool readSubtitlesDubbed = false;
     SubtitlePreference subtitlesSubbed;
     SubtitlePreference subtitlesDubbed;
+    std::string audioLanguageSubbed;
+    std::string audioLanguageDubbed;
     WindowPlacement window;
 
     bool readSubtitlesFor(Audio kind) const { return kind == Audio::Dub ? readSubtitlesDubbed : readSubtitlesSubbed; }
@@ -47,6 +49,10 @@ struct Settings {
         return kind == Audio::Dub ? subtitlesDubbed : subtitlesSubbed;
     }
     SubtitlePreference& subtitlesFor(Audio kind) { return kind == Audio::Dub ? subtitlesDubbed : subtitlesSubbed; }
+    const std::string& audioLanguageFor(Audio kind) const {
+        return kind == Audio::Dub ? audioLanguageDubbed : audioLanguageSubbed;
+    }
+    std::string& audioLanguageFor(Audio kind) { return kind == Audio::Dub ? audioLanguageDubbed : audioLanguageSubbed; }
 
     const ProviderInfo& provider() const;
     std::string baseUrl() const;
