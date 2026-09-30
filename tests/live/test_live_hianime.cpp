@@ -75,6 +75,13 @@ TEST_CASE("live: Frieren still lists episodes with a stream for episode 1") {
     const auto shows = provider.search("frieren");
     REQUIRE_FALSE(shows.empty());
     CHECK(shows.front().id == "481");
+    const auto described = provider.describe(shows.front());
+    CHECK(described.synopsis.size() > 500);
+    CHECK(described.year == 2023);
+    CHECK_FALSE(described.genres.empty());
+    const auto poster = http.get(described.posterUrl);
+    CHECK(poster.status == 200);
+    CHECK(poster.body.starts_with("RIFF"));
     const auto episodes = provider.episodes(shows.front());
     REQUIRE(episodes.size() == 28);
     CHECK_FALSE(provider.streams(episodes.front().id, Audio::Sub).empty());

@@ -1,6 +1,7 @@
 #include "hianime.hpp"
 
 #include "../encoding.hpp"
+#include "../hls.hpp"
 #include "../html.hpp"
 #include "../log.hpp"
 
@@ -92,6 +93,9 @@ std::vector<Show> HiAnimeProvider::search(std::string_view query) {
             show.title = link->text();
         }
         show.altTitle = link->attr("data-jname");
+        if (const auto href = link->attr("href"); !href.empty()) {
+            show.pageUrl = resolveUrl(baseUrl_ + "/", href);
+        }
         if (const auto format = item.first(".fd-infor .fdi-item")) {
             show.format = format->text();
         }
@@ -101,9 +105,64 @@ std::vector<Show> HiAnimeProvider::search(std::string_view query) {
         if (const auto dub = item.first(".tick-dub")) {
             show.dubEpisodes = parseCount(dub->text());
         }
+        if (const auto image = item.first(".film-poster-img")) {
+            auto source = image->attr("data-src");
+            if (source.empty()) {
+                source = image->attr("src");
+            }
+            if (!source.empty()) {
+                show.posterUrl = resolveUrl(baseUrl_ + "/", source);
+            }
+        }
+        if (const auto description = item.first(".description")) {
+            show.synopsis = description->text();
+        }
         shows.push_back(std::move(show));
     }
     return shows;
+}
+
+Show HiAnimeProvider::describe(const Show& show) {
+    if (show.pageUrl.empty()) {
+        return show;
+    }
+    const HtmlDocument page(fetch(show.pageUrl));
+    Show described = show;
+    if (const auto description = page.first(".film-description .text")) {
+        if (auto synopsis = description->text(); !synopsis.empty()) {
+            described.synopsis = std::move(synopsis);
+        }
+    }
+    if (const auto image = page.first(".film-poster-img")) {
+        if (const auto source = image->attr("src"); !source.empty()) {
+            described.posterUrl = resolveUrl(baseUrl_ + "/", source);
+        }
+    }
+    for (const auto& item : page.select(".item")) {
+        const auto head = item.first(".item-head");
+        const auto label = head ? head->text() : std::string();
+        if (label == "Genres:") {
+            described.genres.clear();
+            for (const auto& genre : item.select("a")) {
+                if (auto name = genre.text(); !name.empty()) {
+                    described.genres.push_back(std::move(name));
+                }
+            }
+        } else if (label == "Aired:" && described.year == 0) {
+            if (const auto date = item.first(".name")) {
+                const auto text = date->text();
+                for (size_t i = 0; i + 4 <= text.size(); ++i) {
+                    const auto digits = std::string_view(text).substr(i, 4);
+                    if (std::ranges::all_of(digits, [](char c) { return c >= '0' && c <= '9'; }) &&
+                        (digits.starts_with("19") || digits.starts_with("20"))) {
+                        std::from_chars(digits.data(), digits.data() + digits.size(), described.year);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    return described;
 }
 
 std::vector<Episode> HiAnimeProvider::episodes(const Show& show) {

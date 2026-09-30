@@ -54,6 +54,9 @@ TEST_CASE("search parses every result in the main list") {
     CHECK(shows[0].format == "TV");
     CHECK(shows[0].subEpisodes == 28);
     CHECK(shows[0].dubEpisodes == 28);
+    CHECK(shows[0].posterUrl == "https://cdn.anipixcdn.co/thumbnail/bb6d2babd7797d94d8f4a8600bc9b44e.jpg");
+    CHECK(shows[0].synopsis.starts_with("During their decade-long quest to defeat the Demon King"));
+    CHECK(shows[0].pageUrl == "https://hianime.at/frieren-beyond-journeys-end-481");
     CHECK(shows[1].id == "808");
     CHECK(shows[1].subEpisodes == 10);
     CHECK(shows[2].format == "ONA");
@@ -61,6 +64,35 @@ TEST_CASE("search parses every result in the main list") {
     CHECK(shows[3].title == "Sousou no Frieren 3rd Season");
     CHECK(shows[3].subEpisodes == 0);
     CHECK(shows[3].dubEpisodes == 0);
+}
+
+TEST_CASE("describe reads the full synopsis, genres, year and poster from the show page") {
+    FakeHttpClient http;
+    http.serve("https://hianime.at/frieren-beyond-journeys-end-481", readFixture("hianime/show_481.html"));
+    HiAnimeProvider provider(http);
+    Show show{"481", "Frieren: Beyond Journey's End", "Sousou no Frieren", "TV", 28, 28};
+    show.pageUrl = "https://hianime.at/frieren-beyond-journeys-end-481";
+    show.synopsis = "During their decade-long quest...";
+
+    const auto described = provider.describe(show);
+
+    CHECK(described.title == show.title);
+    CHECK(described.subEpisodes == 28);
+    CHECK(described.synopsis.starts_with("During their decade-long quest to defeat the Demon King"));
+    CHECK(described.synopsis.ends_with("a new tale is about to begin."));
+    CHECK(described.year == 2023);
+    CHECK(described.genres ==
+          std::vector<std::string>{"Adventure", "Fantasy", "Shounen", "Drama", "Award Winning"});
+    CHECK(described.posterUrl == "https://hianime.at/storage/media/2026/08/frieren-beyond-journeys-end.webp");
+}
+
+TEST_CASE("describe leaves a show without a page alone") {
+    FakeHttpClient http;
+    HiAnimeProvider provider(http);
+    const Show show{"1", "No page"};
+
+    CHECK(provider.describe(show).title == "No page");
+    CHECK(http.requests.empty());
 }
 
 TEST_CASE("search encodes the query and returns nothing for an empty result page") {

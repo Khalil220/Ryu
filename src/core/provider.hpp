@@ -22,6 +22,10 @@ struct Show {
     int year = 0;
     bool offersSub = false;
     bool offersDub = false;
+    std::string posterUrl;
+    std::string synopsis;
+    std::vector<std::string> genres;
+    std::string pageUrl;
 };
 
 struct Episode {
@@ -70,6 +74,7 @@ public:
     virtual std::vector<Show> search(std::string_view query) = 0;
     virtual std::vector<Episode> episodes(const Show& show) = 0;
     virtual std::vector<Stream> streams(std::string_view episodeId, Audio audio) = 0;
+    virtual Show describe(const Show& show) { return show; }
 };
 
 }

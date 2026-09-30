@@ -14,6 +14,7 @@ public:
     std::vector<Show> search(std::string_view query) override;
     std::vector<Episode> episodes(const Show& show) override;
     std::vector<Stream> streams(std::string_view episodeId, Audio audio) override;
+    Show describe(const Show& show) override;
 
 private:
     std::string fetch(const std::string& url, const Headers& headers = {});

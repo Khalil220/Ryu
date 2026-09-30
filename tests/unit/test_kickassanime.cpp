@@ -50,6 +50,9 @@ TEST_CASE("search posts the query and reads titles, format, year and audio avail
     CHECK(shows[0].year == 2023);
     CHECK(shows[0].offersSub);
     CHECK(shows[0].offersDub);
+    CHECK(shows[0].posterUrl == "https://kaa.lt/image/poster/sousou-no-frieren-f6d4-hq.jpg");
+    CHECK(shows[0].synopsis.starts_with("During their decade-long quest to defeat the Demon King"));
+    CHECK(shows[0].genres == std::vector<std::string>{"Adventure", "Drama", "Fantasy", "Shounen"});
     REQUIRE(http.requests.size() == 1);
     CHECK(http.requests[0].method == "POST");
     CHECK(http.requests[0].body == R"({"query":"frieren"})");

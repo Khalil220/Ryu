@@ -152,6 +152,19 @@ std::vector<Show> KickAssAnimeProvider::search(std::string_view query) {
         }
         show.offersSub = hasLocale(item, "ja-JP");
         show.offersDub = hasLocale(item, "en-US");
+        show.synopsis = stringField(item, "synopsis");
+        if (const auto poster = item.find("poster"); poster != item.end() && poster->is_object()) {
+            if (const auto hq = stringField(*poster, "hq"); !hq.empty()) {
+                show.posterUrl = baseUrl_ + "/image/poster/" + hq + ".jpg";
+            }
+        }
+        if (const auto genres = item.find("genres"); genres != item.end() && genres->is_array()) {
+            for (const auto& genre : *genres) {
+                if (genre.is_string()) {
+                    show.genres.push_back(genre.get<std::string>());
+                }
+            }
+        }
         shows.push_back(std::move(show));
     }
     return shows;
