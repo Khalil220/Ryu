@@ -44,6 +44,16 @@ PreferencesDialog::PreferencesDialog(wxWindow* parent, const Settings& settings)
     audioChoice_->SetSelection(settings_.audio == Audio::Dub ? 1 : 0);
     grid->Add(audioChoice_, 0);
 
+    grid->Add(new wxStaticText(this, wxID_ANY, "Th&eme:"), 0, wxALIGN_CENTER_VERTICAL);
+    themeChoice_ = new wxChoice(this, wxID_ANY);
+    themeChoice_->Append("Dark");
+    themeChoice_->Append("Light");
+    themeChoice_->Append("Match Windows");
+    themeChoice_->SetSelection(static_cast<int>(settings_.theme));
+    grid->Add(themeChoice_, 0);
+    grid->AddSpacer(0);
+    grid->Add(new wxStaticText(this, wxID_ANY, "A new theme applies the next time Ryu starts."), 0);
+
     fallbackCheck_ = new wxCheckBox(this, wxID_ANY, "&Try other providers when an episode won't play");
     fallbackCheck_->SetValue(settings_.useFallback);
 
@@ -55,6 +65,7 @@ PreferencesDialog::PreferencesDialog(wxWindow* parent, const Settings& settings)
     setAccessibleName(providerChoice_, "Provider");
     setAccessibleName(baseUrl_, "Base URL");
     setAccessibleName(audioChoice_, "Preferred audio");
+    setAccessibleName(themeChoice_, "Theme");
 
     providerChoice_->SetSelection(shownProvider_);
     showProvider(shownProvider_);
@@ -113,6 +124,7 @@ void PreferencesDialog::onOk(wxCommandEvent& event) {
     settings_.providerId = availableProviders()[shownProvider_].id;
     settings_.audio = audioChoice_->GetSelection() == 1 ? Audio::Dub : Audio::Sub;
     settings_.useFallback = fallbackCheck_->GetValue();
+    settings_.theme = static_cast<Theme>(themeChoice_->GetSelection());
     event.Skip();
 }
 

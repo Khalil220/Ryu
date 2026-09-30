@@ -81,6 +81,8 @@ Settings loadSettings(wxConfigBase& config) {
     settings.providerId = settings.provider().id;
     settings.audio = config.Read("/Audio", "sub") == "dub" ? Audio::Dub : Audio::Sub;
     settings.useFallback = config.ReadBool("/Fallback", true);
+    const auto theme = config.Read("/Theme", "dark");
+    settings.theme = theme == "light" ? Theme::Light : theme == "system" ? Theme::System : Theme::Dark;
     settings.readSubtitlesSubbed = config.ReadBool("/ReadSubtitles/Subbed", true);
     settings.readSubtitlesDubbed = config.ReadBool("/ReadSubtitles/Dubbed", false);
     settings.subtitlesSubbed = readSubtitlePreference(config, "Subbed");
@@ -98,6 +100,9 @@ void saveSettings(wxConfigBase& config, const Settings& settings) {
     config.Write("/Provider", wxString::FromUTF8(settings.providerId));
     config.Write("/Audio", settings.audio == Audio::Dub ? "dub" : "sub");
     config.Write("/Fallback", settings.useFallback);
+    config.Write("/Theme", settings.theme == Theme::Light    ? "light"
+                           : settings.theme == Theme::System ? "system"
+                                                             : "dark");
     config.Write("/ReadSubtitles/Subbed", settings.readSubtitlesSubbed);
     config.Write("/ReadSubtitles/Dubbed", settings.readSubtitlesDubbed);
     writeSubtitlePreference(config, "Subbed", settings.subtitlesSubbed);

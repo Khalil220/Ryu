@@ -18,8 +18,11 @@ class wxFileConfig;
 
 namespace ryu {
 
+enum class Theme { Dark, Light, System };
+
 struct Settings {
     std::string providerId = "hianime";
+    Theme theme = Theme::Dark;
     std::map<std::string, std::string> baseUrlOverrides;
     Audio audio = Audio::Sub;
     bool useFallback = true;

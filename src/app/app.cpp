@@ -31,6 +31,16 @@ public:
             path = wxFileName(dataDir, "settings.ini").GetFullPath();
         }
         settings_ = std::make_unique<ryu::SettingsStore>(path.ToStdWstring());
+        switch (settings_->load().theme) {
+        case ryu::Theme::Dark:
+            MSWEnableDarkMode(DarkMode_Always);
+            break;
+        case ryu::Theme::System:
+            MSWEnableDarkMode(DarkMode_Auto);
+            break;
+        case ryu::Theme::Light:
+            break;
+        }
         speech_ = std::make_unique<ryu::Speech>();
         ryu::setSpeech(speech_.get());
         (new ryu::MainFrame(*settings_))->Show();
