@@ -1,6 +1,8 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
+#include <functional>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -9,6 +11,7 @@
 namespace ryu {
 
 using Headers = std::vector<std::pair<std::string, std::string>>;
+using Progress = std::function<bool(std::uint64_t done, std::uint64_t total)>;
 
 struct HttpResponse {
     long status = 0;
@@ -22,12 +25,18 @@ public:
     explicit HttpError(const std::string& message) : std::runtime_error(message) {}
 };
 
+class HttpCancelled : public HttpError {
+public:
+    HttpCancelled() : HttpError("The download was cancelled") {}
+};
+
 class HttpClient {
 public:
     virtual ~HttpClient() = default;
     virtual HttpResponse get(const std::string& url, const Headers& headers = {}) = 0;
     virtual HttpResponse post(const std::string& url, const std::string& body, const Headers& headers = {}) = 0;
     virtual HttpResponse probe(const std::string& url, const Headers& headers = {}) = 0;
+    virtual HttpResponse download(const std::string& url, const Progress& progress);
 };
 
 class CurlHttpClient : public HttpClient {
@@ -41,10 +50,12 @@ public:
     HttpResponse get(const std::string& url, const Headers& headers = {}) override;
     HttpResponse post(const std::string& url, const std::string& body, const Headers& headers = {}) override;
     HttpResponse probe(const std::string& url, const Headers& headers = {}) override;
+    HttpResponse download(const std::string& url, const Progress& progress) override;
 
 private:
     enum class Mode { Get, Post, Probe };
-    HttpResponse perform(Mode mode, const std::string& url, const std::string* body, const Headers& headers);
+    HttpResponse perform(Mode mode, const std::string& url, const std::string* body, const Headers& headers,
+                         const Progress* progress = nullptr);
 
     std::string userAgent_;
     std::chrono::seconds timeout_;

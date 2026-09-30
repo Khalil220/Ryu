@@ -34,6 +34,11 @@ size_t appendBody(char* data, size_t size, size_t count, void* userData) {
     return size * count;
 }
 
+int reportProgress(void* userData, curl_off_t total, curl_off_t done, curl_off_t, curl_off_t) {
+    const auto& progress = *static_cast<const Progress*>(userData);
+    return progress(static_cast<std::uint64_t>(done), static_cast<std::uint64_t>(total)) ? 0 : 1;
+}
+
 struct EasyDeleter {
     void operator()(CURL* handle) const { curl_easy_cleanup(handle); }
 };
@@ -42,6 +47,14 @@ struct ListDeleter {
     void operator()(curl_slist* list) const { curl_slist_free_all(list); }
 };
 
+}
+
+HttpResponse HttpClient::download(const std::string& url, const Progress& progress) {
+    auto response = get(url);
+    if (progress && !progress(response.body.size(), response.body.size())) {
+        throw HttpCancelled();
+    }
+    return response;
 }
 
 CurlHttpClient::CurlHttpClient(std::string userAgent, std::chrono::seconds timeout)
@@ -61,8 +74,12 @@ HttpResponse CurlHttpClient::probe(const std::string& url, const Headers& header
     return perform(Mode::Probe, url, nullptr, headers);
 }
 
+HttpResponse CurlHttpClient::download(const std::string& url, const Progress& progress) {
+    return perform(Mode::Get, url, nullptr, {}, &progress);
+}
+
 HttpResponse CurlHttpClient::perform(Mode mode, const std::string& url, const std::string* body,
-                                     const Headers& headers) {
+                                     const Headers& headers, const Progress* progress) {
     std::unique_ptr<CURL, EasyDeleter> handle(curl_easy_init());
     if (!handle) {
         throw HttpError("Could not create an HTTP handle");
@@ -87,6 +104,11 @@ HttpResponse CurlHttpClient::perform(Mode mode, const std::string& url, const st
     curl_easy_setopt(easy, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(easy, CURLOPT_WRITEFUNCTION, appendBody);
     curl_easy_setopt(easy, CURLOPT_WRITEDATA, &sink);
+    if (progress && *progress) {
+        curl_easy_setopt(easy, CURLOPT_NOPROGRESS, 0L);
+        curl_easy_setopt(easy, CURLOPT_XFERINFOFUNCTION, reportProgress);
+        curl_easy_setopt(easy, CURLOPT_XFERINFODATA, progress);
+    }
     if (mode == Mode::Post) {
         curl_easy_setopt(easy, CURLOPT_POSTFIELDS, body->c_str());
         curl_easy_setopt(easy, CURLOPT_POSTFIELDSIZE, static_cast<long>(body->size()));
@@ -98,6 +120,10 @@ HttpResponse CurlHttpClient::perform(Mode mode, const std::string& url, const st
     const auto elapsed =
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
     const bool stoppedEarly = code == CURLE_WRITE_ERROR && sink.limit && response.body.size() >= sink.limit;
+    if (code == CURLE_ABORTED_BY_CALLBACK) {
+        logLine(std::format("{} {} was cancelled after {} ms", verb, url, elapsed));
+        throw HttpCancelled();
+    }
     if (code != CURLE_OK && !stoppedEarly) {
         logLine(std::format("{} {} failed after {} ms: {}", verb, url, elapsed, curl_easy_strerror(code)));
         throw HttpError("Request to " + url + " failed: " + curl_easy_strerror(code));
