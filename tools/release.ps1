@@ -1,10 +1,16 @@
 param(
-    [switch]$Publish
+    [switch]$Publish,
+    [string]$VcpkgRoot = $env:VCPKG_ROOT
 )
 
 $ErrorActionPreference = 'Stop'
 $repository = 'Khalil220/Ryu'
 $root = Split-Path -Parent $PSScriptRoot
+
+if (-not $VcpkgRoot -or -not (Test-Path (Join-Path $VcpkgRoot 'scripts\buildsystems\vcpkg.cmake'))) {
+    throw 'Set VCPKG_ROOT, or pass -VcpkgRoot, to the folder of your vcpkg clone.'
+}
+$env:VCPKG_ROOT = $VcpkgRoot
 
 function Invoke-Checked {
     param([string]$Command, [string[]]$Arguments)
