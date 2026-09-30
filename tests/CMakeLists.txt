@@ -35,7 +35,7 @@ add_executable(ryu_live_tests
     live/test_live_repair.cpp
     live/test_live_update.cpp
 )
-target_link_libraries(ryu_live_tests PRIVATE ryu_core ryu_test_main)
+target_link_libraries(ryu_live_tests PRIVATE ryu_core ryu_test_main nlohmann_json::nlohmann_json)
 add_test(NAME live COMMAND ryu_live_tests)
 set_tests_properties(live PROPERTIES LABELS live)
 

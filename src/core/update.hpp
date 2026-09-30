@@ -2,6 +2,7 @@
 
 #include "http.hpp"
 
+#include <chrono>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -11,6 +12,7 @@ namespace ryu {
 
 inline constexpr const char* releaseFeedUrl = "https://api.github.com/repos/Khalil220/Ryu/releases/latest";
 inline constexpr const char* checksumsName = "SHA256SUMS";
+inline constexpr std::chrono::seconds updateDownloadTimeout{900};
 
 struct Release {
     std::string version;

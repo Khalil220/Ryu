@@ -9,7 +9,6 @@
 #include <wx/utils.h>
 #include <wx/window.h>
 
-#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -44,7 +43,7 @@ fs::path installPackage(const Release& release) {
     if (release.packageUrl.empty() || release.checksumsUrl.empty()) {
         throw std::runtime_error("This release has no Windows package with a checksum.");
     }
-    CurlHttpClient http(CurlHttpClient::defaultUserAgent, std::chrono::seconds(900));
+    CurlHttpClient http(CurlHttpClient::defaultUserAgent, updateDownloadTimeout);
     const auto expected = checksumFor(download(http, release.checksumsUrl), release.packageName);
     if (!expected) {
         throw std::runtime_error("The release's checksums don't list its package.");
