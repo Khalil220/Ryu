@@ -56,6 +56,7 @@ private:
     ryu::Show currentShow_;
     size_t currentEpisode_ = 0;
     std::optional<size_t> pendingEpisode_;
+    wxRect normalRect_;
     Audio playingAudio_ = Audio::Sub;
     unsigned searchGeneration_ = 0;
     unsigned episodeGeneration_ = 0;

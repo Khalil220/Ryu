@@ -87,6 +87,11 @@ Settings loadSettings(wxConfigBase& config) {
     settings.readSubtitlesDubbed = config.ReadBool("/ReadSubtitles/Dubbed", false);
     settings.subtitlesSubbed = readSubtitlePreference(config, "Subbed");
     settings.subtitlesDubbed = readSubtitlePreference(config, "Dubbed");
+    settings.window.x = config.ReadLong("/Window/X", 0);
+    settings.window.y = config.ReadLong("/Window/Y", 0);
+    settings.window.width = config.ReadLong("/Window/Width", 0);
+    settings.window.height = config.ReadLong("/Window/Height", 0);
+    settings.window.maximized = config.ReadBool("/Window/Maximized", false);
     for (const auto& info : availableProviders()) {
         const auto value = config.Read(baseUrlKey(info.id), wxString()).utf8_string();
         if (!value.empty()) {
@@ -107,6 +112,13 @@ void saveSettings(wxConfigBase& config, const Settings& settings) {
     config.Write("/ReadSubtitles/Dubbed", settings.readSubtitlesDubbed);
     writeSubtitlePreference(config, "Subbed", settings.subtitlesSubbed);
     writeSubtitlePreference(config, "Dubbed", settings.subtitlesDubbed);
+    if (settings.window.width > 0 && settings.window.height > 0) {
+        config.Write("/Window/X", settings.window.x);
+        config.Write("/Window/Y", settings.window.y);
+        config.Write("/Window/Width", settings.window.width);
+        config.Write("/Window/Height", settings.window.height);
+        config.Write("/Window/Maximized", settings.window.maximized);
+    }
     for (const auto& info : availableProviders()) {
         const auto it = settings.baseUrlOverrides.find(info.id);
         if (it != settings.baseUrlOverrides.end() && !it->second.empty() && it->second != info.defaultBaseUrl) {

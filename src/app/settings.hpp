@@ -20,6 +20,16 @@ namespace ryu {
 
 enum class Theme { Dark, Light, System };
 
+struct WindowPlacement {
+    int x = 0;
+    int y = 0;
+    int width = 0;
+    int height = 0;
+    bool maximized = false;
+
+    bool operator==(const WindowPlacement&) const = default;
+};
+
 struct Settings {
     std::string providerId = "hianime";
     Theme theme = Theme::Dark;
@@ -30,6 +40,7 @@ struct Settings {
     bool readSubtitlesDubbed = false;
     SubtitlePreference subtitlesSubbed;
     SubtitlePreference subtitlesDubbed;
+    WindowPlacement window;
 
     bool readSubtitlesFor(Audio kind) const { return kind == Audio::Dub ? readSubtitlesDubbed : readSubtitlesSubbed; }
     const SubtitlePreference& subtitlesFor(Audio kind) const {

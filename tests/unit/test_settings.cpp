@@ -31,6 +31,7 @@ TEST_CASE("empty settings fall back to HiAnime, subs and the default base URL") 
     CHECK(settings.baseUrl() == "https://hianime.at");
     CHECK(settings.useFallback);
     CHECK(settings.theme == Theme::Dark);
+    CHECK(settings.window.width == 0);
     CHECK(settings.readSubtitlesFor(Audio::Sub));
     CHECK_FALSE(settings.readSubtitlesFor(Audio::Dub));
     CHECK(settings.subtitlesFor(Audio::Sub) == SubtitlePreference{});
@@ -44,6 +45,7 @@ TEST_CASE("saved settings load back unchanged") {
     settings.audio = Audio::Dub;
     settings.useFallback = false;
     settings.theme = Theme::System;
+    settings.window = {-8, 40, 1600, 900, true};
     settings.readSubtitlesSubbed = false;
     settings.readSubtitlesDubbed = true;
     settings.providerId = "kickassanime";
@@ -56,6 +58,7 @@ TEST_CASE("saved settings load back unchanged") {
     CHECK(loaded.audio == Audio::Dub);
     CHECK_FALSE(loaded.useFallback);
     CHECK(loaded.theme == Theme::System);
+    CHECK(loaded.window == settings.window);
     CHECK_FALSE(loaded.readSubtitlesFor(Audio::Sub));
     CHECK(loaded.readSubtitlesFor(Audio::Dub));
     CHECK(loaded.providerId == "kickassanime");

@@ -44,10 +44,33 @@ MainFrame::MainFrame(SettingsStore& store)
     createControls();
     CreateStatusBar();
     SetMinSize(FromDIP(wxSize(760, 480)));
-    const auto area = wxDisplay().GetClientArea();
-    auto size = FromDIP(wxSize(1000, 680));
-    size.DecTo(area.GetSize());
-    SetSize(wxRect(area.GetTopLeft() + (area.GetSize() - size) / 2, size));
+    const auto& saved = settings_.window;
+    const wxRect savedRect(saved.x, saved.y, saved.width, saved.height);
+    if (saved.width > 0 && wxDisplay::GetFromPoint(savedRect.GetPosition() + savedRect.GetSize() / 2) != wxNOT_FOUND) {
+        SetSize(savedRect);
+        if (saved.maximized) {
+            Maximize();
+        }
+    } else {
+        const auto area = wxDisplay().GetClientArea();
+        auto size = FromDIP(wxSize(1000, 680));
+        size.DecTo(area.GetSize());
+        SetSize(wxRect(area.GetTopLeft() + (area.GetSize() - size) / 2, size));
+    }
+    normalRect_ = GetRect();
+    const auto trackNormalRect = [this](wxEvent& event) {
+        if (!IsMaximized() && !IsFullScreen() && !IsIconized()) {
+            normalRect_ = GetRect();
+        }
+        event.Skip();
+    };
+    Bind(wxEVT_SIZE, trackNormalRect);
+    Bind(wxEVT_MOVE, trackNormalRect);
+    Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent& event) {
+        settings_.window = {normalRect_.x, normalRect_.y, normalRect_.width, normalRect_.height, IsMaximized()};
+        store_.save(settings_);
+        event.Skip();
+    });
     applySettings();
     setStatus("Ready");
     searchBox_->SetFocus();
