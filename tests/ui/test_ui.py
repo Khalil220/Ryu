@@ -275,16 +275,27 @@ def run(app, speech_log):
           f"the next episode plays, repairing its host if it is banned ({time_box.get_value()})")
     check(read.get_toggle_state() == 1, "the subtitle reading choice carries over to the next episode")
 
+    main.child_window(title="Pause", control_type="Button").set_focus()
+    mark = len(spoken(speech_log))
+    send_keys("nn", vk_packet=False)
+    check(wait_for(lambda: main.window_text().startswith("Episode 4:"), 45) is not None,
+          f"pressing N twice while loading skips two episodes ({main.window_text()})")
+    loads = [line for line in spoken(speech_log)[mark:] if line.startswith("Loading Episode")]
+    check([line.split(":")[0] for line in loads] == ["Loading Episode 3", "Loading Episode 4"],
+          f"each press announces the episode it moves to ({loads})")
+    check(wait_for(lambda: 1 <= seconds(time_box.get_value()) < 60, 60) is not None,
+          f"the episode two ahead plays ({time_box.get_value()})")
+
     check(player.child_window(title="Close", control_type="Button", class_name="Button").exists(),
           "player has a Close button")
     main.child_window(title="Pause", control_type="Button").set_focus()
     send_keys("{ESC}")
     check(wait_for(lambda: main.window_text() == "Ryu - HiAnime", 15) is not None,
           f"Escape goes back to browsing ({main.window_text()})")
-    episode_two = items(episodes)[1]
-    check(wait_for(lambda: episode_two.has_keyboard_focus() or episodes.has_keyboard_focus(), 5) is not None,
+    episode_four = items(episodes)[3]
+    check(wait_for(lambda: episode_four.has_keyboard_focus() or episodes.has_keyboard_focus(), 5) is not None,
           "focus returns to the episode list")
-    check(episode_two.is_selected(), f"the episode that was playing is selected ({episode_two.window_text()})")
+    check(episode_four.is_selected(), f"the episode that was playing is selected ({episode_four.window_text()})")
 
     search.set_focus()
     send_keys("{END}tnp", vk_packet=False)
