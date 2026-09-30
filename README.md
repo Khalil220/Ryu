@@ -42,7 +42,7 @@ In the player:
 4. T speaks the current time, for example "3:21 of 24:10", without moving focus.
 5. I skips the intro, and Ryu says "Intro" when the intro starts. The Skip intro button only shows while the intro is playing, and I only works then. Once you skip it, seek past it or it finishes, the button goes away, and if it had focus, focus moves to Pause. Episodes where the site doesn't say where the intro is never show the button.
 6. R turns reading subtitles aloud on or off.
-7. N plays the next episode and P plays the previous one. On the last or first episode, Ryu says so instead.
+7. N plays the next episode and P plays the previous one. On the last or first episode, Ryu says so instead. The current episode keeps playing while the next one loads. Pressing N or P again during that time moves on from the episode that's loading, so pressing N three times quickly skips ahead three episodes.
 8. Escape stops playback and goes back to the episode list, with the episode you were watching selected.
 9. Alt+P is Pause or Play, Alt+B goes back 10 seconds, Alt+F goes forward 10 seconds, Alt+I presses Skip intro, Alt+R and Alt+N press Previous episode and Next episode, Alt+D toggles the Read subtitles aloud checkbox, and Alt+C closes the player.
 10. Alt+T moves to the position slider, Alt+M to the time field, Alt+V to the volume slider and Alt+S to the subtitles choice. Arrow keys move the sliders and change the subtitle track when those have focus, and move the cursor in the time field.

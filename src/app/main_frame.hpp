@@ -6,6 +6,7 @@
 #include <wx/frame.h>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -54,6 +55,7 @@ private:
     std::vector<size_t> visibleEpisodes_;
     ryu::Show currentShow_;
     size_t currentEpisode_ = 0;
+    std::optional<size_t> pendingEpisode_;
     Audio playingAudio_ = Audio::Sub;
     unsigned searchGeneration_ = 0;
     unsigned episodeGeneration_ = 0;

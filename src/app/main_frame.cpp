@@ -277,6 +277,7 @@ void MainFrame::playEpisode(size_t row) {
     const auto label = wxString::FromUTF8(episodeLabel(episode));
     const auto title = label + " - " + wxString::FromUTF8(currentShow_.title);
     const unsigned generation = ++streamGeneration_;
+    pendingEpisode_ = index;
     setStatus("Loading " + title + "...");
     announce("Loading " + label);
 
@@ -292,6 +293,7 @@ void MainFrame::playEpisode(size_t row) {
                 logLine("Dropped the stream for " + title.utf8_string() + " because a newer request replaced it");
                 return;
             }
+            pendingEpisode_.reset();
             try {
                 playingAudio_ = found.stream.audio;
                 player_->play(found.stream, settings_.readSubtitlesFor(found.stream.audio));
@@ -311,6 +313,7 @@ void MainFrame::playEpisode(size_t row) {
         [this, generation](const std::string& message) {
             logLine("Could not load the episode: " + message);
             if (generation == streamGeneration_) {
+                pendingEpisode_.reset();
                 setStatus("Could not load the episode");
                 showError("Could not load the episode", message);
             }
@@ -321,7 +324,7 @@ void MainFrame::stepEpisode(int delta) {
     if (browsing()) {
         return;
     }
-    const auto current = std::ranges::find(visibleEpisodes_, currentEpisode_);
+    const auto current = std::ranges::find(visibleEpisodes_, pendingEpisode_.value_or(currentEpisode_));
     if (current == visibleEpisodes_.end()) {
         return;
     }
@@ -348,6 +351,7 @@ void MainFrame::showPlayer(const wxString& title) {
 
 void MainFrame::showBrowser() {
     ++streamGeneration_;
+    pendingEpisode_.reset();
     player_->stop();
     book_->ChangeSelection(0);
     SetTitle("Ryu - " + wxString::FromUTF8(settings_.provider().name));
