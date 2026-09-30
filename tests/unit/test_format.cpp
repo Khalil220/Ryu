@@ -15,6 +15,17 @@ TEST_CASE("showLabel lists format and episode counts") {
           "Sousou no Frieren 3rd Season, TV (? eps), no episodes yet");
 }
 
+TEST_CASE("showDetailsLine joins format, year, audio and genres") {
+    Show frieren{"481", "Frieren", "", "TV", 28, 28, 2023};
+    CHECK(showDetailsLine(frieren) == "TV  \u00b7  2023  \u00b7  28 subbed, 28 dubbed");
+    frieren.genres = {"Adventure", "Fantasy"};
+    CHECK(showDetailsLine(frieren) == "TV  \u00b7  2023  \u00b7  28 subbed, 28 dubbed  \u00b7  Adventure, Fantasy");
+    Show kaa{"x", "X", "", "TV", 0, 0, 0, true, true};
+    CHECK(showDetailsLine(kaa) == "TV  \u00b7  Subbed and dubbed");
+    CHECK(showDetailsLine(Show{"y", "Y", "", "", 0, 4}) == "4 dubbed");
+    CHECK(showDetailsLine(Show{"z"}).empty());
+}
+
 TEST_CASE("episodeLabel combines number and title") {
     CHECK(episodeLabel({"9227", "1", "The Journey's End"}) == "Episode 1: The Journey's End");
     CHECK(episodeLabel({"9", "12.5", ""}) == "Episode 12.5");

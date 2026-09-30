@@ -13,6 +13,7 @@ add_executable(ryu WIN32
     main_frame.cpp
     player_panel.cpp
     preferences_dialog.cpp
+    show_details_panel.cpp
     speech.cpp
     text_list.cpp
     ryu.rc

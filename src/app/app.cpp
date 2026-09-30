@@ -5,6 +5,7 @@
 
 #include <wx/app.h>
 #include <wx/filename.h>
+#include <wx/image.h>
 #include <wx/stdpaths.h>
 #include <wx/utils.h>
 
@@ -19,6 +20,7 @@ public:
             return false;
         }
         SetAppName("Ryu");
+        wxInitAllImageHandlers();
         const auto dataDir = wxStandardPaths::Get().GetUserDataDir();
         wxFileName::Mkdir(dataDir, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
         wxString logPath;

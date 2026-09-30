@@ -114,6 +114,16 @@ def run(app, speech_log):
         check(any(first.window_text() in line and re.search(r"\b1 of 4\b", line) for line in heard),
               f"NVDA says the first result with its position when tabbing into the list ({heard})")
 
+    synopsis = main.child_window(title="Synopsis", control_type="Edit")
+    check(wait_for(lambda: synopsis.get_value().startswith("During their decade-long quest"), 10) is not None,
+          "the selected result's synopsis is shown")
+    check(wait_for(lambda: synopsis.get_value().endswith("a new tale is about to begin."), 15) is not None,
+          f"the full synopsis loads from the show page ({synopsis.get_value()[-40:]})")
+    results.set_focus()
+    wait_for(lambda: results.has_keyboard_focus() or first.has_keyboard_focus(), 5)
+    send_keys("%y", vk_packet=False)
+    check(wait_for(synopsis.has_keyboard_focus, 5) is not None, "Alt+Y moves to the synopsis")
+
     results.set_focus()
     first.select()
     send_keys("{ENTER}")

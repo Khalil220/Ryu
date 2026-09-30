@@ -8,6 +8,7 @@
 #include "playlist_server.hpp"
 #include "player_panel.hpp"
 #include "preferences_dialog.hpp"
+#include "show_details_panel.hpp"
 #include "speech.hpp"
 #include "text_list.hpp"
 
@@ -17,6 +18,8 @@
 #include <wx/choice.h>
 #include <wx/display.h>
 #include <wx/iconbndl.h>
+#include <wx/log.h>
+#include <wx/mstream.h>
 #include <wx/menu.h>
 #include <wx/msgdlg.h>
 #include <wx/panel.h>
@@ -94,33 +97,45 @@ void MainFrame::createControls() {
     auto* panel = browsePage_;
     auto* sizer = new wxBoxSizer(wxVERTICAL);
 
+    const int gap = FromDIP(12);
     auto* searchRow = new wxBoxSizer(wxHORIZONTAL);
-    searchRow->Add(new wxStaticText(panel, wxID_ANY, "&Search:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
+    searchRow->Add(new wxStaticText(panel, wxID_ANY, "&Search:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
     searchBox_ = new wxTextCtrl(panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
-    searchRow->Add(searchBox_, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
+    searchRow->Add(searchBox_, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
     searchButton_ = new wxButton(panel, wxID_ANY, "Search");
     searchRow->Add(searchButton_, 0, wxALIGN_CENTER_VERTICAL);
-    sizer->Add(searchRow, 0, wxEXPAND | wxALL, 8);
+    sizer->Add(searchRow, 0, wxEXPAND | wxALL, gap);
 
-    sizer->Add(new wxStaticText(panel, wxID_ANY, "&Results:"), 0, wxLEFT | wxRIGHT, 8);
+    auto* showsRow = new wxBoxSizer(wxHORIZONTAL);
+    auto* resultsColumn = new wxBoxSizer(wxVERTICAL);
+    resultsColumn->Add(new wxStaticText(panel, wxID_ANY, "&Results:"), 0, wxBOTTOM, FromDIP(4));
     results_ = new TextList(panel);
     results_->SetMinSize(FromDIP(wxSize(-1, 120)));
-    sizer->Add(results_, 1, wxEXPAND | wxALL, 8);
+    resultsColumn->Add(results_, 1, wxEXPAND);
+    showsRow->Add(resultsColumn, 1, wxEXPAND | wxRIGHT, gap);
+    details_ = new ShowDetailsPanel(panel);
+    showsRow->Add(details_, 1, wxEXPAND | wxTOP, FromDIP(4));
+    sizer->Add(showsRow, 1, wxEXPAND | wxLEFT | wxRIGHT, gap);
 
-    sizer->Add(new wxStaticText(panel, wxID_ANY, "&Episodes:"), 0, wxLEFT | wxRIGHT, 8);
+    sizer->Add(new wxStaticText(panel, wxID_ANY, "&Episodes:"), 0, wxLEFT | wxRIGHT | wxTOP, gap);
     episodeList_ = new TextList(panel);
     episodeList_->SetMinSize(FromDIP(wxSize(-1, 120)));
-    sizer->Add(episodeList_, 1, wxEXPAND | wxALL, 8);
+    sizer->Add(episodeList_, 1, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, gap);
 
     auto* playRow = new wxBoxSizer(wxHORIZONTAL);
-    playRow->Add(new wxStaticText(panel, wxID_ANY, "&Audio:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
+    playRow->Add(new wxStaticText(panel, wxID_ANY, "&Audio:"), 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(8));
     audioChoice_ = new wxChoice(panel, wxID_ANY);
     audioChoice_->Append("Subbed");
     audioChoice_->Append("Dubbed");
-    playRow->Add(audioChoice_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 12);
+    playRow->Add(audioChoice_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, gap);
     playButton_ = new wxButton(panel, wxID_ANY, "&Play");
     playRow->Add(playButton_, 0, wxALIGN_CENTER_VERTICAL);
-    sizer->Add(playRow, 0, wxALL, 8);
+    sizer->Add(playRow, 0, wxALL, gap);
+
+    const int synopsisId = wxWindow::NewControlId();
+    wxAcceleratorEntry browseKeys[] = {{wxACCEL_ALT, 'Y', synopsisId}};
+    panel->SetAcceleratorTable(wxAcceleratorTable(1, browseKeys));
+    panel->Bind(wxEVT_MENU, [this](wxCommandEvent&) { details_->synopsis()->SetFocus(); }, synopsisId);
 
     panel->SetSizer(sizer);
 
@@ -145,6 +160,7 @@ void MainFrame::createControls() {
     searchBox_->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent&) { startSearch(); });
     searchButton_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { startSearch(); });
     results_->Bind(wxEVT_LIST_ITEM_ACTIVATED, [this](wxListEvent&) { loadEpisodes(); });
+    results_->Bind(wxEVT_LIST_ITEM_SELECTED, [this](wxListEvent& event) { showDetailsFor(event.GetIndex()); });
     episodeList_->Bind(wxEVT_LIST_ITEM_ACTIVATED,
                        [this](wxListEvent& event) { playEpisode(static_cast<size_t>(event.GetIndex())); });
     playButton_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { playEpisode(episodeList_->selectedIndex()); });
@@ -194,6 +210,9 @@ void MainFrame::startSearch() {
     shows_.clear();
     episodes_.clear();
     visibleEpisodes_.clear();
+    ++posterGeneration_;
+    described_.clear();
+    details_->clear();
     results_->setItems({});
     episodeList_->setItems({});
     setStatus("Searching for " + query + "...");
@@ -298,6 +317,74 @@ wxString MainFrame::episodeCountLabel(bool mentionAudio) const {
                           : selectedAudio() == Audio::Dub ? wxString("dubbed ")
                                                           : wxString("subbed ");
     return count == 1 ? "1 " + kind + "episode" : wxString::Format("%zu %sepisodes", count, kind);
+}
+
+void MainFrame::showDetailsFor(long row) {
+    const unsigned generation = ++posterGeneration_;
+    if (row < 0 || static_cast<size_t>(row) >= shows_.size()) {
+        details_->clear();
+        return;
+    }
+    const auto index = static_cast<size_t>(row);
+    details_->showDetails(shows_[index]);
+    if (described_.contains(shows_[index].id)) {
+        loadPoster(shows_[index].posterUrl, generation);
+        return;
+    }
+    auto session = session_;
+    const unsigned search = searchGeneration_;
+    runInBackground<ryu::Show>(
+        alive_, [session, show = shows_[index]] { return session->primary().describe(show); },
+        [this, generation, search, index](ryu::Show described) {
+            if (search != searchGeneration_ || index >= shows_.size()) {
+                return;
+            }
+            described_.insert(described.id);
+            shows_[index] = std::move(described);
+            if (generation == posterGeneration_) {
+                details_->showDetails(shows_[index]);
+                loadPoster(shows_[index].posterUrl, generation);
+            }
+        },
+        [this, generation, search, index](const std::string& message) {
+            logLine("Could not load show details: " + message);
+            if (search == searchGeneration_ && index < shows_.size() && generation == posterGeneration_) {
+                loadPoster(shows_[index].posterUrl, generation);
+            }
+        });
+}
+
+void MainFrame::loadPoster(const std::string& url, unsigned generation) {
+    if (url.empty()) {
+        return;
+    }
+    if (const auto cached = posterCache_.find(url); cached != posterCache_.end()) {
+        details_->setPoster(cached->second);
+        return;
+    }
+    auto session = session_;
+    runInBackground<std::string>(
+        alive_,
+        [session, url] {
+            auto response = session->http->get(url);
+            if (response.status < 200 || response.status >= 300) {
+                throw HttpError("The poster returned HTTP " + std::to_string(response.status));
+            }
+            return std::move(response.body);
+        },
+        [this, generation, url](std::string bytes) {
+            wxLogNull quiet;
+            wxMemoryInputStream stream(bytes.data(), bytes.size());
+            wxImage image(stream, wxBITMAP_TYPE_ANY);
+            if (!image.IsOk()) {
+                return;
+            }
+            posterCache_[url] = image;
+            if (generation == posterGeneration_) {
+                details_->setPoster(image);
+            }
+        },
+        [](const std::string&) {});
 }
 
 void MainFrame::playEpisode(size_t row) {
@@ -421,6 +508,9 @@ void MainFrame::showPreferences() {
         shows_.clear();
         episodes_.clear();
         visibleEpisodes_.clear();
+        ++posterGeneration_;
+        described_.clear();
+        details_->clear();
         results_->setItems({});
         episodeList_->setItems({});
         setStatus("Using " + wxString::FromUTF8(settings_.provider().name));

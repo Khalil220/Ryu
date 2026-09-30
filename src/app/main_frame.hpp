@@ -4,9 +4,12 @@
 #include "settings.hpp"
 
 #include <wx/frame.h>
+#include <wx/image.h>
 
+#include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -17,6 +20,8 @@ class wxSimplebook;
 class wxTextCtrl;
 
 namespace ryu {
+
+class ShowDetailsPanel;
 
 class PlayerPanel;
 class TextList;
@@ -34,6 +39,8 @@ private:
     void startSearch();
     void loadEpisodes();
     void showEpisodes(size_t preferred);
+    void showDetailsFor(long row);
+    void loadPoster(const std::string& url, unsigned generation);
     wxString episodeCountLabel(bool mentionAudio) const;
     void playEpisode(size_t index);
     void stepEpisode(int delta);
@@ -61,6 +68,9 @@ private:
     unsigned searchGeneration_ = 0;
     unsigned episodeGeneration_ = 0;
     unsigned streamGeneration_ = 0;
+    unsigned posterGeneration_ = 0;
+    std::map<std::string, wxImage> posterCache_;
+    std::set<std::string> described_;
 
     wxSimplebook* book_ = nullptr;
     wxPanel* browsePage_ = nullptr;
@@ -68,6 +78,7 @@ private:
     wxTextCtrl* searchBox_ = nullptr;
     wxButton* searchButton_ = nullptr;
     TextList* results_ = nullptr;
+    ShowDetailsPanel* details_ = nullptr;
     TextList* episodeList_ = nullptr;
     wxChoice* audioChoice_ = nullptr;
     wxButton* playButton_ = nullptr;

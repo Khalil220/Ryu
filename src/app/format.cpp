@@ -48,6 +48,41 @@ std::string showLabel(const Show& show) {
     return label;
 }
 
+std::string showDetailsLine(const Show& show) {
+    std::vector<std::string> parts;
+    if (!show.format.empty()) {
+        parts.push_back(show.format);
+    }
+    if (show.year > 0) {
+        parts.push_back(std::to_string(show.year));
+    }
+    std::string audio;
+    if (show.subEpisodes > 0) {
+        audio = std::to_string(show.subEpisodes) + " subbed";
+    }
+    if (show.dubEpisodes > 0) {
+        audio += (audio.empty() ? "" : ", ") + std::to_string(show.dubEpisodes) + " dubbed";
+    }
+    if (audio.empty() && (show.offersSub || show.offersDub)) {
+        audio = show.offersSub && show.offersDub ? "Subbed and dubbed" : show.offersSub ? "Subbed" : "Dubbed";
+    }
+    if (!audio.empty()) {
+        parts.push_back(audio);
+    }
+    std::string genres;
+    for (const auto& genre : show.genres) {
+        genres += (genres.empty() ? "" : ", ") + genre;
+    }
+    if (!genres.empty()) {
+        parts.push_back(genres);
+    }
+    std::string line;
+    for (const auto& part : parts) {
+        line += (line.empty() ? "" : "  \u00b7  ") + part;
+    }
+    return line;
+}
+
 std::string episodeLabel(const Episode& episode) {
     if (episode.number.empty()) {
         return episode.title;
