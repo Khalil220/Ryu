@@ -10,6 +10,7 @@ add_executable(ryu_unit_tests
     unit/test_html.cpp
     unit/test_language.cpp
     unit/test_log.cpp
+    unit/test_lru_cache.cpp
     unit/test_miruro.cpp
     unit/test_hianime.cpp
     unit/test_hls.cpp

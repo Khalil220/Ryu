@@ -417,13 +417,13 @@ void MainFrame::showDetailsFor(long row) {
     }
     const auto& show = shows_[static_cast<size_t>(row)];
     details_->showDetails(show);
-    const auto cached = posterCache_.find(show.posterUrl);
-    if (cached != posterCache_.end()) {
-        details_->setPoster(cached->second);
+    const auto* cached = posterCache_.find(show.posterUrl);
+    if (cached) {
+        details_->setPoster(*cached);
     } else {
         details_->clearPoster();
     }
-    if (!described_.contains(show.id) || (cached == posterCache_.end() && !show.posterUrl.empty())) {
+    if (!described_.contains(show.id) || (!cached && !show.posterUrl.empty())) {
         detailsTimer_.StartOnce(150);
     }
 }
@@ -465,8 +465,8 @@ void MainFrame::loadPoster(const std::string& url, unsigned generation) {
     if (url.empty()) {
         return;
     }
-    if (const auto cached = posterCache_.find(url); cached != posterCache_.end()) {
-        details_->setPoster(cached->second);
+    if (const auto* cached = posterCache_.find(url)) {
+        details_->setPoster(*cached);
         return;
     }
     auto session = session_;
@@ -487,7 +487,7 @@ void MainFrame::loadPoster(const std::string& url, unsigned generation) {
         },
         [this, generation, url](wxImage poster) {
             const wxBitmap bitmap(poster);
-            posterCache_[url] = bitmap;
+            posterCache_.put(url, bitmap);
             if (generation == posterGeneration_) {
                 details_->setPoster(bitmap);
             }

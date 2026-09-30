@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lru_cache.hpp"
 #include "provider.hpp"
 #include "settings.hpp"
 
@@ -7,7 +8,6 @@
 #include <wx/frame.h>
 #include <wx/timer.h>
 
-#include <map>
 #include <memory>
 #include <optional>
 #include <set>
@@ -21,6 +21,8 @@ class wxSimplebook;
 class wxTextCtrl;
 
 namespace ryu {
+
+inline constexpr size_t posterCacheSize = 60;
 
 class ShowDetailsPanel;
 
@@ -77,7 +79,7 @@ private:
     unsigned episodeGeneration_ = 0;
     unsigned streamGeneration_ = 0;
     unsigned posterGeneration_ = 0;
-    std::map<std::string, wxBitmap> posterCache_;
+    LruCache<std::string, wxBitmap> posterCache_{posterCacheSize};
     wxTimer detailsTimer_;
     wxTimer loadingTimer_;
     wxString loadingMessage_;
