@@ -2,6 +2,7 @@
 
 #include "../encoding.hpp"
 #include "../html.hpp"
+#include "../log.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -149,8 +150,10 @@ std::vector<Stream> HiAnimeProvider::streams(std::string_view episodeId, Audio a
             }
         } catch (const std::exception& error) {
             lastError = error.what();
+            logLine("HiAnime server " + name + " failed: " + lastError);
         }
         if (!result.empty()) {
+            logLine("HiAnime server " + name + " resolved");
             break;
         }
     }

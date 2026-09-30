@@ -3,6 +3,7 @@
 #include "accessibility.hpp"
 #include "background.hpp"
 #include "format.hpp"
+#include "log.hpp"
 #include "stream_finder.hpp"
 #include "playlist_server.hpp"
 #include "player_panel.hpp"
@@ -288,6 +289,7 @@ void MainFrame::playEpisode(size_t row) {
         },
         [this, generation, index, title](FoundStream found) {
             if (generation != streamGeneration_) {
+                logLine("Dropped the stream for " + title.utf8_string() + " because a newer request replaced it");
                 return;
             }
             try {
@@ -301,11 +303,13 @@ void MainFrame::playEpisode(size_t row) {
                     announce("From " + source, false);
                 }
             } catch (const std::exception& error) {
+                logLine(std::string("Playback failed: ") + error.what());
                 setStatus("Playback failed");
                 showError("Playback failed", error.what());
             }
         },
         [this, generation](const std::string& message) {
+            logLine("Could not load the episode: " + message);
             if (generation == streamGeneration_) {
                 setStatus("Could not load the episode");
                 showError("Could not load the episode", message);

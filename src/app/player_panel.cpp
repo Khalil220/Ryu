@@ -2,6 +2,7 @@
 
 #include "accessibility.hpp"
 #include "format.hpp"
+#include "log.hpp"
 #include "http.hpp"
 #include "speech.hpp"
 
@@ -51,6 +52,23 @@ const mpv_node* field(const mpv_node& map, const char* key) {
 
 std::string text(const mpv_node* node) {
     return node && node->format == MPV_FORMAT_STRING ? node->u.string : "";
+}
+
+std::string endReason(const mpv_event_end_file& end) {
+    switch (end.reason) {
+    case MPV_END_FILE_REASON_EOF:
+        return "it reached the end";
+    case MPV_END_FILE_REASON_STOP:
+        return "it was stopped or replaced";
+    case MPV_END_FILE_REASON_QUIT:
+        return "the player shut down";
+    case MPV_END_FILE_REASON_ERROR:
+        return std::string("of an error: ") + mpv_error_string(end.error);
+    case MPV_END_FILE_REASON_REDIRECT:
+        return "it redirected to another file";
+    default:
+        return "of reason " + std::to_string(end.reason);
+    }
 }
 
 }
@@ -212,7 +230,7 @@ void PlayerPanel::startMpv() {
     mpv_observe_property(mpv_, TrackList, "track-list", MPV_FORMAT_NODE);
     mpv_observe_property(mpv_, EndReached, "eof-reached", MPV_FORMAT_FLAG);
     mpv_observe_property(mpv_, SubText, "sub-text", MPV_FORMAT_STRING);
-    mpv_request_log_messages(mpv_, "error");
+    mpv_request_log_messages(mpv_, "info");
     mpv_set_wakeup_callback(
         mpv_, [](void* panel) { static_cast<PlayerPanel*>(panel)->CallAfter(&PlayerPanel::processEvents); }, this);
 }
@@ -258,6 +276,7 @@ void PlayerPanel::play(const Stream& stream, bool readSubtitles) {
     readCheck_->SetValue(readSubtitles);
     updateIntroButton();
     active_ = true;
+    logLine("Loading " + stream.server + " stream " + stream.url);
     command({"loadfile", stream.url, "replace"});
     stallTimer_.Start(1000);
 }
@@ -316,14 +335,24 @@ void PlayerPanel::processEvents() {
                               subtitle.language});
             }
             pendingSubtitles_.clear();
+            logLine("mpv loaded the file");
             break;
         case MPV_EVENT_LOG_MESSAGE: {
-            wxString line = wxString::FromUTF8(static_cast<const mpv_event_log_message*>(event->data)->text);
-            lastError_ = line.Trim().utf8_string();
+            const auto* message = static_cast<const mpv_event_log_message*>(event->data);
+            const std::string prefix = message->prefix;
+            const auto line = wxString::FromUTF8(message->text).Trim().utf8_string();
+            const bool listing = prefix == "cplayer" && message->text[0] != ' ' && line != "Track added:";
+            if (message->log_level <= MPV_LOG_LEVEL_WARN || listing) {
+                logLine("mpv " + prefix + ": " + line);
+            }
+            if (message->log_level <= MPV_LOG_LEVEL_ERROR) {
+                lastError_ = line;
+            }
             break;
         }
         case MPV_EVENT_END_FILE: {
             const auto* end = static_cast<const mpv_event_end_file*>(event->data);
+            logLine("mpv stopped the file because " + endReason(*end));
             if (active_ && end->reason == MPV_END_FILE_REASON_ERROR) {
                 wxString message = "Playback failed: " + wxString::FromUTF8(mpv_error_string(end->error));
                 if (!lastError_.empty()) {
@@ -490,6 +519,7 @@ void PlayerPanel::toggleReadSubtitles() {
 
 void PlayerPanel::checkForStall() {
     if (stallWatch_.tick(position_, active_ && !ended_ && paused_ != 1)) {
+        logLine("Playback stalled at " + formatClock(position_));
         timeText_->ChangeValue("Not loading");
         announce("The video is not loading. Its host may be down.");
     }

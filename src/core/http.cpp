@@ -1,7 +1,11 @@
 #include "http.hpp"
 
+#include "log.hpp"
+
 #include <curl/curl.h>
 
+#include <chrono>
+#include <format>
 #include <memory>
 #include <mutex>
 
@@ -88,9 +92,14 @@ HttpResponse CurlHttpClient::perform(Mode mode, const std::string& url, const st
         curl_easy_setopt(easy, CURLOPT_POSTFIELDSIZE, static_cast<long>(body->size()));
     }
 
+    const char* verb = mode == Mode::Post ? "POST" : mode == Mode::Probe ? "PROBE" : "GET";
+    const auto started = std::chrono::steady_clock::now();
     const CURLcode code = curl_easy_perform(easy);
+    const auto elapsed =
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
     const bool stoppedEarly = code == CURLE_WRITE_ERROR && sink.limit && response.body.size() >= sink.limit;
     if (code != CURLE_OK && !stoppedEarly) {
+        logLine(std::format("{} {} failed after {} ms: {}", verb, url, elapsed, curl_easy_strerror(code)));
         throw HttpError("Request to " + url + " failed: " + curl_easy_strerror(code));
     }
 
@@ -101,6 +110,7 @@ HttpResponse CurlHttpClient::perform(Mode mode, const std::string& url, const st
     char* location = nullptr;
     curl_easy_getinfo(easy, CURLINFO_REDIRECT_URL, &location);
     response.location = location ? location : "";
+    logLine(std::format("{} {} returned {} in {} ms", verb, url, response.status, elapsed));
     return response;
 }
 

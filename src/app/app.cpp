@@ -1,3 +1,4 @@
+#include "log.hpp"
 #include "main_frame.hpp"
 #include "settings.hpp"
 #include "speech.hpp"
@@ -18,11 +19,16 @@ public:
             return false;
         }
         SetAppName("Ryu");
+        const auto dataDir = wxStandardPaths::Get().GetUserDataDir();
+        wxFileName::Mkdir(dataDir, wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+        wxString logPath;
+        if (!wxGetEnv("RYU_LOG", &logPath)) {
+            logPath = wxFileName(dataDir, "ryu.log").GetFullPath();
+        }
+        ryu::openLog(logPath.ToStdWstring());
         wxString path;
         if (!wxGetEnv("RYU_CONFIG_FILE", &path)) {
-            const wxFileName file(wxStandardPaths::Get().GetUserDataDir(), "settings.ini");
-            file.Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
-            path = file.GetFullPath();
+            path = wxFileName(dataDir, "settings.ini").GetFullPath();
         }
         settings_ = std::make_unique<ryu::SettingsStore>(path.ToStdWstring());
         speech_ = std::make_unique<ryu::Speech>();
@@ -35,6 +41,7 @@ public:
         ryu::setSpeech(nullptr);
         speech_.reset();
         settings_.reset();
+        ryu::closeLog();
         return wxApp::OnExit();
     }
 

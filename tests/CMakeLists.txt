@@ -8,6 +8,7 @@ add_executable(ryu_unit_tests
     unit/test_format.cpp
     unit/test_html.cpp
     unit/test_kickassanime.cpp
+    unit/test_log.cpp
     unit/test_hianime.cpp
     unit/test_hls.cpp
     unit/test_host_repair.cpp

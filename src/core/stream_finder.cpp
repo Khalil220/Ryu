@@ -1,10 +1,13 @@
 #include "stream_finder.hpp"
 
 #include "host_repair.hpp"
+#include "log.hpp"
 
 #include <algorithm>
 #include <cctype>
 #include <charconv>
+#include <chrono>
+#include <format>
 
 namespace ryu {
 
@@ -98,6 +101,12 @@ FoundStream findStream(HttpClient& http, PlaylistServer& server, const std::vect
                        const Show& show, const Episode& episode, Audio audio) {
     std::string lastError;
     bool anyFailure = false;
+    const auto started = std::chrono::steady_clock::now();
+    const auto elapsed = [&] {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
+    };
+    logLine(std::format("Finding a {} stream for {} episode {}", audio == Audio::Dub ? "dubbed" : "subbed", show.title,
+                        episode.number));
     for (size_t i = 0; i < providers.size(); ++i) {
         const auto& handle = providers[i];
         try {
@@ -107,30 +116,43 @@ FoundStream findStream(HttpClient& http, PlaylistServer& server, const std::vect
             } else {
                 const auto match = locate(*handle.provider, show);
                 if (!match) {
+                    logLine(handle.name + " has no matching show");
                     continue;
                 }
                 const auto episodes = handle.provider->episodes(*match);
                 const auto same = std::ranges::find_if(
                     episodes, [&](const Episode& candidate) { return sameEpisodeNumber(candidate.number, episode.number); });
                 if (same == episodes.end()) {
+                    logLine(handle.name + " has no episode " + episode.number);
                     continue;
                 }
                 streams = handle.provider->streams(same->id, audio);
             }
+            if (streams.empty()) {
+                logLine(handle.name + " offered no streams");
+            }
             for (const auto& stream : streams) {
                 try {
                     auto report = repairStreamHosts(http, server, stream);
+                    for (const auto& host : report.deadHosts) {
+                        logLine("Dead host " + host + ", replaced by " + report.replacementHost);
+                    }
+                    logLine(std::format("Using {} {} after {} ms: {}", handle.name, stream.server, elapsed(),
+                                        report.stream.url));
                     return {std::move(report.stream), handle.name, i > 0, std::move(report.deadHosts)};
                 } catch (const std::exception& error) {
                     anyFailure = true;
                     lastError = handle.name + ": " + error.what();
+                    logLine("Stream from " + handle.name + " " + stream.server + " failed: " + error.what());
                 }
             }
         } catch (const std::exception& error) {
             anyFailure = true;
             lastError = handle.name + ": " + error.what();
+            logLine(lastError);
         }
     }
+    logLine(std::format("No stream found after {} ms", elapsed()));
     if (!anyFailure) {
         throw ProviderError(audio == Audio::Dub ? "No dubbed stream is available for this episode."
                                                 : "No subbed stream is available for this episode.");

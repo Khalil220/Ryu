@@ -159,7 +159,8 @@ def run_after_playback(app, pid, speech_log):
 def launch(exe, scenario):
     config = os.path.join(tempfile.gettempdir(), f"ryu-responsiveness-{os.getpid()}.ini")
     speech_log = os.path.join(tempfile.gettempdir(), f"ryu-responsiveness-speech-{os.getpid()}.log")
-    env = dict(os.environ, RYU_CONFIG_FILE=config, RYU_MPV_OPTIONS="ao=null", RYU_SPEECH_LOG=speech_log)
+    env = dict(os.environ, RYU_CONFIG_FILE=config, RYU_MPV_OPTIONS="ao=null",
+               RYU_LOG=os.path.join(tempfile.gettempdir(), f"ryu-test-{os.getpid()}.log"), RYU_SPEECH_LOG=speech_log)
     process = subprocess.Popen([os.path.abspath(exe)], env=env)
     try:
         app = Application(backend="uia").connect(process=process.pid, timeout=20)

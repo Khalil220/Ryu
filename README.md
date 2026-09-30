@@ -85,7 +85,11 @@ The UI test needs Python with pywinauto. Set it up once:
 
 ## Environment variables
 
-`RYU_CONFIG_FILE` points Ryu at a different settings file. `RYU_MPV_OPTIONS` passes extra mpv options as comma-separated `name=value` pairs, for example `ao=null` to mute playback. `RYU_SPEECH_LOG` appends every announcement, and the speech backend Ryu picked, to the given file.
+`RYU_CONFIG_FILE` points Ryu at a different settings file. `RYU_MPV_OPTIONS` passes extra mpv options as comma-separated `name=value` pairs, for example `ao=null` to mute playback. `RYU_SPEECH_LOG` appends every announcement, and the speech backend Ryu picked, to the given file. `RYU_LOG` writes the log to a different file.
+
+## Log
+
+Ryu keeps a log of the current session in `%APPDATA%\Ryu\ryu.log` and moves the previous session's log to `ryu.old.log` when it starts. The log records every request Ryu makes to the sites with its result and how long it took, which provider and server each episode came from, any dead hosts it routed around, and what mpv reported about the audio and video tracks, along with its warnings and errors. When an episode won't load, stalls or plays without sound, the log shows where it went wrong.
 
 ## Licensing note
 

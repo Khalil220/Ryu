@@ -4,6 +4,7 @@ add_library(ryu_core STATIC
     host_repair.cpp
     html.cpp
     http.cpp
+    log.cpp
     playlist_server.cpp
     registry.cpp
     providers/hianime.cpp
