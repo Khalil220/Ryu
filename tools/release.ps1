@@ -77,7 +77,7 @@ try {
     }
 
     if ($Publish) {
-        $previous = git describe --tags --abbrev=0 2>$null
+        $previous = git tag --list 'v*' --sort=-v:refname | Select-Object -First 1
         $notes = if ($previous) {
             (git log --pretty='- %s' "$previous..HEAD") -join "`n"
         } else {
