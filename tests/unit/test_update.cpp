@@ -4,6 +4,7 @@
 #include <doctest/doctest.h>
 
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -152,4 +153,18 @@ TEST_CASE("extractPackage reports a package tar can't read") {
     TempFolder folder;
     writeFile(folder.path() / "broken.zip", "not a zip");
     CHECK_THROWS(extractPackage(folder.path() / "broken.zip", folder.path() / "out"));
+}
+
+TEST_CASE("canWriteTo tells a folder Ryu can change from one it can't") {
+    TempFolder folder;
+    CHECK(canWriteTo(folder.path()));
+    CHECK(fs::is_empty(folder.path()));
+    CHECK_FALSE(canWriteTo(folder.path() / "missing"));
+
+    const auto locked = folder.path() / "locked";
+    fs::create_directories(locked);
+    const auto path = locked.string();
+    REQUIRE(std::system((R"x(icacls ")x" + path + R"x(" /deny *S-1-1-0:(WD,AD) >nul)x").c_str()) == 0);
+    CHECK_FALSE(canWriteTo(locked));
+    std::system((R"x(icacls ")x" + path + R"x(" /remove:d *S-1-1-0 >nul)x").c_str());
 }

@@ -70,7 +70,16 @@ fs::path installPackage(const Release& release) {
         fs::remove_all(staging);
         throw std::runtime_error("The update package has no ryu.exe.");
     }
-    replaceFiles(staging, folder);
+    try {
+        replaceFiles(staging, folder);
+    } catch (const fs::filesystem_error& error) {
+        std::error_code ignored;
+        fs::remove_all(staging, ignored);
+        if (error.code() == std::errc::permission_denied) {
+            throw std::runtime_error("Windows didn't let Ryu change its files in " + folder.string() + ".");
+        }
+        throw;
+    }
     fs::remove_all(staging);
     return folder / "ryu.exe";
 }
@@ -141,6 +150,19 @@ void Updater::check(bool userAsked) {
 void Updater::offer(const Release& release) {
     const auto version = wxString::FromUTF8(release.version);
     setStatus_("Ryu " + version + " is available");
+    if (!canWriteTo(appFolder())) {
+        wxMessageDialog dialog(parent_,
+                               "Ryu " + version + " is available, but Ryu can't update itself because its folder, " +
+                                   wxString(appFolder().wstring()) +
+                                   ", needs administrator rights to change. Move Ryu to a folder of your own, or "
+                                   "download the update by hand.\nOpen the release page?",
+                               "Update available", wxYES_NO | wxYES_DEFAULT | wxICON_INFORMATION);
+        if (dialog.ShowModal() == wxID_YES && !release.pageUrl.empty()) {
+            wxLaunchDefaultBrowser(wxString::FromUTF8(release.pageUrl));
+        }
+        setStatus_("Ready");
+        return;
+    }
     wxMessageDialog dialog(parent_,
                            "Ryu " + version + " is available. You have " RYU_VERSION ".\nDownload and install it now?",
                            "Update available", wxYES_NO | wxYES_DEFAULT | wxICON_INFORMATION);

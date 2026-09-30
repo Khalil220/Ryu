@@ -7,6 +7,7 @@
 #include <cctype>
 #include <charconv>
 #include <cstdio>
+#include <fstream>
 #include <stdexcept>
 #include <utility>
 #include <vector>
@@ -232,6 +233,19 @@ void removeReplacedFiles(const fs::path& directory) {
             fs::remove(entry.path(), ignored);
         }
     }
+}
+
+bool canWriteTo(const fs::path& folder) {
+    const auto probe = folder / ".ryu-write-check";
+    {
+        std::ofstream out(probe, std::ios::binary);
+        if (!out) {
+            return false;
+        }
+    }
+    std::error_code ignored;
+    fs::remove(probe, ignored);
+    return true;
 }
 
 }

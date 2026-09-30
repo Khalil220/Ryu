@@ -71,7 +71,7 @@ cmake --preset windows -DRYU_UI_TEST_PYTHON=%CD%\build\ui-venv\Scripts\python.ex
 
 ## Files
 
-Settings are stored in `%APPDATA%\Ryu\settings.ini`. Updates replace the program's files in place, so Ryu needs to live in a folder you can write to. Each session is logged to `%APPDATA%\Ryu\ryu.log`, with the previous session kept in `ryu.old.log`.
+Settings are stored in `%APPDATA%\Ryu\settings.ini`. Ryu can only update itself from a folder you can write to. From a protected folder such as Program Files, it links to the release page instead. Each session is logged to `%APPDATA%\Ryu\ryu.log`, with the previous session kept in `ryu.old.log`.
 
 These environment variables override the defaults:
 

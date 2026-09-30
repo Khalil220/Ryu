@@ -21,6 +21,12 @@ PACKAGE = "Ryu-9.9.9-win64.zip"
 
 
 class QuietHandler(http.server.SimpleHTTPRequestHandler):
+    requested = []
+
+    def do_GET(self):
+        QuietHandler.requested.append(self.path)
+        super().do_GET()
+
     def log_message(self, *args):
         pass
 
@@ -59,6 +65,33 @@ def connect(path):
     return wait_for(attempt, 30)
 
 
+def locked_folder(source, root, env):
+    folder = os.path.join(root, "locked")
+    os.makedirs(folder)
+    for name in ("ryu.exe", "libmpv-2.dll", "prism.dll"):
+        shutil.copy2(os.path.join(source, name), folder)
+    subprocess.run(["icacls", folder, "/deny", "*S-1-1-0:(WD,AD)"], check=True, capture_output=True)
+    process = subprocess.Popen([os.path.join(folder, "ryu.exe")], env=env)
+    try:
+        QuietHandler.requested.clear()
+        app = Application(backend="uia").connect(process=process.pid, timeout=20)
+        app.window(title_re="Ryu.*").wait("visible", timeout=20)
+        main = app.window(handle=app.window(title_re="Ryu.*").handle)
+        notice = answer(main, "Update available", "No")
+        check(notice is not None and "needs administrator rights" in notice,
+              f"a Ryu in a protected folder explains why it can't update ({notice})")
+        check(not any(path.endswith(PACKAGE) for path in QuietHandler.requested),
+              f"a Ryu in a protected folder downloads nothing ({QuietHandler.requested})")
+        check(sorted(os.listdir(folder)) == ["libmpv-2.dll", "prism.dll", "ryu.exe"],
+              f"the protected folder is left untouched ({os.listdir(folder)})")
+        main.close()
+        process.wait(15)
+    finally:
+        if process.poll() is None:
+            process.kill()
+        subprocess.run(["icacls", folder, "/remove:d", "*S-1-1-0"], capture_output=True)
+
+
 def run(exe, root):
     app_folder = os.path.join(root, "app")
     served = os.path.join(root, "served")
@@ -86,6 +119,11 @@ def run(exe, root):
                RYU_LOG=os.path.join(root, "ryu.log"), RYU_SPEECH_LOG=speech_log,
                RYU_UPDATE_FEED=f"http://127.0.0.1:{port}/feed.json")
     program = os.path.join(app_folder, "ryu.exe")
+    try:
+        locked_folder(source, root, env)
+    except Exception:
+        server.shutdown()
+        raise
     first = subprocess.Popen([program], env=env)
     restarted = None
     try:

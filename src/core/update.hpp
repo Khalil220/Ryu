@@ -32,5 +32,6 @@ std::string sha256Hex(std::string_view data);
 void extractPackage(const std::filesystem::path& package, const std::filesystem::path& destination);
 void replaceFiles(const std::filesystem::path& staging, const std::filesystem::path& target);
 void removeReplacedFiles(const std::filesystem::path& directory);
+bool canWriteTo(const std::filesystem::path& folder);
 
 }
