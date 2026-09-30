@@ -68,6 +68,23 @@ TEST_CASE("speakableSubtitle joins lines, tidies spacing and drops watermark lin
     CHECK(speakableSubtitle("KAA.lt", {"kaa.lt"}).empty());
     CHECK(speakableSubtitle("Visit kaa.lt later", {"kaa.lt"}) == "Visit kaa.lt later");
     CHECK(speakableSubtitle("\n", {}).empty());
+    CHECK(speakableSubtitle("KAA.lt\nHello there.", {"kaa.lt"}) == "Hello there.");
+}
+
+TEST_CASE("speakableSubtitle skips karaoke layers and syllables but keeps dialogue") {
+    std::string layered;
+    for (int i = 0; i < 42; ++i) {
+        layered += "o\nshi\n";
+    }
+    CHECK(speakableSubtitle(layered, {}).empty());
+    CHECK(speakableSubtitle(layered + "Um, I'm really sorry.", {}) == "Um, I'm really sorry.");
+    CHECK(speakableSubtitle("hi\nro\nOn one spacious blue planet", {}) == "On one spacious blue planet");
+    CHECK(speakableSubtitle("か\nき\nHello", {}) == "Hello");
+    CHECK(speakableSubtitle("Chapter One\nChapter One", {}) == "Chapter One");
+    CHECK(speakableSubtitle("Eh?", {}) == "Eh?");
+    CHECK(speakableSubtitle("e", {}).empty());
+    CHECK(speakableSubtitle("a\nEver since we first met", {}) == "Ever since we first met");
+    CHECK(speakableSubtitle("No.\nThat's not what I mean.", {}) == "No. That's not what I mean.");
 }
 
 TEST_CASE("timeLabel includes the duration once it is known") {
