@@ -4,6 +4,7 @@
 #include <doctest/doctest.h>
 
 #include <algorithm>
+#include <iterator>
 
 using namespace ryu;
 using ryu::test::FakeHttpClient;
@@ -42,7 +43,7 @@ TEST_CASE("search posts the query and reads titles, format, year and audio avail
 
     const auto shows = provider.search("frieren");
 
-    REQUIRE(shows.size() == 3);
+    REQUIRE(shows.size() == 2);
     CHECK(shows[0].id == "sousou-no-frieren-2d15");
     CHECK(shows[0].title == "Frieren: Beyond Journey's End");
     CHECK(shows[0].altTitle == "Sousou no Frieren");
@@ -57,6 +58,32 @@ TEST_CASE("search posts the query and reads titles, format, year and audio avail
     CHECK(http.requests[0].method == "POST");
     CHECK(http.requests[0].body == R"({"query":"frieren"})");
     CHECK(http.header(0, "Content-Type") == "application/json");
+}
+
+TEST_CASE("search leaves out catalogue entries that have no Japanese or English video") {
+    FakeHttpClient http;
+    http.serve(searchUrl, readFixture("kickassanime/search_one_piece_film.json"));
+    KickAssAnimeProvider provider(http);
+
+    const auto shows = provider.search("one piece film");
+
+    std::vector<std::string> ids;
+    std::ranges::transform(shows, std::back_inserter(ids), &Show::id);
+    CHECK(ids == std::vector<std::string>{"one-piece-film-strong-world-3ebd", "one-piece-film-z-b73f",
+                                          "one-piece-film-gold-98b4", "one-piece-film-red-ce6a"});
+    CHECK(shows[2].offersSub);
+    CHECK_FALSE(shows[2].offersDub);
+}
+
+TEST_CASE("search keeps results when the site does not say which languages they have") {
+    FakeHttpClient http;
+    http.serve(searchUrl, R"({"result":[{"slug":"mystery-1a2b","title":"Mystery","type":"movie"}]})");
+    KickAssAnimeProvider provider(http);
+
+    const auto shows = provider.search("mystery");
+
+    REQUIRE(shows.size() == 1);
+    CHECK(shows[0].id == "mystery-1a2b");
 }
 
 TEST_CASE("episodes lists the Japanese-audio episodes with ids that carry the show and number") {

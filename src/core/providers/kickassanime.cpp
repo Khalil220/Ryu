@@ -152,6 +152,10 @@ std::vector<Show> KickAssAnimeProvider::search(std::string_view query) {
         }
         show.offersSub = hasLocale(item, "ja-JP");
         show.offersDub = hasLocale(item, "en-US");
+        if (const auto locales = item.find("locales");
+            locales != item.end() && locales->is_array() && !show.offersSub && !show.offersDub) {
+            continue;
+        }
         show.synopsis = stringField(item, "synopsis");
         if (const auto poster = item.find("poster"); poster != item.end() && poster->is_object()) {
             if (const auto hq = stringField(*poster, "hq"); !hq.empty()) {
