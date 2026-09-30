@@ -51,7 +51,7 @@ Visual Studio's developer prompts point `VCPKG_ROOT` at the bundled copy. Buildi
 
 The first configure builds wxWidgets, libcurl, lexbor and nlohmann-json through vcpkg, and downloads prebuilt libmpv and Prism. The result is `build\windows\src\app\Release\ryu.exe`, which needs `libmpv-2.dll` and `prism.dll` beside it.
 
-`tools\release.ps1` builds a release from a clean checkout of the current commit, runs the unit tests, and writes `dist\Ryu-<version>-win64.zip` with a `SHA256SUMS` file. With `-Publish` it also tags the version from `CMakeLists.txt` and uploads both files as a GitHub release, which is what the built-in updater reads.
+`tools\release.ps1` builds a release from a clean checkout of the current commit, runs the unit tests, and writes `dist\Ryu-<version>-win64.zip` with a `SHA256SUMS` file. With `-Publish -NotesFile <file>` it also tags the version from `CMakeLists.txt` and uploads both files as a GitHub release with those notes, which is what the built-in updater reads and shows.
 
 ## Tests
 

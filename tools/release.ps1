@@ -1,5 +1,6 @@
 param(
     [switch]$Publish,
+    [string]$NotesFile,
     [string]$VcpkgRoot = $env:VCPKG_ROOT
 )
 
@@ -11,6 +12,16 @@ if (-not $VcpkgRoot -or -not (Test-Path (Join-Path $VcpkgRoot 'scripts\buildsyst
     throw 'Set VCPKG_ROOT, or pass -VcpkgRoot, to the folder of your vcpkg clone.'
 }
 $env:VCPKG_ROOT = $VcpkgRoot
+
+if ($Publish) {
+    if (-not $NotesFile -or -not (Test-Path -PathType Leaf $NotesFile)) {
+        throw 'Pass -NotesFile with the release notes to publish. They are shown in the update dialog.'
+    }
+    $NotesFile = (Resolve-Path $NotesFile).Path
+    if (-not [IO.File]::ReadAllText($NotesFile).Trim()) {
+        throw "$NotesFile is empty. Write the release notes first."
+    }
+}
 
 function Invoke-Native {
     param([string]$Command, [string[]]$Arguments)
@@ -83,21 +94,13 @@ try {
     }
 
     if ($Publish) {
-        $previous = git tag --list 'v*' --sort=-v:refname | Select-Object -First 1
-        $notes = if ($previous) {
-            (git log --pretty='- %s' "$previous..HEAD") -join "`n"
-        } else {
-            'Initial release.'
-        }
-        $notesFile = Join-Path $dist 'notes.md'
-        [IO.File]::WriteAllText($notesFile, "$notes`n")
         Invoke-Checked git @('tag', '-a', $tag, '-m', "Ryu $version")
         Invoke-Checked git @('push', 'origin', $tag)
         Invoke-Checked gh @('release', 'create', $tag, $package, $sums, '--repo', $repository, '--title', "Ryu $version",
-            '--notes-file', $notesFile)
+            '--notes-file', $NotesFile)
         Write-Host "Published $tag"
     } else {
-        Write-Host 'Run with -Publish to tag and upload this release.'
+        Write-Host 'Run with -Publish -NotesFile <file> to tag and upload this release.'
     }
 } finally {
     Pop-Location
