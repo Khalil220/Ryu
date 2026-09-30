@@ -16,6 +16,7 @@
 #include <wx/button.h>
 #include <wx/choice.h>
 #include <wx/display.h>
+#include <wx/iconbndl.h>
 #include <wx/menu.h>
 #include <wx/msgdlg.h>
 #include <wx/panel.h>
@@ -38,6 +39,7 @@ MainFrame::MainFrame(SettingsStore& store)
     : wxFrame(nullptr, wxID_ANY, "Ryu"), store_(store), playlistServer_(std::make_shared<PlaylistServer>()),
       alive_(std::make_shared<int>(0)) {
     settings_ = store_.load();
+    SetIcons(wxIconBundle("appicon", nullptr));
     createMenu();
     createControls();
     CreateStatusBar();
