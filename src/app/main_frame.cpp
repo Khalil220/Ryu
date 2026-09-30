@@ -426,7 +426,7 @@ void MainFrame::playEpisode(size_t row) {
         [session, server, show = currentShow_, episode, audio] {
             return findStream(*session->http, *server, session->handles, show, episode, audio);
         },
-        [this, generation, index, title](FoundStream found) {
+        [this, generation, index, title, label](FoundStream found) {
             if (generation != streamGeneration_) {
                 logLine("Dropped the stream for " + title.utf8_string() + " because a newer request replaced it");
                 return;
@@ -434,7 +434,7 @@ void MainFrame::playEpisode(size_t row) {
             pendingEpisode_.reset();
             try {
                 playingAudio_ = found.stream.audio;
-                player_->play(found.stream, settings_.readSubtitlesFor(found.stream.audio),
+                player_->play(found.stream, label.utf8_string(), settings_.readSubtitlesFor(found.stream.audio),
                               settings_.subtitlesFor(found.stream.audio));
                 currentEpisode_ = index;
                 showPlayer(title);

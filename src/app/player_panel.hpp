@@ -32,7 +32,8 @@ public:
                 std::function<void(const SubtitlePreference&)> onSubtitlesChosen);
     ~PlayerPanel() override;
 
-    void play(const Stream& stream, bool readSubtitles, const SubtitlePreference& subtitles);
+    void play(const Stream& stream, const std::string& heading, bool readSubtitles,
+              const SubtitlePreference& subtitles);
     void stop();
     void focusControls();
 
@@ -72,6 +73,7 @@ private:
     std::vector<int64_t> subtitleTracks_;
     std::vector<std::string> subtitleLanguages_;
     SubtitlePreference subtitlePreference_;
+    std::string heading_;
     std::string lastError_;
     double position_ = 0;
     double duration_ = 0;

@@ -333,7 +333,8 @@ void PlayerPanel::stopMpv() {
     mpv_ = nullptr;
 }
 
-void PlayerPanel::play(const Stream& stream, bool readSubtitles, const SubtitlePreference& subtitles) {
+void PlayerPanel::play(const Stream& stream, const std::string& heading, bool readSubtitles,
+                       const SubtitlePreference& subtitles) {
     if (!mpv_) {
         startMpv();
     }
@@ -361,6 +362,7 @@ void PlayerPanel::play(const Stream& stream, bool readSubtitles, const SubtitleP
     resetState("Loading");
     pendingSubtitles_ = stream.subtitles;
     subtitlePreference_ = subtitles;
+    heading_ = heading;
     subtitleNoise_ = stream.subtitleNoise;
     intro_ = stream.intro;
     readSubtitles_ = readSubtitles;
@@ -369,6 +371,7 @@ void PlayerPanel::play(const Stream& stream, bool readSubtitles, const SubtitleP
     active_ = true;
     logLine("Loading " + stream.server + " stream " + stream.url);
     command({"loadfile", stream.url, "replace"});
+    commandAsync({"show-text", "Loading " + heading, "60000"});
     stallTimer_.Start(1000);
 }
 
@@ -437,6 +440,7 @@ void PlayerPanel::processEvents() {
             }
             pendingSubtitles_.clear();
             logLine("mpv loaded the file");
+            commandAsync({"show-text", heading_, "3000"});
             break;
         case MPV_EVENT_LOG_MESSAGE: {
             const auto* message = static_cast<const mpv_event_log_message*>(event->data);
