@@ -91,6 +91,7 @@ def run(app, pid, speech_log):
 
         audio = window.child_window(title="Audio", control_type="ComboBox")
         audio.set_focus()
+        wait_for(lambda: audio.has_keyboard_focus() or None, 5)
         changed = time.perf_counter()
         send_keys("{DOWN}")
         time.sleep(1)
@@ -143,6 +144,7 @@ def run_after_playback(app, pid, speech_log):
         wait_for(lambda: window.window_text().startswith("Ryu - "), 15)
         time.sleep(2)
         audio.set_focus()
+        wait_for(lambda: audio.has_keyboard_focus() or None, 5)
         time.sleep(1)
         for key in ("{UP}", "{DOWN}"):
             changed = time.perf_counter()
