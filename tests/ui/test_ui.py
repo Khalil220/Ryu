@@ -146,6 +146,15 @@ def run(app, speech_log):
     check(not spoke_synopsis(mark), "Ctrl+D outside the results does nothing")
 
     results.set_focus()
+    wait_for(lambda: results.has_keyboard_focus() or first.has_keyboard_focus(), 5)
+    send_keys("{TAB}")
+    episode_list = main.child_window(title="Episodes", control_type="List")
+    check(wait_for(episode_list.has_keyboard_focus, 5) is not None, "Tab goes from the results straight to the episodes")
+    send_keys("+{TAB}")
+    check(wait_for(lambda: results.has_keyboard_focus() or first.has_keyboard_focus(), 5) is not None,
+          "Shift+Tab goes from the episodes straight back to the results")
+
+    results.set_focus()
     first.select()
     send_keys("{ENTER}")
     episodes = main.child_window(title="Episodes", control_type="List")

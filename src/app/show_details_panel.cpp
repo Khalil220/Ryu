@@ -28,6 +28,16 @@ protected:
 
 }
 
+class PlainPanel : public wxPanel {
+public:
+    explicit PlainPanel(wxWindow* parent) : wxPanel(parent) { m_container.DisableSelfFocus(); }
+};
+
+class PlainBook : public wxSimplebook {
+public:
+    explicit PlainBook(wxWindow* parent) : wxSimplebook(parent) { m_container.DisableSelfFocus(); }
+};
+
 class SynopsisView : public wxScrolled<wxWindow> {
 public:
     explicit SynopsisView(wxWindow* parent) : wxScrolled<wxWindow>(parent) {
@@ -67,9 +77,10 @@ private:
 };
 
 ShowDetailsPanel::ShowDetailsPanel(wxWindow* parent) : wxPanel(parent), posterSize_(FromDIP(wxSize(160, 240))) {
-    book_ = new wxSimplebook(this);
+    m_container.DisableSelfFocus();
+    book_ = new PlainBook(this);
 
-    auto* hintPage = new wxPanel(book_);
+    auto* hintPage = new PlainPanel(book_);
     auto* hint = new wxStaticText(hintPage, wxID_ANY, "Pick a search result to see its details here.");
     hint->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT));
     auto* hintSizer = new wxBoxSizer(wxVERTICAL);
@@ -78,7 +89,7 @@ ShowDetailsPanel::ShowDetailsPanel(wxWindow* parent) : wxPanel(parent), posterSi
     hintSizer->AddStretchSpacer();
     hintPage->SetSizer(hintSizer);
 
-    auto* page = new wxPanel(book_);
+    auto* page = new PlainPanel(book_);
     auto* row = new wxBoxSizer(wxHORIZONTAL);
     poster_ = new wxStaticBitmap(page, wxID_ANY, wxBitmapBundle(), wxDefaultPosition, posterSize_);
     poster_->SetMinSize(posterSize_);
