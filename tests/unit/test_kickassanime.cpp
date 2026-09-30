@@ -21,6 +21,17 @@ constexpr const char* jaPlayerUrl =
 constexpr const char* enPlayerUrl =
     "https://krussdomi.com/cat-player/player?id=67d0c079169c31976b8d7970&source=vidstream&ln=en-US";
 constexpr const char* manifest = "https://hls.krussdomi.com/manifest/67d0c079169c31976b8d7970/master.m3u8";
+constexpr const char* catPlayerUrl = "https://krussdomi.com/cat-player/player?id=OWQ4ZTY2&type=hls&source=catstream";
+constexpr const char* catManifest = "https://bl.krussdomi.com/playlist/679705bd169c31976bd92812/master.m3u8";
+
+std::string episodeWithServers(const std::vector<std::pair<std::string, std::string>>& servers) {
+    std::string json = R"({"episode_number":1,"servers":[)";
+    for (size_t i = 0; i < servers.size(); ++i) {
+        json += (i ? "," : "") + std::string(R"({"name":")") + servers[i].first + R"(","src":")" + servers[i].second +
+                R"("})";
+    }
+    return json + "]}";
+}
 
 }
 
@@ -151,6 +162,57 @@ TEST_CASE("dub streams use the English episode list and ask for English audio wi
     CHECK(streams[0].audio == Audio::Dub);
     CHECK(streams[0].audioLanguage == "eng,en");
     CHECK(std::ranges::none_of(streams[0].subtitles, [](const Subtitle& s) { return s.isDefault; }));
+}
+
+TEST_CASE("streams plays an episode that only offers CatStream") {
+    FakeHttpClient http;
+    http.serve(jaListUrl, readFixture("kickassanime/episodes_frieren_ja.json"));
+    http.serve(jaEpisodeUrl, episodeWithServers({{"CatStream", catPlayerUrl}}));
+    http.serve(catPlayerUrl, readFixture("kickassanime/player_cat.html"));
+    KickAssAnimeProvider provider(http);
+
+    const auto streams = provider.streams("sousou-no-frieren-2d15|1", Audio::Sub);
+
+    REQUIRE(streams.size() == 1);
+    CHECK(streams[0].server == "CatStream");
+    CHECK(streams[0].url == catManifest);
+    REQUIRE(streams[0].headers.size() == 2);
+    CHECK(streams[0].headers[0] == std::pair<std::string, std::string>{"Origin", "https://krussdomi.com"});
+    CHECK(streams[0].audioLanguage == "jpn,ja");
+}
+
+TEST_CASE("streams prefers VidStreaming and moves on to the other servers when it fails") {
+    const auto servers = episodeWithServers({{"CatStream", catPlayerUrl}, {"VidStreaming", jaPlayerUrl}});
+    {
+        FakeHttpClient http;
+        http.serve(jaListUrl, readFixture("kickassanime/episodes_frieren_ja.json"));
+        http.serve(jaEpisodeUrl, servers);
+        http.serve(jaPlayerUrl, readFixture("kickassanime/player_ja.html"));
+        http.serve(catPlayerUrl, readFixture("kickassanime/player_cat.html"));
+        KickAssAnimeProvider provider(http);
+
+        CHECK(provider.streams("sousou-no-frieren-2d15|1", Audio::Sub).at(0).server == "VidStreaming");
+    }
+    {
+        FakeHttpClient http;
+        http.serve(jaListUrl, readFixture("kickassanime/episodes_frieren_ja.json"));
+        http.serve(jaEpisodeUrl, servers);
+        http.serve(jaPlayerUrl, "<html><body>nothing</body></html>");
+        http.serve(catPlayerUrl, readFixture("kickassanime/player_cat.html"));
+        KickAssAnimeProvider provider(http);
+
+        CHECK(provider.streams("sousou-no-frieren-2d15|1", Audio::Sub).at(0).server == "CatStream");
+    }
+}
+
+TEST_CASE("an episode listed without any servers says so") {
+    FakeHttpClient http;
+    http.serve(jaListUrl, readFixture("kickassanime/episodes_frieren_ja.json"));
+    http.serve(jaEpisodeUrl, episodeWithServers({}));
+    KickAssAnimeProvider provider(http);
+
+    CHECK_THROWS_WITH_AS(provider.streams("sousou-no-frieren-2d15|1", Audio::Sub), doctest::Contains("no servers"),
+                         ProviderError);
 }
 
 TEST_CASE("an episode missing from the requested audio's list has no stream") {

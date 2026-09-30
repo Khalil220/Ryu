@@ -1,7 +1,9 @@
 #include "kickassanime.hpp"
 
 #include "../encoding.hpp"
+#include "../hls.hpp"
 #include "../html.hpp"
+#include "../log.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -232,20 +234,32 @@ std::vector<Stream> KickAssAnimeProvider::streams(std::string_view episodeId, Au
 
     const auto episodeUrl = baseUrl_ + "/api/show/" + show + "/episode/ep-" + urlEncode(number) + "-" + urlEncode(slug);
     const auto episode = parseJson(fetch(episodeUrl), episodeUrl);
-    std::string playerUrl;
+    std::vector<std::pair<std::string, std::string>> players;
     if (const auto servers = episode.find("servers"); servers != episode.end() && servers->is_array()) {
         for (const auto& server : *servers) {
-            const auto src = stringField(server, "src");
-            if (stringField(server, "name") == "VidStreaming" || src.find("source=vidstream") != std::string::npos) {
-                playerUrl = src;
-                break;
+            if (auto src = stringField(server, "src"); !src.empty()) {
+                players.emplace_back(stringField(server, "name"), std::move(src));
             }
         }
     }
-    if (playerUrl.empty()) {
-        throw ProviderError("KickAssAnime has no VidStreaming server for this episode");
+    if (players.empty()) {
+        throw ProviderError("KickAssAnime has no servers for this episode");
     }
-    return {resolvePlayer(playerUrl, audio)};
+    std::ranges::stable_partition(players, [](const auto& player) {
+        return player.first == "VidStreaming" || player.second.find("source=vidstream") != std::string::npos;
+    });
+    std::string firstError;
+    for (const auto& [name, src] : players) {
+        try {
+            return {resolvePlayer(src, name, audio)};
+        } catch (const std::exception& error) {
+            logLine("KickAssAnime server " + name + " failed: " + error.what());
+            if (firstError.empty()) {
+                firstError = error.what();
+            }
+        }
+    }
+    throw ProviderError(firstError);
 }
 
 std::string KickAssAnimeProvider::fetch(const std::string& url) {
@@ -259,7 +273,7 @@ std::string KickAssAnimeProvider::fetch(const std::string& url) {
     return std::move(response.body);
 }
 
-Stream KickAssAnimeProvider::resolvePlayer(const std::string& playerUrl, Audio audio) {
+Stream KickAssAnimeProvider::resolvePlayer(const std::string& playerUrl, const std::string& server, Audio audio) {
     const HtmlDocument page(fetch(playerUrl));
     json props;
     for (const auto& island : page.select("astro-island[props]")) {
@@ -276,8 +290,8 @@ Stream KickAssAnimeProvider::resolvePlayer(const std::string& playerUrl, Audio a
 
     const auto origin = originOf(playerUrl);
     Stream stream;
-    stream.url = manifest;
-    stream.server = "VidStreaming";
+    stream.url = resolveUrl(playerUrl, manifest);
+    stream.server = server.empty() ? "KickAssAnime" : server;
     stream.audio = audio;
     stream.headers = {{"Origin", origin}, {"Referer", origin + "/"}};
     stream.disguisedSegments = true;

@@ -16,7 +16,7 @@ public:
 
 private:
     std::string fetch(const std::string& url);
-    Stream resolvePlayer(const std::string& playerUrl, Audio audio);
+    Stream resolvePlayer(const std::string& playerUrl, const std::string& server, Audio audio);
 
     HttpClient& http_;
     std::string baseUrl_;
