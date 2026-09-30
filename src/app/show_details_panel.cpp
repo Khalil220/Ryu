@@ -44,6 +44,7 @@ public:
         text_ = new wxStaticText(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize,
                                  wxST_NO_AUTORESIZE);
         SetScrollRate(0, FromDIP(8));
+        SetMinSize(FromDIP(wxSize(100, 60)));
         ShowScrollbars(wxSHOW_SB_NEVER, wxSHOW_SB_DEFAULT);
         Bind(wxEVT_SIZE, [this](wxSizeEvent& event) {
             event.Skip();
