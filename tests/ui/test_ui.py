@@ -319,6 +319,9 @@ def run(app, speech_log):
     main.child_window(title="Pause", control_type="Button").set_focus()
     send_keys("r", vk_packet=False)
     check(wait_for(lambda: read.get_toggle_state() == 0, 5) is not None, "R turns subtitle reading off for subs")
+    main.child_window(title="Pause", control_type="Button").invoke()
+    check(wait_for(main.child_window(title="Play", control_type="Button").exists, 10) is not None,
+          "the subbed episode is paused before leaving")
     send_keys("{ESC}")
     check(wait_for(lambda: main.window_text() == "Ryu - HiAnime", 15) is not None, "Escape leaves the subbed episode")
 
@@ -327,6 +330,9 @@ def run(app, speech_log):
     main.child_window(title="Play", control_type="Button").invoke()
     check(wait_for(lambda: main.window_text().startswith("Episode 1:"), 45) is not None,
           f"episode 1 plays dubbed again after the subbed one ({main.window_text()})")
+    check(wait_for(lambda: seconds(time_box.get_value()) >= 3, 60) is not None,
+          f"an episode started after leaving a paused one plays instead of staying paused ({time_box.get_value()})")
+    check(main.child_window(title="Pause", control_type="Button").exists(), "the button offers Pause, not Play")
     check(wait_for(lambda: subtitles.selected_text() == "English", 20) is not None,
           f"the dub's English track is selected again ({subtitles.selected_text()})")
     time.sleep(2)

@@ -268,6 +268,7 @@ void PlayerPanel::play(const Stream& stream, bool readSubtitles) {
     mpv_set_property(mpv_, "http-header-fields", MPV_FORMAT_NODE, &node);
     mpv_set_property_string(mpv_, "demuxer-lavf-o", stream.disguisedSegments ? "extension_picky=0" : "");
     mpv_set_property_string(mpv_, "alang", stream.audioLanguage.c_str());
+    mpv_set_property_string(mpv_, "pause", "no");
 
     resetState("Loading");
     pendingSubtitles_ = stream.subtitles;
