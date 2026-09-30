@@ -36,6 +36,39 @@ std::optional<std::string> literalAt(std::string_view script, size_t marker) {
     return std::string(script.substr(begin, end - begin));
 }
 
+std::optional<std::string> pickedDefault(std::string_view script, std::string_view name) {
+    const auto option = script.find("\"" + std::string(name) + "\"");
+    const auto close = option == std::string_view::npos ? option : script.find(']', option);
+    if (close == std::string_view::npos) {
+        return std::nullopt;
+    }
+    auto at = script.find_first_not_of(" ,", close + 1);
+    if (at == std::string_view::npos || (script[at] != '"' && script[at] != '\'')) {
+        return std::nullopt;
+    }
+    const char quote = script[at++];
+    std::string value;
+    while (at < script.size() && script[at] != quote) {
+        char ch = script[at++];
+        if (ch == '\\' && at < script.size()) {
+            ch = script[at++];
+            if (ch == 'n') {
+                ch = '\n';
+            } else if (ch == 't') {
+                ch = '\t';
+            } else if (ch == 'x' && at + 2 <= script.size()) {
+                ch = static_cast<char>(std::stoi(std::string(script.substr(at, 2)), nullptr, 16));
+                at += 2;
+            }
+        }
+        value.push_back(ch);
+    }
+    if (at >= script.size()) {
+        return std::nullopt;
+    }
+    return value;
+}
+
 std::string stringField(const nlohmann::json& object, const char* key) {
     const auto it = object.find(key);
     return it != object.end() && it->is_string() ? it->get<std::string>() : std::string();
@@ -175,10 +208,14 @@ MegaplayResolver::Cipher MegaplayResolver::cipherFor(const std::string& scriptUr
 
     const auto script = fetch(scriptUrl, {{"Referer", std::string(host)}});
     const std::string_view view(script);
-    const auto importKey = view.find("importKey(\"raw\"");
-    const auto decrypt = view.find("decrypt({name:\"AES-CBC\"");
-    const auto key = literalAt(view, importKey == std::string_view::npos ? importKey : view.find(literalMarker, importKey));
-    const auto iv = literalAt(view, decrypt == std::string_view::npos ? decrypt : view.rfind(literalMarker, decrypt));
+    auto key = pickedDefault(view, "trustAesKey");
+    auto iv = pickedDefault(view, "trustAesIv");
+    if (!key || !iv) {
+        const auto importKey = view.find("importKey(\"raw\"");
+        const auto decrypt = view.find("decrypt({name:\"AES-CBC\"");
+        key = literalAt(view, importKey == std::string_view::npos ? importKey : view.find(literalMarker, importKey));
+        iv = literalAt(view, decrypt == std::string_view::npos ? decrypt : view.rfind(literalMarker, decrypt));
+    }
     if (!key || !iv || iv->size() != 16) {
         throw ProviderError("Could not find the megaplay decryption key");
     }

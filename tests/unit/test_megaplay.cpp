@@ -131,12 +131,28 @@ TEST_CASE("a rotated key that no longer decrypts is reported clearly") {
     FakeHttpClient http;
     serveEpisode(http);
     auto script = readFixture("megaplay/newclient.min.js");
-    const auto at = script.find("i?LMTAx0Q6,:}50U");
-    REQUIRE(at != std::string::npos);
-    script.replace(at, 16, "0000000000000000");
+    REQUIRE(script.find("i?LMTAx0Q6,:}50U") != std::string::npos);
+    for (auto at = script.find("i?LMTAx0Q6,:}50U"); at != std::string::npos; at = script.find("i?LMTAx0Q6,:}50U")) {
+        script.replace(at, 16, "0000000000000000");
+    }
     http.serve(scriptUrl, script);
     MegaplayResolver resolver(http);
 
     CHECK_THROWS_WITH_AS(resolver.resolve(embedUrl, Audio::Sub, "https://hianime.at/"),
                          doctest::Contains("decrypt"), ProviderError);
+}
+
+TEST_CASE("resolve reads the key and IV that client 4.22 keeps as trustAesKey and trustAesIv defaults") {
+    FakeHttpClient http;
+    http.serve("https://megaplay.buzz/stream/s-2/107257/dub", readFixture("megaplay/stream_107257_dub.html"));
+    http.serve("https://megaplay.buzz/stream/getSources?id=13454", readFixture("megaplay/get_sources_13454.json"));
+    http.serve("https://megaplay.buzz/lib/newclient.min.js?v=4.22", readFixture("megaplay/newclient-4.22.min.js"));
+    MegaplayResolver resolver(http);
+
+    const auto stream = resolver.resolve("https://megaplay.buzz/stream/s-2/107257/dub", Audio::Dub, "https://hianime.at/");
+
+    CHECK(stream.url ==
+          "https://fetch.nexabloom.top/anime/bb6d2babd7797d94d8f4a8600bc9b44e/b6ae2e4493d9f272eaef8ca4291d5d73/master.m3u8");
+    REQUIRE(stream.intro.has_value());
+    CHECK(stream.intro->end == doctest::Approx(89));
 }
