@@ -204,6 +204,7 @@ void PlayerPanel::startMpv() {
     mpv_set_option_string(mpv_, "keep-open", "yes");
     mpv_set_option_string(mpv_, "force-window", "yes");
     mpv_set_option_string(mpv_, "hwdec", "auto-safe");
+    mpv_set_option_string(mpv_, "cache-secs", "60");
     mpv_set_option_string(mpv_, "osc", "yes");
     mpv_set_option_string(mpv_, "ytdl", "no");
     mpv_set_option_string(mpv_, "user-agent", CurlHttpClient::defaultUserAgent);

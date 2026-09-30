@@ -409,8 +409,9 @@ def run(app, speech_log):
 def main(exe):
     config = os.path.join(tempfile.gettempdir(), f"ryu-ui-test-{os.getpid()}.ini")
     speech_log = os.path.join(tempfile.gettempdir(), f"ryu-ui-speech-{os.getpid()}.log")
-    env = dict(os.environ, RYU_CONFIG_FILE=config, RYU_MPV_OPTIONS="ao=null",
-               RYU_LOG=os.path.join(tempfile.gettempdir(), f"ryu-test-{os.getpid()}.log"), RYU_SPEECH_LOG=speech_log)
+    ryu_log = os.path.join(tempfile.gettempdir(), f"ryu-test-{os.getpid()}.log")
+    env = dict(os.environ, RYU_CONFIG_FILE=config, RYU_MPV_OPTIONS="ao=null", RYU_LOG=ryu_log,
+               RYU_SPEECH_LOG=speech_log)
     process = subprocess.Popen([os.path.abspath(exe)], env=env)
     try:
         run(Application(backend="uia").connect(process=process.pid, timeout=20), speech_log)
@@ -419,12 +420,15 @@ def main(exe):
             check(True, "closing the main window exits the app")
         except subprocess.TimeoutExpired:
             check(False, "closing the main window exits the app")
+        with open(ryu_log, encoding="utf-8", errors="replace") as log:
+            refused = [line for line in log if "HTTP error 429" in line]
+        check(not refused, f"no video host refuses Ryu for requesting too fast ({len(refused)} refusals)")
     except Exception as error:
         check(False, f"unexpected error: {error!r}")
     finally:
         if process.poll() is None:
             process.kill()
-        for path in (config, speech_log):
+        for path in (config, speech_log, ryu_log):
             if os.path.exists(path):
                 os.remove(path)
     print(f"{failures} failure(s)")
