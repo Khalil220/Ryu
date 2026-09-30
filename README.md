@@ -2,7 +2,7 @@
 
 Ryu is an anime client for Windows built for screen reader users. It is written in C++ with wxWidgets and plays video through libmpv. Every control is a standard Windows control with an explicit accessible name, so NVDA, JAWS and Narrator read it without guesswork.
 
-Ryu supports two providers. HiAnime (hianime.at) serves its videos through megaplay, and KickAssAnime (kaa.lt) hosts its own. Both can search, list episodes, play subbed or dubbed episodes, and load every subtitle track the episode offers.
+Ryu supports two providers. HiAnime (hianime.at) serves its videos through megaplay, with its ZokoAnime server as a backup, and KickAssAnime (kaa.lt) hosts its own. Ryu prefers megaplay because it has intro times for Skip intro and subtitles in several languages, while ZokoAnime has neither. Both can search, list episodes, play subbed or dubbed episodes, and load every subtitle track the episode offers.
 
 These sites store video on throwaway domains that Cloudflare bans from time to time. Before playing an episode, Ryu checks each video host it uses. If one has been banned, Ryu rewrites the playlist to use one of the same site's other hosts, which serve the same files, and hands the corrected playlist to the player from a small server on 127.0.0.1. If an episode still can't be played, Ryu looks for the same show and episode on the other provider and plays it from there, saying which provider it came from.
 

@@ -31,6 +31,13 @@ std::string serversJson(const std::string& items) {
     return "{\"status\":true,\"html\":\"" + escaped + "\"}";
 }
 
+std::string zokoServers() {
+    return serversJson(R"(<div class="item server-item" data-type="sub" data-server-name="ZokoAnime" )"
+                       R"(data-hash="aHR0cHM6Ly96b2tvYW5pbWUudmlkZW8vc3RyZWFtL21hbC81Mjk5MS8xL3N1Yg=="></div>)"
+                       R"(<div class="item server-item" data-type="dub" data-server-name="ZokoAnime" )"
+                       R"(data-hash="aHR0cHM6Ly96b2tvYW5pbWUudmlkZW8vc3RyZWFtL21hbC81Mjk5MS8xL2R1Yg=="></div>)");
+}
+
 }
 
 TEST_CASE("search parses every result in the main list") {
@@ -120,7 +127,7 @@ TEST_CASE("episodes treats every episode as available when the show has no count
 
 TEST_CASE("streams resolves the ZokoAnime embed into a master playlist with headers and subtitles") {
     FakeHttpClient http;
-    http.serve(serversUrl, readFixture("hianime/servers_9227.json"));
+    http.serve(serversUrl, zokoServers());
     http.serve(subEmbedUrl, readFixture("hianime/embed_zoko.html"));
     HiAnimeProvider provider(http);
 
@@ -148,7 +155,7 @@ TEST_CASE("streams resolves the ZokoAnime embed into a master playlist with head
 
 TEST_CASE("streams picks the dub embed when dub audio is requested") {
     FakeHttpClient http;
-    http.serve(serversUrl, readFixture("hianime/servers_9227.json"));
+    http.serve(serversUrl, zokoServers());
     http.serve(dubEmbedUrl, readFixture("hianime/embed_zoko.html"));
     HiAnimeProvider provider(http);
 
@@ -172,7 +179,7 @@ TEST_CASE("streams skips servers it cannot resolve") {
 
 TEST_CASE("streams reports an embed page without a player config") {
     FakeHttpClient http;
-    http.serve(serversUrl, readFixture("hianime/servers_9227.json"));
+    http.serve(serversUrl, zokoServers());
     http.serve(subEmbedUrl, "<html><body>No player here</body></html>");
     HiAnimeProvider provider(http);
 
@@ -216,13 +223,29 @@ TEST_CASE("streams resolves megaplay servers when ZokoAnime is not offered") {
     CHECK(http.header(1, "Referer") == "https://hianime.at/");
 }
 
-TEST_CASE("streams keeps working servers when another one fails") {
+TEST_CASE("streams prefers megaplay over ZokoAnime even when ZokoAnime is listed first") {
+    FakeHttpClient http;
+    http.serve(serversUrl, readFixture("hianime/servers_9227.json"));
+    http.serve("https://megaplay.buzz/stream/s-2/107257/sub?s=tcdn", readFixture("megaplay/stream_107257_sub.html"));
+    http.serve("https://megaplay.buzz/stream/getSources?id=13461", readFixture("megaplay/get_sources_13461.json"));
+    http.serve("https://megaplay.buzz/lib/newclient.min.js?v=4.20", readFixture("megaplay/newclient.min.js"));
+    HiAnimeProvider provider(http);
+
+    const auto streams = provider.streams("9227", Audio::Sub);
+
+    REQUIRE(streams.size() == 1);
+    CHECK(streams[0].server == "HD-1");
+    CHECK(streams[0].intro.has_value());
+    CHECK(std::ranges::none_of(http.requests, [](const auto& request) { return request.url == subEmbedUrl; }));
+}
+
+TEST_CASE("streams falls back to ZokoAnime when megaplay fails") {
     FakeHttpClient http;
     http.serve(serversUrl,
-               serversJson(R"(<div class="item server-item" data-type="sub" data-server-name="Vidstream-2" )"
-                           R"(data-hash="aHR0cHM6Ly9tZWdhcGxheS5idXp6L3N0cmVhbS9zLTIvMS9zdWI="></div>)"
-                           R"(<div class="item server-item" data-type="sub" data-server-name="ZokoAnime" )"
-                           R"(data-hash="aHR0cHM6Ly96b2tvYW5pbWUudmlkZW8vc3RyZWFtL21hbC81Mjk5MS8xL3N1Yg=="></div>)"));
+               serversJson(R"(<div class="item server-item" data-type="sub" data-server-name="ZokoAnime" )"
+                           R"(data-hash="aHR0cHM6Ly96b2tvYW5pbWUudmlkZW8vc3RyZWFtL21hbC81Mjk5MS8xL3N1Yg=="></div>)"
+                           R"(<div class="item server-item" data-type="sub" data-server-name="Vidstream-2" )"
+                           R"(data-hash="aHR0cHM6Ly9tZWdhcGxheS5idXp6L3N0cmVhbS9zLTIvMS9zdWI="></div>)"));
     http.serve("https://megaplay.buzz/stream/s-2/1/sub", "gone", 404);
     http.serve(subEmbedUrl, readFixture("hianime/embed_zoko.html"));
     HiAnimeProvider provider(http);
@@ -231,6 +254,9 @@ TEST_CASE("streams keeps working servers when another one fails") {
 
     REQUIRE(streams.size() == 1);
     CHECK(streams[0].server == "ZokoAnime");
+    REQUIRE(http.requests.size() == 3);
+    CHECK(http.requests[1].url == "https://megaplay.buzz/stream/s-2/1/sub");
+    CHECK(http.requests[2].url == subEmbedUrl);
 }
 
 TEST_CASE("streams reports the failure when every server fails") {

@@ -6,6 +6,7 @@
 
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
 #include <charconv>
 
 namespace ryu {
@@ -129,7 +130,10 @@ std::vector<Stream> HiAnimeProvider::streams(std::string_view episodeId, Audio a
     const std::string_view type = audio == Audio::Dub ? "dub" : "sub";
     std::vector<Stream> result;
     std::string lastError;
-    for (const auto& server : servers.select(".server-item")) {
+    auto candidates = servers.select(".server-item");
+    std::ranges::stable_partition(
+        candidates, [](const HtmlNode& server) { return server.attr("data-server-name") != zokoServer; });
+    for (const auto& server : candidates) {
         if (server.attr("data-type") != type) {
             continue;
         }
