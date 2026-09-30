@@ -316,6 +316,17 @@ def run(app, speech_log):
     subtitle_line = wait_for(lambda: next((line for line in spoken(speech_log)[mark:] if not known.match(line)), None),
                              60)
     check(subtitle_line is not None, f"a subtitle line is read aloud ({subtitle_line})")
+    subtitles.set_focus()
+    wait_for(lambda: subtitles.has_keyboard_focus() or None, 5)
+    send_keys("f", vk_packet=False)
+    check(wait_for(lambda: subtitles.selected_text() == "French", 5) is not None,
+          f"typing F in the subtitles choice picks French ({subtitles.selected_text()})")
+    main.child_window(title="Pause", control_type="Button").set_focus()
+    send_keys("n", vk_packet=False)
+    check(wait_for(lambda: main.window_text().startswith("Episode 2:"), 45) is not None,
+          f"N moves on to subbed episode 2 ({main.window_text()})")
+    check(wait_for(lambda: subtitles.selected_text() == "French", 30) is not None,
+          f"the next episode keeps the chosen subtitles ({subtitles.selected_text()})")
     main.child_window(title="Pause", control_type="Button").set_focus()
     send_keys("r", vk_packet=False)
     check(wait_for(lambda: read.get_toggle_state() == 0, 5) is not None, "R turns subtitle reading off for subs")

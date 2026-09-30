@@ -2,6 +2,7 @@
 
 #include "provider.hpp"
 #include "stall_watch.hpp"
+#include "subtitle_choice.hpp"
 
 #include <wx/panel.h>
 #include <wx/timer.h>
@@ -27,10 +28,11 @@ namespace ryu {
 class PlayerPanel : public wxPanel {
 public:
     PlayerPanel(wxWindow* parent, std::function<void()> onLeave, std::function<void(int)> onStep,
-                std::function<void(bool)> onReadSubtitlesChanged);
+                std::function<void(bool)> onReadSubtitlesChanged,
+                std::function<void(const SubtitlePreference&)> onSubtitlesChosen);
     ~PlayerPanel() override;
 
-    void play(const Stream& stream, bool readSubtitles);
+    void play(const Stream& stream, bool readSubtitles, const SubtitlePreference& subtitles);
     void stop();
     void focusControls();
 
@@ -60,9 +62,12 @@ private:
     std::function<void()> onLeave_;
     std::function<void(int)> onStep_;
     std::function<void(bool)> onReadSubtitlesChanged_;
+    std::function<void(const SubtitlePreference&)> onSubtitlesChosen_;
     mpv_handle* mpv_ = nullptr;
     std::vector<Subtitle> pendingSubtitles_;
     std::vector<int64_t> subtitleTracks_;
+    std::vector<std::string> subtitleLanguages_;
+    SubtitlePreference subtitlePreference_;
     std::string lastError_;
     double position_ = 0;
     double duration_ = 0;

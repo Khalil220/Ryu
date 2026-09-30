@@ -74,9 +74,10 @@ std::string endReason(const mpv_event_end_file& end) {
 }
 
 PlayerPanel::PlayerPanel(wxWindow* parent, std::function<void()> onLeave, std::function<void(int)> onStep,
-                         std::function<void(bool)> onReadSubtitlesChanged)
+                         std::function<void(bool)> onReadSubtitlesChanged,
+                         std::function<void(const SubtitlePreference&)> onSubtitlesChosen)
     : wxPanel(parent), onLeave_(std::move(onLeave)), onStep_(std::move(onStep)),
-      onReadSubtitlesChanged_(std::move(onReadSubtitlesChanged)) {
+      onReadSubtitlesChanged_(std::move(onReadSubtitlesChanged)), onSubtitlesChosen_(std::move(onSubtitlesChosen)) {
     createControls();
     Bind(wxEVT_CHAR_HOOK, &PlayerPanel::onCharHook, this);
     stallTimer_.SetOwner(this);
@@ -185,10 +186,14 @@ void PlayerPanel::createControls() {
         const int index = subtitleChoice_->GetSelection();
         if (index <= 0 || static_cast<size_t>(index) > subtitleTracks_.size()) {
             mpv_set_property_string(mpv_, "sid", "no");
+            subtitlePreference_ = {SubtitlePreference::Kind::Off, "", ""};
         } else {
             int64_t track = subtitleTracks_[index - 1];
             mpv_set_property(mpv_, "sid", MPV_FORMAT_INT64, &track);
+            subtitlePreference_ = {SubtitlePreference::Kind::Track, subtitleChoice_->GetString(index).utf8_string(),
+                                   subtitleLanguages_[index - 1]};
         }
+        onSubtitlesChosen_(subtitlePreference_);
     });
 }
 
@@ -245,7 +250,7 @@ void PlayerPanel::stopMpv() {
     mpv_ = nullptr;
 }
 
-void PlayerPanel::play(const Stream& stream, bool readSubtitles) {
+void PlayerPanel::play(const Stream& stream, bool readSubtitles, const SubtitlePreference& subtitles) {
     if (!mpv_) {
         startMpv();
     }
@@ -272,6 +277,7 @@ void PlayerPanel::play(const Stream& stream, bool readSubtitles) {
 
     resetState("Loading");
     pendingSubtitles_ = stream.subtitles;
+    subtitlePreference_ = subtitles;
     subtitleNoise_ = stream.subtitleNoise;
     intro_ = stream.intro;
     readSubtitles_ = readSubtitles;
@@ -300,6 +306,7 @@ void PlayerPanel::focusControls() {
 
 void PlayerPanel::resetState(const wxString& timeText) {
     subtitleTracks_.clear();
+    subtitleLanguages_.clear();
     subtitleChoice_->Clear();
     subtitleChoice_->Append("Off");
     subtitleChoice_->SetSelection(0);
@@ -332,9 +339,17 @@ void PlayerPanel::processEvents() {
             }
             break;
         case MPV_EVENT_FILE_LOADED:
-            for (const auto& subtitle : pendingSubtitles_) {
-                commandAsync({"sub-add", subtitle.url, subtitle.isDefault ? "select" : "auto", subtitle.label,
-                              subtitle.language});
+            if (const auto chosen = pickSubtitle(pendingSubtitles_, subtitlePreference_)) {
+                for (size_t i = 0; i < pendingSubtitles_.size(); ++i) {
+                    const auto& subtitle = pendingSubtitles_[i];
+                    commandAsync({"sub-add", subtitle.url, i == *chosen ? "select" : "auto", subtitle.label,
+                                  subtitle.language});
+                }
+            } else {
+                for (const auto& subtitle : pendingSubtitles_) {
+                    commandAsync({"sub-add", subtitle.url, "auto", subtitle.label, subtitle.language});
+                }
+                commandAsync({"set", "sid", "no"});
             }
             pendingSubtitles_.clear();
             logLine("mpv loaded the file");
@@ -429,6 +444,7 @@ void PlayerPanel::refreshSubtitles(const mpv_node& tracks) {
         return;
     }
     std::vector<int64_t> ids;
+    std::vector<std::string> languages;
     wxArrayString labels;
     int selected = 0;
     for (int i = 0; i < tracks.u.list->num; ++i) {
@@ -448,6 +464,7 @@ void PlayerPanel::refreshSubtitles(const mpv_node& tracks) {
             label = "Track " + std::to_string(id->u.int64);
         }
         ids.push_back(id->u.int64);
+        languages.push_back(text(field(track, "lang")));
         labels.Add(wxString::FromUTF8(label));
         const auto* isSelected = field(track, "selected");
         if (isSelected && isSelected->format == MPV_FORMAT_FLAG && isSelected->u.flag) {
@@ -458,6 +475,7 @@ void PlayerPanel::refreshSubtitles(const mpv_node& tracks) {
         return;
     }
     subtitleTracks_ = std::move(ids);
+    subtitleLanguages_ = std::move(languages);
     subtitleChoice_->Clear();
     subtitleChoice_->Append("Off");
     subtitleChoice_->Append(labels);

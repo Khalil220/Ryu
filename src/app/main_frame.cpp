@@ -100,6 +100,10 @@ void MainFrame::createControls() {
         [this](bool read) {
             (playingAudio_ == Audio::Dub ? settings_.readSubtitlesDubbed : settings_.readSubtitlesSubbed) = read;
             store_.save(settings_);
+        },
+        [this](const SubtitlePreference& subtitles) {
+            settings_.subtitlesFor(playingAudio_) = subtitles;
+            store_.save(settings_);
         });
     book_->AddPage(browsePage_, "Browse", true);
     book_->AddPage(player_, "Player");
@@ -296,7 +300,8 @@ void MainFrame::playEpisode(size_t row) {
             pendingEpisode_.reset();
             try {
                 playingAudio_ = found.stream.audio;
-                player_->play(found.stream, settings_.readSubtitlesFor(found.stream.audio));
+                player_->play(found.stream, settings_.readSubtitlesFor(found.stream.audio),
+                              settings_.subtitlesFor(found.stream.audio));
                 currentEpisode_ = index;
                 showPlayer(title);
                 if (found.fromFallback) {

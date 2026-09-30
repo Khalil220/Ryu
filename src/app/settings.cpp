@@ -11,6 +11,28 @@ namespace ryu {
 
 namespace {
 
+SubtitlePreference readSubtitlePreference(wxConfigBase& config, const wxString& audio) {
+    SubtitlePreference preference;
+    const auto kind = config.Read("/Subtitles/" + audio, "default");
+    if (kind == "off") {
+        preference.kind = SubtitlePreference::Kind::Off;
+    } else if (kind == "track") {
+        preference.kind = SubtitlePreference::Kind::Track;
+        preference.label = config.Read("/Subtitles/" + audio + "Label", wxString()).utf8_string();
+        preference.language = config.Read("/Subtitles/" + audio + "Language", wxString()).utf8_string();
+    }
+    return preference;
+}
+
+void writeSubtitlePreference(wxConfigBase& config, const wxString& audio, const SubtitlePreference& preference) {
+    const auto kind = preference.kind == SubtitlePreference::Kind::Off     ? "off"
+                      : preference.kind == SubtitlePreference::Kind::Track ? "track"
+                                                                            : "default";
+    config.Write("/Subtitles/" + audio, kind);
+    config.Write("/Subtitles/" + audio + "Label", wxString::FromUTF8(preference.label));
+    config.Write("/Subtitles/" + audio + "Language", wxString::FromUTF8(preference.language));
+}
+
 wxString baseUrlKey(const std::string& providerId) {
     return "/BaseUrls/" + wxString::FromUTF8(providerId);
 }
@@ -61,6 +83,8 @@ Settings loadSettings(wxConfigBase& config) {
     settings.useFallback = config.ReadBool("/Fallback", true);
     settings.readSubtitlesSubbed = config.ReadBool("/ReadSubtitles/Subbed", true);
     settings.readSubtitlesDubbed = config.ReadBool("/ReadSubtitles/Dubbed", false);
+    settings.subtitlesSubbed = readSubtitlePreference(config, "Subbed");
+    settings.subtitlesDubbed = readSubtitlePreference(config, "Dubbed");
     for (const auto& info : availableProviders()) {
         const auto value = config.Read(baseUrlKey(info.id), wxString()).utf8_string();
         if (!value.empty()) {
@@ -76,6 +100,8 @@ void saveSettings(wxConfigBase& config, const Settings& settings) {
     config.Write("/Fallback", settings.useFallback);
     config.Write("/ReadSubtitles/Subbed", settings.readSubtitlesSubbed);
     config.Write("/ReadSubtitles/Dubbed", settings.readSubtitlesDubbed);
+    writeSubtitlePreference(config, "Subbed", settings.subtitlesSubbed);
+    writeSubtitlePreference(config, "Dubbed", settings.subtitlesDubbed);
     for (const auto& info : availableProviders()) {
         const auto it = settings.baseUrlOverrides.find(info.id);
         if (it != settings.baseUrlOverrides.end() && !it->second.empty() && it->second != info.defaultBaseUrl) {

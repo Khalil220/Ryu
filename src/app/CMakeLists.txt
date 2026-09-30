@@ -2,6 +2,7 @@ add_library(ryu_ui_support STATIC
     format.cpp
     settings.cpp
     stall_watch.cpp
+    subtitle_choice.cpp
 )
 target_include_directories(ryu_ui_support PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ryu_ui_support PUBLIC ryu_core wx::base)

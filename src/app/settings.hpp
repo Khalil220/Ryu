@@ -2,6 +2,7 @@
 
 #include "provider.hpp"
 #include "registry.hpp"
+#include "subtitle_choice.hpp"
 
 #include <condition_variable>
 #include <filesystem>
@@ -24,8 +25,14 @@ struct Settings {
     bool useFallback = true;
     bool readSubtitlesSubbed = true;
     bool readSubtitlesDubbed = false;
+    SubtitlePreference subtitlesSubbed;
+    SubtitlePreference subtitlesDubbed;
 
     bool readSubtitlesFor(Audio kind) const { return kind == Audio::Dub ? readSubtitlesDubbed : readSubtitlesSubbed; }
+    const SubtitlePreference& subtitlesFor(Audio kind) const {
+        return kind == Audio::Dub ? subtitlesDubbed : subtitlesSubbed;
+    }
+    SubtitlePreference& subtitlesFor(Audio kind) { return kind == Audio::Dub ? subtitlesDubbed : subtitlesSubbed; }
 
     const ProviderInfo& provider() const;
     std::string baseUrl() const;

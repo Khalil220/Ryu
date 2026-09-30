@@ -17,6 +17,7 @@ add_executable(ryu_unit_tests
     unit/test_settings.cpp
     unit/test_stall_watch.cpp
     unit/test_stream_finder.cpp
+    unit/test_subtitle_choice.cpp
 )
 target_link_libraries(ryu_unit_tests PRIVATE ryu_core ryu_ui_support ryu_test_main)
 target_compile_definitions(ryu_unit_tests PRIVATE RYU_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
