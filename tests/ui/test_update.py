@@ -14,10 +14,12 @@ import zipfile
 from pywinauto import Application, Desktop
 from pywinauto.keyboard import send_keys
 
-from test_ui import check, spoken, wait_for
+from test_ui import check, wait_for
 import test_ui
 
 PACKAGE = "Ryu-9.9.9-win64.zip"
+PACKAGE_SECONDS = 3
+PACKAGE_CHUNKS = 30
 
 
 class QuietHandler(http.server.SimpleHTTPRequestHandler):
@@ -25,7 +27,26 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         QuietHandler.requested.append(self.path)
-        super().do_GET()
+        if self.path.endswith(PACKAGE):
+            self.send_slowly()
+        else:
+            super().do_GET()
+
+    def send_slowly(self):
+        with open(os.path.join(self.directory, PACKAGE), "rb") as f:
+            data = f.read()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/zip")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        step = -(-len(data) // PACKAGE_CHUNKS)
+        try:
+            for start in range(0, len(data), step):
+                self.wfile.write(data[start:start + step])
+                self.wfile.flush()
+                time.sleep(PACKAGE_SECONDS / PACKAGE_CHUNKS)
+        except OSError:
+            pass
 
     def log_message(self, *args):
         pass
@@ -56,6 +77,34 @@ def answer(main, title, button):
     text = dialog_text(dialog)
     dialog.child_window(title_re=f"&?{button}", control_type="Button").invoke()
     return text
+
+
+def progress_value(dialog):
+    bar = dialog.child_window(control_type="ProgressBar")
+    return bar.iface_range_value.CurrentValue if bar.exists() else None
+
+
+def cancel_download(main, app_folder, log):
+    before = sorted(os.listdir(app_folder))
+    dialog = main.child_window(title="Updating Ryu", control_type="Window")
+    if wait_for(dialog.exists, 20) is None:
+        check(False, "a progress dialog shows while the update downloads")
+        return
+    text = dialog_text(dialog)
+    check("Downloading Ryu 9.9.9" in text, f"a progress dialog shows while the update downloads ({text})")
+    moved = wait_for(lambda: (progress_value(dialog) or 0) > 0, 10)
+    check(moved is not None, f"its progress bar moves as the package arrives ({moved})")
+    dialog.child_window(title="Cancel", control_type="Button").invoke()
+    check(wait_for(lambda: not dialog.exists(), 10) is not None, "Cancel closes the progress dialog")
+    time.sleep(PACKAGE_SECONDS)
+    others = [title for title in ("Update installed", "Update failed")
+              if main.child_window(title=title, control_type="Window").exists()]
+    check(not others, f"cancelling shows no error or restart question ({others})")
+    check(sorted(os.listdir(app_folder)) == before, f"cancelling leaves Ryu's folder as it was ({os.listdir(app_folder)})")
+    with open(log, encoding="utf-8", errors="replace") as f:
+        lines = f.read()
+    check("was cancelled after" in lines and "The update was cancelled" in lines,
+          "the log records that the download stopped")
 
 
 def connect(path):
@@ -114,9 +163,9 @@ def run(exe, root):
     threading.Thread(target=server.serve_forever, daemon=True).start()
     publish(served, port, "9.9.9")
 
-    speech_log = os.path.join(root, "speech.log")
+    log = os.path.join(root, "ryu.log")
     env = dict(os.environ, RYU_CONFIG_FILE=os.path.join(root, "settings.ini"), RYU_MPV_OPTIONS="ao=null",
-               RYU_LOG=os.path.join(root, "ryu.log"), RYU_SPEECH_LOG=speech_log,
+               RYU_LOG=log, RYU_SPEECH_LOG=os.path.join(root, "speech.log"),
                RYU_UPDATE_FEED=f"http://127.0.0.1:{port}/feed.json")
     program = os.path.join(app_folder, "ryu.exe")
     try:
@@ -134,8 +183,15 @@ def run(exe, root):
         offer = answer(main, "Update available", "Yes")
         check(offer is not None and "Ryu 9.9.9 is available" in offer,
               f"the startup check offers the newer release ({offer})")
-        check(wait_for(lambda: "Downloading the update" in spoken(speech_log), 10) is not None,
-              "the download is announced")
+        cancel_download(main, app_folder, log)
+
+        main.set_focus()
+        send_keys("%h", vk_packet=False)
+        send_keys("u", vk_packet=False)
+        retry = answer(main, "Update available", "Yes")
+        check(retry is not None, "checking by hand offers the cancelled update again")
+        check(wait_for(main.child_window(title="Updating Ryu", control_type="Window").exists, 20) is not None,
+              "the progress dialog shows again for the second attempt")
         installed = answer(main, "Update installed", "Yes")
         check(installed is not None and "Restart Ryu now" in installed,
               f"Ryu asks to restart once the update is in place ({installed})")

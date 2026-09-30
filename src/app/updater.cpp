@@ -2,25 +2,35 @@
 
 #include "background.hpp"
 #include "log.hpp"
-#include "speech.hpp"
 
 #include <wx/msgdlg.h>
+#include <wx/progdlg.h>
 #include <wx/stdpaths.h>
 #include <wx/utils.h>
 #include <wx/window.h>
 
+#include <algorithm>
+#include <atomic>
 #include <filesystem>
-#include <fstream>
-#include <stdexcept>
+#include <mutex>
 
 namespace ryu {
+
+struct InstallState {
+    std::mutex mutex;
+    InstallStep step = InstallStep::Downloading;
+    std::uint64_t done = 0;
+    std::uint64_t total = 0;
+    std::atomic<bool> cancelled = false;
+};
 
 namespace {
 
 namespace fs = std::filesystem;
 
-constexpr const char* stagingName = ".ryu-update";
 constexpr int notesLineLimit = 15;
+constexpr int progressRange = 1000;
+constexpr int progressInterval = 100;
 
 fs::path appFolder() {
     return fs::path(wxStandardPaths::Get().GetExecutablePath().ToStdWstring()).parent_path();
@@ -29,59 +39,6 @@ fs::path appFolder() {
 std::string feedUrl() {
     wxString feed;
     return wxGetEnv("RYU_UPDATE_FEED", &feed) ? feed.utf8_string() : std::string(releaseFeedUrl);
-}
-
-std::string download(HttpClient& http, const std::string& url) {
-    auto response = http.get(url);
-    if (response.status < 200 || response.status >= 300) {
-        throw std::runtime_error("The download returned HTTP " + std::to_string(response.status));
-    }
-    return std::move(response.body);
-}
-
-fs::path installPackage(const Release& release) {
-    if (release.packageUrl.empty() || release.checksumsUrl.empty()) {
-        throw std::runtime_error("This release has no Windows package with a checksum.");
-    }
-    CurlHttpClient http(CurlHttpClient::defaultUserAgent, updateDownloadTimeout);
-    const auto expected = checksumFor(download(http, release.checksumsUrl), release.packageName);
-    if (!expected) {
-        throw std::runtime_error("The release's checksums don't list its package.");
-    }
-    const auto package = download(http, release.packageUrl);
-    if (sha256Hex(package) != *expected) {
-        throw std::runtime_error("The downloaded update doesn't match its checksum.");
-    }
-
-    const auto saved = fs::temp_directory_path() / release.packageName;
-    {
-        std::ofstream out(saved, std::ios::binary);
-        out.write(package.data(), static_cast<std::streamsize>(package.size()));
-        if (!out) {
-            throw std::runtime_error("Could not save the update to " + saved.string());
-        }
-    }
-    const auto folder = appFolder();
-    const auto staging = folder / stagingName;
-    fs::remove_all(staging);
-    extractPackage(saved, staging);
-    fs::remove(saved);
-    if (!fs::exists(staging / "ryu.exe")) {
-        fs::remove_all(staging);
-        throw std::runtime_error("The update package has no ryu.exe.");
-    }
-    try {
-        replaceFiles(staging, folder);
-    } catch (const fs::filesystem_error& error) {
-        std::error_code ignored;
-        fs::remove_all(staging, ignored);
-        if (error.code() == std::errc::permission_denied) {
-            throw std::runtime_error("Windows didn't let Ryu change its files in " + folder.string() + ".");
-        }
-        throw;
-    }
-    fs::remove_all(staging);
-    return folder / "ryu.exe";
 }
 
 wxString shortNotes(const std::string& notes) {
@@ -100,12 +57,22 @@ wxString shortNotes(const std::string& notes) {
 }
 
 Updater::Updater(wxWindow* parent, std::weak_ptr<void> alive, std::function<void(const wxString&)> setStatus)
-    : parent_(parent), alive_(std::move(alive)), setStatus_(std::move(setStatus)) {}
+    : parent_(parent), alive_(std::move(alive)), setStatus_(std::move(setStatus)) {
+    progressTimer_.Bind(wxEVT_TIMER, [this](wxTimerEvent&) { showProgress(); });
+}
+
+Updater::~Updater() {
+    if (state_) {
+        state_->cancelled = true;
+    }
+    progressTimer_.Stop();
+    delete progress_.get();
+}
 
 void Updater::cleanUp() {
     const auto folder = appFolder();
     std::error_code ignored;
-    fs::remove_all(folder / stagingName, ignored);
+    fs::remove_all(folder / stagingFolderName, ignored);
     removeReplacedFiles(folder);
 }
 
@@ -178,22 +145,47 @@ void Updater::offer(const Release& release) {
 
 void Updater::install(const Release& release) {
     busy_ = true;
-    const auto version = wxString::FromUTF8(release.version);
-    setStatus_("Downloading Ryu " + version);
-    announce("Downloading the update");
+    version_ = wxString::FromUTF8(release.version);
+    setStatus_("Downloading Ryu " + version_);
     logLine("Installing Ryu " + release.version + " from " + release.packageUrl);
-    runInBackground<fs::path>(
-        alive_, [release] { return installPackage(release); },
-        [this, version](fs::path program) {
+    state_ = std::make_shared<InstallState>();
+    shownStep_ = InstallStep::Downloading;
+    progress_ = new wxProgressDialog("Updating Ryu", "Downloading Ryu " + version_, progressRange, parent_,
+                                     wxPD_CAN_ABORT | wxPD_APP_MODAL);
+    progressTimer_.Start(progressInterval);
+    runInBackground<std::optional<fs::path>>(
+        alive_,
+        [release, folder = appFolder(), state = state_]() -> std::optional<fs::path> {
+            CurlHttpClient http(CurlHttpClient::defaultUserAgent, updateDownloadTimeout);
+            try {
+                return installRelease(http, release, folder,
+                                      [state](InstallStep step, std::uint64_t done, std::uint64_t total) {
+                                          std::scoped_lock lock(state->mutex);
+                                          state->step = step;
+                                          state->done = done;
+                                          state->total = total;
+                                          return !state->cancelled;
+                                      });
+            } catch (const UpdateCancelled&) {
+                return std::nullopt;
+            }
+        },
+        [this](std::optional<fs::path> program) {
             busy_ = false;
-            logLine("Installed the update to " + program.string());
-            setStatus_("Ryu " + version + " is installed");
-            wxMessageDialog dialog(parent_, "Ryu " + version + " is installed. Restart Ryu now to use it?",
+            closeProgress();
+            if (!program) {
+                logLine("The update was cancelled");
+                setStatus_("Update cancelled");
+                return;
+            }
+            logLine("Installed the update to " + program->string());
+            setStatus_("Ryu " + version_ + " is installed");
+            wxMessageDialog dialog(parent_, "Ryu " + version_ + " is installed. Restart Ryu now to use it?",
                                    "Update installed", wxYES_NO | wxYES_DEFAULT | wxICON_INFORMATION);
             if (dialog.ShowModal() != wxID_YES) {
                 return;
             }
-            const wxString path = program.wstring();
+            const wxString path = program->wstring();
             const wchar_t* command[] = {path.wc_str(), nullptr};
             if (wxExecute(command, wxEXEC_ASYNC) == 0) {
                 wxMessageBox("Ryu could not restart itself. Start it again to use the new version.", "Update installed",
@@ -204,6 +196,7 @@ void Updater::install(const Release& release) {
         },
         [this, page = release.pageUrl](const std::string& message) {
             busy_ = false;
+            closeProgress();
             logLine("Update failed: " + message);
             setStatus_("Update failed");
             wxMessageDialog dialog(parent_,
@@ -214,6 +207,38 @@ void Updater::install(const Release& release) {
                 wxLaunchDefaultBrowser(wxString::FromUTF8(page));
             }
         });
+}
+
+void Updater::showProgress() {
+    if (!progress_ || !state_) {
+        return;
+    }
+    InstallStep step;
+    std::uint64_t done = 0;
+    std::uint64_t total = 0;
+    {
+        std::scoped_lock lock(state_->mutex);
+        step = state_->step;
+        done = state_->done;
+        total = state_->total;
+    }
+    const int value =
+        total ? static_cast<int>(std::min<std::uint64_t>(done * progressRange / total, progressRange - 1)) : 0;
+    const bool carryOn =
+        step == shownStep_
+            ? progress_->Update(value)
+            : progress_->Update(value, step == InstallStep::Downloading ? "Downloading Ryu " + version_
+                                                                        : wxString("Extracting package"));
+    shownStep_ = step;
+    if (!carryOn) {
+        state_->cancelled = true;
+    }
+}
+
+void Updater::closeProgress() {
+    progressTimer_.Stop();
+    delete progress_.get();
+    state_.reset();
 }
 
 }

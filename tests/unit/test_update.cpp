@@ -3,11 +3,14 @@
 
 #include <doctest/doctest.h>
 
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <utility>
+#include <vector>
 
 using namespace ryu;
 using ryu::test::FakeHttpClient;
@@ -41,6 +44,30 @@ std::string readFile(const fs::path& path) {
     std::ostringstream contents;
     contents << std::ifstream(path, std::ios::binary).rdbuf();
     return contents.str();
+}
+
+const std::string packageName = "Ryu-0.2.0-win64.zip";
+
+Release testRelease() {
+    Release release;
+    release.version = "0.2.0";
+    release.packageName = packageName;
+    release.packageUrl = "https://example.test/" + packageName;
+    release.checksumsUrl = "https://example.test/SHA256SUMS";
+    return release;
+}
+
+void serveRelease(FakeHttpClient& http, const std::string& package) {
+    http.serve(testRelease().packageUrl, package);
+    http.serve(testRelease().checksumsUrl, sha256Hex(package) + "  " + packageName + "\n");
+}
+
+fs::path installedApp(const TempFolder& folder) {
+    const auto app = folder.path() / "app";
+    fs::create_directories(app);
+    writeFile(app / "ryu.exe", "old exe");
+    writeFile(app / "prism.dll", "old dll");
+    return app;
 }
 
 }
@@ -113,7 +140,7 @@ TEST_CASE("an unpacked update replaces the installed files and keeps the old one
     writeFile(app / "libmpv-2.dll", "untouched");
     writeFile(app / "notes.old", "someone else's");
 
-    extractPackage(fs::path(RYU_FIXTURE_DIR) / "update" / "Ryu-0.2.0-win64.zip", app / ".ryu-update");
+    extractPackage(readFixture("update/Ryu-0.2.0-win64.zip"), app / ".ryu-update");
     CHECK(readFile(app / ".ryu-update" / "ryu.exe") == "new exe");
     replaceFiles(app / ".ryu-update", app);
 
@@ -149,10 +176,115 @@ TEST_CASE("a failed replacement puts every file back") {
     CHECK_FALSE(fs::exists(app / "a.txt.ryu-old"));
 }
 
-TEST_CASE("extractPackage reports a package tar can't read") {
+TEST_CASE("extractPackage unpacks stored and deflated entries and reports its progress in bytes") {
     TempFolder folder;
-    writeFile(folder.path() / "broken.zip", "not a zip");
-    CHECK_THROWS(extractPackage(folder.path() / "broken.zip", folder.path() / "out"));
+    std::vector<std::pair<std::uint64_t, std::uint64_t>> reports;
+    extractPackage(readFixture("update/mixed.zip"), folder.path() / "out", [&](std::uint64_t done, std::uint64_t total) {
+        reports.emplace_back(done, total);
+        return true;
+    });
+
+    CHECK(readFile(folder.path() / "out" / "readme.txt") == "stored text");
+    const auto big = readFile(folder.path() / "out" / "data" / "big.bin");
+    REQUIRE(big.size() == 600 * 1024);
+    CHECK(static_cast<unsigned char>(big[1234]) == (1234 * 7 + 1) % 251);
+    REQUIRE(reports.size() > 3);
+    CHECK(reports.back() == std::pair<std::uint64_t, std::uint64_t>(11 + 600 * 1024, 11 + 600 * 1024));
+    CHECK(std::ranges::is_sorted(reports));
+}
+
+TEST_CASE("extractPackage stops as soon as its progress says to") {
+    TempFolder folder;
+    int reports = 0;
+    CHECK_THROWS_AS(extractPackage(readFixture("update/mixed.zip"), folder.path() / "out",
+                                   [&](std::uint64_t, std::uint64_t) { return ++reports < 2; }),
+                    UpdateCancelled);
+    CHECK(reports == 2);
+}
+
+TEST_CASE("extractPackage rejects damaged packages and entries that leave the folder") {
+    TempFolder folder;
+    const auto out = folder.path() / "out";
+    CHECK_THROWS(extractPackage("not a zip", out));
+    const auto package = readFixture("update/mixed.zip");
+    CHECK_THROWS(extractPackage(std::string_view(package).substr(0, package.size() - 30), out));
+    auto corrupted = package;
+    corrupted[corrupted.find("stored text")] = 'S';
+    CHECK_THROWS(extractPackage(corrupted, out));
+    CHECK_THROWS(extractPackage(readFixture("update/escape.zip"), out));
+    CHECK_FALSE(fs::exists(folder.path() / "escaped.txt"));
+}
+
+TEST_CASE("installRelease downloads, checks, unpacks and swaps in the release, reporting each step") {
+    TempFolder folder;
+    const auto app = installedApp(folder);
+    FakeHttpClient http;
+    serveRelease(http, readFixture("update/Ryu-0.2.0-win64.zip"));
+    std::vector<InstallStep> steps;
+    std::uint64_t lastDone = 0;
+    std::uint64_t lastTotal = 0;
+
+    const auto program = installRelease(http, testRelease(), app, [&](InstallStep step, std::uint64_t done, std::uint64_t total) {
+        if (steps.empty() || steps.back() != step) {
+            steps.push_back(step);
+        }
+        lastDone = done;
+        lastTotal = total;
+        return true;
+    });
+
+    CHECK(program == app / "ryu.exe");
+    CHECK(readFile(app / "ryu.exe") == "new exe");
+    CHECK(readFile(app / "prism.dll") == "new dll");
+    CHECK(readFile(app / "ryu.exe.ryu-old") == "old exe");
+    CHECK_FALSE(fs::exists(app / stagingFolderName));
+    CHECK(steps == std::vector{InstallStep::Downloading, InstallStep::Extracting});
+    CHECK(lastDone == lastTotal);
+    CHECK(lastTotal == 14);
+}
+
+TEST_CASE("installRelease leaves the installed files alone when cancelled while downloading or unpacking") {
+    for (const auto cancelAt : {InstallStep::Downloading, InstallStep::Extracting}) {
+        CAPTURE(static_cast<int>(cancelAt));
+        TempFolder folder;
+        const auto app = installedApp(folder);
+        FakeHttpClient http;
+        serveRelease(http, readFixture("update/Ryu-0.2.0-win64.zip"));
+
+        CHECK_THROWS_AS(installRelease(http, testRelease(), app,
+                                       [&](InstallStep step, std::uint64_t, std::uint64_t) { return step != cancelAt; }),
+                        UpdateCancelled);
+
+        CHECK(readFile(app / "ryu.exe") == "old exe");
+        CHECK(readFile(app / "prism.dll") == "old dll");
+        CHECK_FALSE(fs::exists(app / "ryu.exe.ryu-old"));
+        CHECK_FALSE(fs::exists(app / stagingFolderName));
+    }
+}
+
+TEST_CASE("installRelease refuses a package that doesn't match its checksum or doesn't download") {
+    TempFolder folder;
+    const auto app = installedApp(folder);
+    const auto keepGoing = [](InstallStep, std::uint64_t, std::uint64_t) { return true; };
+
+    FakeHttpClient tampered;
+    serveRelease(tampered, readFixture("update/Ryu-0.2.0-win64.zip"));
+    tampered.serve(testRelease().packageUrl, readFixture("update/mixed.zip"));
+    CHECK_THROWS_WITH(installRelease(tampered, testRelease(), app, keepGoing),
+                      "The downloaded update doesn't match its checksum.");
+
+    FakeHttpClient missing;
+    serveRelease(missing, readFixture("update/Ryu-0.2.0-win64.zip"));
+    missing.serve(testRelease().packageUrl, "Not Found", 404);
+    CHECK_THROWS_WITH(installRelease(missing, testRelease(), app, keepGoing), "The download returned HTTP 404");
+
+    FakeHttpClient unlisted;
+    unlisted.serve(testRelease().checksumsUrl, "abc  other.zip\n");
+    CHECK_THROWS_WITH(installRelease(unlisted, testRelease(), app, keepGoing),
+                      "The release's checksums don't list its package.");
+
+    CHECK(readFile(app / "ryu.exe") == "old exe");
+    CHECK_FALSE(fs::exists(app / stagingFolderName));
 }
 
 TEST_CASE("canWriteTo tells a folder Ryu can change from one it can't") {
