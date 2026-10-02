@@ -44,7 +44,7 @@ private:
     void startSearch();
     void loadEpisodes();
     void showEpisodes(size_t preferred);
-    void showDetailsFor(long row);
+    void showSelectedDetails();
     void speakSynopsis();
     void loadDetails();
     void loadPoster(const std::string& url, unsigned generation);

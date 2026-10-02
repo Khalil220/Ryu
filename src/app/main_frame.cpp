@@ -37,6 +37,7 @@ namespace ryu {
 namespace {
 
 constexpr int slowLoadMilliseconds = 700;
+constexpr int detailsDelayMilliseconds = 100;
 
 }
 
@@ -85,7 +86,7 @@ MainFrame::MainFrame(SettingsStore& store)
     }
     normalRect_ = GetRect();
     detailsTimer_.SetOwner(this);
-    Bind(wxEVT_TIMER, [this](wxTimerEvent&) { loadDetails(); }, detailsTimer_.GetId());
+    Bind(wxEVT_TIMER, [this](wxTimerEvent&) { showSelectedDetails(); }, detailsTimer_.GetId());
     loadingTimer_.SetOwner(this);
     Bind(wxEVT_TIMER, [this](wxTimerEvent&) { announce(loadingMessage_); }, loadingTimer_.GetId());
     const auto trackNormalRect = [this](wxEvent& event) {
@@ -213,7 +214,10 @@ void MainFrame::createControls() {
     searchBox_->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent&) { startSearch(); });
     searchButton_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { startSearch(); });
     results_->Bind(wxEVT_LIST_ITEM_ACTIVATED, [this](wxListEvent&) { loadEpisodes(); });
-    results_->Bind(wxEVT_LIST_ITEM_SELECTED, [this](wxListEvent& event) { showDetailsFor(event.GetIndex()); });
+    results_->Bind(wxEVT_LIST_ITEM_SELECTED, [this](wxListEvent&) {
+        ++posterGeneration_;
+        detailsTimer_.StartOnce(detailsDelayMilliseconds);
+    });
     results_->Bind(wxEVT_KEY_DOWN, [this](wxKeyEvent& event) {
         if (event.GetKeyCode() == 'D' && event.GetModifiers() == wxMOD_CONTROL) {
             speakSynopsis();
@@ -289,6 +293,7 @@ void MainFrame::startSearch() {
     episodes_.clear();
     visibleEpisodes_.clear();
     ++posterGeneration_;
+    detailsTimer_.Stop();
     described_.clear();
     details_->clear();
     results_->setItems({});
@@ -408,14 +413,13 @@ void MainFrame::speakSynopsis() {
     announce(synopsis.empty() ? wxString("No synopsis available") : wxString::FromUTF8(synopsis));
 }
 
-void MainFrame::showDetailsFor(long row) {
-    ++posterGeneration_;
-    detailsTimer_.Stop();
-    if (row < 0 || static_cast<size_t>(row) >= shows_.size()) {
+void MainFrame::showSelectedDetails() {
+    const auto index = results_->selectedIndex();
+    if (index >= shows_.size()) {
         details_->clear();
         return;
     }
-    const auto& show = shows_[static_cast<size_t>(row)];
+    const auto& show = shows_[index];
     details_->showDetails(show);
     const auto* cached = posterCache_.find(show.posterUrl);
     if (cached) {
@@ -424,7 +428,7 @@ void MainFrame::showDetailsFor(long row) {
         details_->clearPoster();
     }
     if (!described_.contains(show.id) || (!cached && !show.posterUrl.empty())) {
-        detailsTimer_.StartOnce(150);
+        loadDetails();
     }
 }
 
@@ -627,6 +631,7 @@ void MainFrame::showPreferences() {
         episodes_.clear();
         visibleEpisodes_.clear();
         ++posterGeneration_;
+        detailsTimer_.Stop();
         described_.clear();
         details_->clear();
         results_->setItems({});
