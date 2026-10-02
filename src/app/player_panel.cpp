@@ -29,7 +29,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <limits>
 #include <stdexcept>
 
 namespace ryu {
@@ -276,7 +275,7 @@ void PlayerPanel::createControls() {
     fullScreenButton_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { setFullScreen(!isFullScreen()); });
     close->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { onLeave_(); });
     positionSlider_->Bind(wxEVT_SLIDER, [this](wxCommandEvent&) {
-        command({"seek", std::to_string(positionSlider_->GetValue()), "absolute"});
+        command({"seek", std::to_string(seekTarget(positionSlider_->GetValue(), duration_)), "absolute"});
     });
     volumeSlider_->Bind(wxEVT_SLIDER, [this](wxCommandEvent&) {
         if (mpv_) {
@@ -767,9 +766,21 @@ void PlayerPanel::togglePause() {
 }
 
 void PlayerPanel::seek(double seconds) {
-    const double end = duration_ > 0 ? duration_ : std::numeric_limits<double>::max();
-    announce(wxString::FromUTF8(formatClock(std::clamp(position_ + seconds, 0.0, end))));
-    command({"seek", std::to_string(seconds), "relative"});
+    const double wanted = position_ + seconds;
+    const double target = seekTarget(wanted, duration_);
+    if (target >= wanted) {
+        announce(wxString::FromUTF8(formatClock(target)));
+        command({"seek", std::to_string(seconds), "relative"});
+        return;
+    }
+    if (ended_) {
+        announce("End of episode");
+        return;
+    }
+    if (paused_ == 1) {
+        announce(wxString::FromUTF8(formatClock(target)));
+    }
+    command({"seek", std::to_string(target), "absolute"});
 }
 
 void PlayerPanel::changeVolume(double delta) {

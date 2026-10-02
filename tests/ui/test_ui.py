@@ -397,6 +397,23 @@ def run(app, speech_log):
     if play_button.exists():
         play_button.set_focus()
         wait_for(play_button.has_keyboard_focus, 5)
+    mark = len(spoken(speech_log))
+    send_keys("{RIGHT}")
+    check(wait_for(lambda: "End of episode" in spoken(speech_log)[mark:], 10) is not None,
+          f"seeking forward at the end says the episode is over ({spoken(speech_log)[mark:]})")
+    check(play_button.exists(), "and leaves it at the end")
+    send_keys("+{LEFT}")
+    send_keys("{SPACE}")
+    check(wait_for(main.child_window(title="Pause", control_type="Button").exists, 10) is not None,
+          "Space plays on after seeking back from the end")
+    mark = len(spoken(speech_log))
+    send_keys("+{RIGHT}")
+    check(wait_for(lambda: "End of episode" in spoken(speech_log)[mark:], 15) is not None,
+          f"a seek that would run past the end goes to the end of the episode ({spoken(speech_log)[mark:]})")
+    check(wait_for(play_button.exists, 10) is not None, "and the player pauses there")
+    if play_button.exists():
+        play_button.set_focus()
+        wait_for(play_button.has_keyboard_focus, 5)
 
     send_keys("n", vk_packet=False)
     check(wait_for(lambda: main.window_text().startswith("Episode 2:"), 45) is not None,

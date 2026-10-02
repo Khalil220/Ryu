@@ -215,6 +215,12 @@ bool countsAsWatched(double position, double duration) {
     return duration > 0 && position >= duration * watchedFraction;
 }
 
+double seekTarget(double wanted, double duration) {
+    constexpr double endMargin = 0.5;
+    const double last = duration > 0 ? std::max(0.0, duration - endMargin) : wanted;
+    return std::clamp(wanted, 0.0, std::max(0.0, last));
+}
+
 std::string malTitle(const MalAnime& anime) {
     return anime.englishTitle.empty() ? anime.title : anime.englishTitle;
 }

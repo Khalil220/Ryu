@@ -29,6 +29,7 @@ std::string preferredAudioLanguages(std::string_view preferred, std::string_view
 std::vector<TrackEntry> distinctTracks(const std::vector<TrackEntry>& tracks);
 std::vector<TrackEntry> inRequestedOrder(std::vector<TrackEntry> tracks, const std::vector<std::string>& requested);
 bool countsAsWatched(double position, double duration);
+double seekTarget(double wanted, double duration);
 std::string malTitle(const MalAnime& anime);
 std::string malStatusLabel(MalStatus status);
 std::string malEntryLabel(const MalAnime& anime);

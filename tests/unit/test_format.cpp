@@ -146,6 +146,17 @@ TEST_CASE("an episode counts as watched once 85 percent of it has played") {
     CHECK_FALSE(countsAsWatched(10, 0));
 }
 
+TEST_CASE("seekTarget keeps a seek inside the episode, half a second short of its end") {
+    CHECK(seekTarget(700, 1420.05) == doctest::Approx(700));
+    CHECK(seekTarget(1419, 1420.05) == doctest::Approx(1419));
+    CHECK(seekTarget(1427.5, 1420.05) == doctest::Approx(1419.55));
+    CHECK(seekTarget(1420, 1420) == doctest::Approx(1419.5));
+    CHECK(seekTarget(-4, 1420.05) == doctest::Approx(0));
+    CHECK(seekTarget(5, 0.2) == doctest::Approx(0));
+    CHECK(seekTarget(90, 0) == doctest::Approx(90));
+    CHECK(seekTarget(-90, 0) == doctest::Approx(0));
+}
+
 namespace {
 
 MalAnime malEntry(std::string title, std::string english, int episodes, MalStatus status, int watched, int score) {
