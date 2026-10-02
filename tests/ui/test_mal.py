@@ -71,8 +71,13 @@ def press(button):
     threading.Thread(target=button.invoke, daemon=True).start()
 
 
-def mal_button(preferences, name_start):
-    return preferences.child_window(title_re=name_start + ".*", control_type="Button")
+def mal_button(preferences, name):
+    return preferences.child_window(title=name, control_type="Button")
+
+
+def mal_status(preferences):
+    return [text.window_text() for text in preferences.descendants(control_type="Text")
+            if "ogged in" in text.window_text()]
 
 
 def opened_urls(path):
@@ -85,7 +90,7 @@ def opened_urls(path):
 
 def start_login(main, preferences, urls_file):
     before = len(opened_urls(urls_file))
-    press(mal_button(preferences, "Log in to MyAnimeList"))
+    press(mal_button(preferences, "Log in"))
     wait_for(lambda: len(opened_urls(urls_file)) > before, 10)
     urls = opened_urls(urls_file)
     waiting = main.child_window(title="MyAnimeList login", control_type="Window")
@@ -110,8 +115,13 @@ def run(exe, root):
     process, main = launch(exe, env)
     try:
         preferences = open_preferences(main)
-        check(mal_button(preferences, "Log in to MyAnimeList").exists(),
-              "Preferences offers to log in to MyAnimeList when nobody is logged in")
+        check(mal_button(preferences, "Log in").exists() and mal_status(preferences) == ["Not logged in"],
+              f"Preferences offers to log in when nobody is logged in ({mal_status(preferences)})")
+        groups = [box.window_text() for box in preferences.descendants(control_type="Group")]
+        check(groups == ["Sources", "Playback", "Appearance", "Updates", "MyAnimeList"],
+              f"Preferences is split into named groups ({groups})")
+        check(mal_button(preferences, "Log in").legacy_properties().get("Description") == "Not logged in",
+              "the Log in button's description says nobody is logged in")
 
         url, waiting = start_login(main, preferences, urls_file)
         query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
@@ -124,8 +134,7 @@ def run(exe, root):
                                        for text in waiting.descendants(control_type="Text")),
               "a dialog says Ryu is waiting for the browser")
         waiting.child_window(title="Cancel", control_type="Button").invoke()
-        check(wait_for(lambda: not waiting.exists(), 10) is not None and
-              mal_button(preferences, "Log in to MyAnimeList").exists(),
+        check(wait_for(lambda: not waiting.exists(), 10) is not None and mal_button(preferences, "Log in").exists(),
               "cancelling the wait leaves Ryu logged out")
         time.sleep(1)
 
@@ -146,8 +155,11 @@ def run(exe, root):
         state = query.get("state", [""])[0]
         page = browse(f"{CALLBACK}?code=good-code&state={urllib.parse.quote(state)}")
         check("go back to Ryu" in page, f"the browser is told to go back to Ryu ({page[-70:]})")
-        check(wait_for(mal_button(preferences, "Log out of MyAnimeList, logged in as tester").exists, 15) is not None,
-              "after approval the button names the account and offers to log out")
+        check(wait_for(mal_button(preferences, "Log out").exists, 15) is not None and
+              mal_status(preferences) == ["Logged in as tester"],
+              f"after approval the button offers to log out, next to the account's name ({mal_status(preferences)})")
+        check(mal_button(preferences, "Log out").legacy_properties().get("Description") == "Logged in as tester",
+              "the Log out button's description names the account")
         check(not waiting.exists(), "the waiting dialog closes by itself")
         exchange = FakeMal.token_requests[-1] if FakeMal.token_requests else {}
         check(exchange.get("grant_type") == ["authorization_code"] and
@@ -172,11 +184,12 @@ def run(exe, root):
 
         process, main = launch(exe, env)
         preferences = open_preferences(main)
-        logout = mal_button(preferences, "Log out of MyAnimeList, logged in as tester")
-        check(logout.exists(), "the login survives closing Preferences with Cancel and restarting Ryu")
+        logout = mal_button(preferences, "Log out")
+        check(logout.exists() and mal_status(preferences) == ["Logged in as tester"],
+              "the login survives closing Preferences with Cancel and restarting Ryu")
         if logout.exists():
             logout.invoke()
-        check(wait_for(mal_button(preferences, "Log in to MyAnimeList").exists, 5) is not None,
+        check(wait_for(mal_button(preferences, "Log in").exists, 5) is not None,
               "logging out turns the button back into Log in")
         check(wait_for(lambda: "MyAnimeList" not in saved(), 10) is not None,
               "logging out removes the account from the settings file")

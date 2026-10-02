@@ -8,6 +8,7 @@
 #include <wx/choice.h>
 #include <wx/msgdlg.h>
 #include <wx/sizer.h>
+#include <wx/statbox.h>
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
 
@@ -28,12 +29,21 @@ struct LoginWait {
 PreferencesDialog::PreferencesDialog(wxWindow* parent, const Settings& settings, MalSession& mal)
     : wxDialog(parent, wxID_ANY, "Preferences"), settings_(settings), mal_(mal) {
     const auto& providers = availableProviders();
+    const int gap = FromDIP(8);
+    const int margin = FromDIP(12);
+    auto* sizer = new wxBoxSizer(wxVERTICAL);
+    const auto group = [&](const wxString& title) {
+        auto* box = new wxStaticBoxSizer(wxVERTICAL, this, title);
+        sizer->Add(box, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, margin);
+        return box;
+    };
 
-    auto* grid = new wxFlexGridSizer(2, 6, 8);
+    auto* sources = group("Sources");
+    auto* sourcesBox = sources->GetStaticBox();
+    auto* grid = new wxFlexGridSizer(2, gap, gap);
     grid->AddGrowableCol(1);
-
-    grid->Add(new wxStaticText(this, wxID_ANY, "&Provider:"), 0, wxALIGN_CENTER_VERTICAL);
-    providerChoice_ = new wxChoice(this, wxID_ANY);
+    grid->Add(new wxStaticText(sourcesBox, wxID_ANY, "&Provider:"), 0, wxALIGN_CENTER_VERTICAL);
+    providerChoice_ = new wxChoice(sourcesBox, wxID_ANY);
     for (const auto& info : providers) {
         providerChoice_->Append(wxString::FromUTF8(info.name));
         if (info.id == settings_.provider().id) {
@@ -41,51 +51,59 @@ PreferencesDialog::PreferencesDialog(wxWindow* parent, const Settings& settings,
         }
     }
     grid->Add(providerChoice_, 1, wxEXPAND);
-
-    grid->Add(new wxStaticText(this, wxID_ANY, "&Base URL:"), 0, wxALIGN_CENTER_VERTICAL);
+    grid->Add(new wxStaticText(sourcesBox, wxID_ANY, "&Base URL:"), 0, wxALIGN_CENTER_VERTICAL);
     auto* urlRow = new wxBoxSizer(wxHORIZONTAL);
-    baseUrl_ = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(320, -1));
-    urlRow->Add(baseUrl_, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 6);
-    auto* reset = new wxButton(this, wxID_ANY, "&Reset to default");
+    baseUrl_ = new wxTextCtrl(sourcesBox, wxID_ANY, wxEmptyString, wxDefaultPosition, FromDIP(wxSize(320, -1)));
+    urlRow->Add(baseUrl_, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, gap);
+    auto* reset = new wxButton(sourcesBox, wxID_ANY, "&Reset to default");
     urlRow->Add(reset, 0, wxALIGN_CENTER_VERTICAL);
     grid->Add(urlRow, 1, wxEXPAND);
+    sources->Add(grid, 0, wxEXPAND | wxALL, gap);
+    fallbackCheck_ = new wxCheckBox(sourcesBox, wxID_ANY, "&Try other providers when an episode won't play");
+    fallbackCheck_->SetValue(settings_.useFallback);
+    sources->Add(fallbackCheck_, 0, wxLEFT | wxRIGHT | wxBOTTOM, gap);
 
-    grid->Add(new wxStaticText(this, wxID_ANY, "Preferred &audio:"), 0, wxALIGN_CENTER_VERTICAL);
-    audioChoice_ = new wxChoice(this, wxID_ANY);
+    auto* playback = group("Playback");
+    auto* audioRow = new wxBoxSizer(wxHORIZONTAL);
+    audioRow->Add(new wxStaticText(playback->GetStaticBox(), wxID_ANY, "Preferred &audio:"), 0,
+                  wxALIGN_CENTER_VERTICAL | wxRIGHT, gap);
+    audioChoice_ = new wxChoice(playback->GetStaticBox(), wxID_ANY);
     audioChoice_->Append("Subbed");
     audioChoice_->Append("Dubbed");
     audioChoice_->SetSelection(settings_.audio == Audio::Dub ? 1 : 0);
-    grid->Add(audioChoice_, 0);
+    audioRow->Add(audioChoice_, 0, wxALIGN_CENTER_VERTICAL);
+    playback->Add(audioRow, 0, wxALL, gap);
 
-    grid->Add(new wxStaticText(this, wxID_ANY, "Th&eme:"), 0, wxALIGN_CENTER_VERTICAL);
-    themeChoice_ = new wxChoice(this, wxID_ANY);
+    auto* appearance = group("Appearance");
+    auto* themeRow = new wxBoxSizer(wxHORIZONTAL);
+    themeRow->Add(new wxStaticText(appearance->GetStaticBox(), wxID_ANY, "Th&eme:"), 0,
+                  wxALIGN_CENTER_VERTICAL | wxRIGHT, gap);
+    themeChoice_ = new wxChoice(appearance->GetStaticBox(), wxID_ANY);
     themeChoice_->Append("Dark");
     themeChoice_->Append("Light");
     themeChoice_->Append("Match Windows");
     themeChoice_->SetSelection(static_cast<int>(settings_.theme));
-    grid->Add(themeChoice_, 0);
-    grid->AddSpacer(0);
-    grid->Add(new wxStaticText(this, wxID_ANY, "A new theme applies the next time Ryu starts."), 0);
+    themeRow->Add(themeChoice_, 0, wxALIGN_CENTER_VERTICAL);
+    appearance->Add(themeRow, 0, wxLEFT | wxRIGHT | wxTOP, gap);
+    appearance->Add(new wxStaticText(appearance->GetStaticBox(), wxID_ANY,
+                                     "A new theme applies the next time Ryu starts."),
+                    0, wxALL, gap);
 
-    grid->Add(new wxStaticText(this, wxID_ANY, "MyAnimeList:"), 0, wxALIGN_CENTER_VERTICAL);
-    auto* malRow = new wxBoxSizer(wxHORIZONTAL);
-    malButton_ = new wxButton(this, wxID_ANY, "Log in to &MyAnimeList");
-    malRow->Add(malButton_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 8);
-    malStatus_ = new wxStaticText(this, wxID_ANY, wxEmptyString);
-    malRow->Add(malStatus_, 1, wxALIGN_CENTER_VERTICAL);
-    grid->Add(malRow, 1, wxEXPAND);
-
-    fallbackCheck_ = new wxCheckBox(this, wxID_ANY, "&Try other providers when an episode won't play");
-    fallbackCheck_->SetValue(settings_.useFallback);
-    updatesCheck_ = new wxCheckBox(this, wxID_ANY, "Check for &updates when Ryu starts");
+    auto* updates = group("Updates");
+    updatesCheck_ = new wxCheckBox(updates->GetStaticBox(), wxID_ANY, "Check for &updates when Ryu starts");
     updatesCheck_->SetValue(settings_.checkForUpdates);
+    updates->Add(updatesCheck_, 0, wxALL, gap);
 
-    auto* sizer = new wxBoxSizer(wxVERTICAL);
-    sizer->Add(grid, 1, wxEXPAND | wxALL, 12);
-    sizer->Add(fallbackCheck_, 0, wxLEFT | wxRIGHT | wxBOTTOM, 12);
-    sizer->Add(updatesCheck_, 0, wxLEFT | wxRIGHT | wxBOTTOM, 12);
-    sizer->Add(CreateStdDialogButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 12);
-    SetSizerAndFit(sizer);
+    auto* account = group("MyAnimeList");
+    auto* malRow = new wxBoxSizer(wxHORIZONTAL);
+    malStatus_ = new wxStaticText(account->GetStaticBox(), wxID_ANY, wxEmptyString);
+    malRow->Add(malStatus_, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, gap);
+    malButton_ = new wxButton(account->GetStaticBox(), wxID_ANY, "&Log in");
+    malRow->Add(malButton_, 0, wxALIGN_CENTER_VERTICAL);
+    account->Add(malRow, 0, wxEXPAND | wxALL, gap);
+
+    sizer->Add(CreateStdDialogButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, margin);
+    SetSizer(sizer);
     setAccessibleName(providerChoice_, "Provider");
     setAccessibleName(baseUrl_, "Base URL");
     setAccessibleName(audioChoice_, "Preferred audio");
@@ -120,16 +138,11 @@ PreferencesDialog::PreferencesDialog(wxWindow* parent, const Settings& settings,
 }
 
 void PreferencesDialog::showMalAccount() {
-    const auto user = wxString::FromUTF8(mal_.account().userName);
-    if (mal_.loggedIn()) {
-        setAccessibleName(malButton_, "Log out of MyAnimeList, logged in as " + user);
-        malButton_->SetLabel("Log out of &MyAnimeList");
-        malStatus_->SetLabel("Logged in as " + user);
-    } else {
-        setAccessibleName(malButton_, "Log in to MyAnimeList");
-        malButton_->SetLabel("Log in to &MyAnimeList");
-        malStatus_->SetLabel("Not logged in");
-    }
+    const wxString status =
+        mal_.loggedIn() ? "Logged in as " + wxString::FromUTF8(mal_.account().userName) : wxString("Not logged in");
+    malStatus_->SetLabel(status);
+    setAccessibleDescription(malButton_, status);
+    malButton_->SetLabel(mal_.loggedIn() ? "&Log out" : "&Log in");
     GetSizer()->SetSizeHints(this);
 }
 
@@ -139,9 +152,9 @@ void PreferencesDialog::logInToMal() {
     sizer->Add(new wxStaticText(&waiting, wxID_ANY,
                                 "Approve Ryu in your browser, then come back here.\n"
                                 "Ryu is waiting for MyAnimeList."),
-               0, wxALL, 16);
+               0, wxALL, FromDIP(16));
     auto* cancel = new wxButton(&waiting, wxID_CANCEL, "Cancel");
-    sizer->Add(cancel, 0, wxALIGN_RIGHT | wxLEFT | wxRIGHT | wxBOTTOM, 16);
+    sizer->Add(cancel, 0, wxALIGN_RIGHT | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(16));
     waiting.SetSizerAndFit(sizer);
     waiting.CentreOnParent();
     cancel->SetFocus();

@@ -20,7 +20,7 @@ namespace {
 void clearProperties(HWND hwnd) {
     IAccPropServices* services = nullptr;
     if (SUCCEEDED(CoCreateInstance(CLSID_AccPropServices, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&services)))) {
-        MSAAPROPID properties[] = {PROPID_ACC_NAME, PROPID_ACC_KEYBOARDSHORTCUT};
+        MSAAPROPID properties[] = {PROPID_ACC_NAME, PROPID_ACC_KEYBOARDSHORTCUT, PROPID_ACC_DESCRIPTION};
         services->ClearHwndProps(hwnd, static_cast<DWORD>(OBJID_CLIENT), CHILDID_SELF, properties,
                                  static_cast<int>(std::size(properties)));
         services->Release();
@@ -63,6 +63,14 @@ void setAccessibleName(wxWindow* window, const wxString& name) {
 void setAccessibleShortcut(wxWindow* window, const wxString& shortcut) {
 #ifdef __WXMSW__
     setProperty(window, PROPID_ACC_KEYBOARDSHORTCUT, shortcut);
+#endif
+}
+
+void setAccessibleDescription(wxWindow* window, const wxString& description) {
+#ifdef __WXMSW__
+    setProperty(window, PROPID_ACC_DESCRIPTION, description);
+#else
+    window->SetHelpText(description);
 #endif
 }
 
