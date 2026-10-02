@@ -13,20 +13,12 @@ namespace ryu {
 
 namespace {
 
-constexpr std::array<std::pair<const char*, const char*>, 28> shortcuts{{
-    {"Enter", "Search, open the selected show, or play the selected episode"},
-    {"Alt+S", "Search box"},
-    {"Alt+R", "Results"},
+constexpr std::array<std::pair<const char*, const char*>, 15> shortcuts{{
     {"Ctrl+D in Results", "Speak the synopsis"},
-    {"Applications key in Results", "Menu for the selected show"},
-    {"Alt+E", "Episodes"},
-    {"Alt+A", "Audio"},
     {"Ctrl+M in Results", "Add to, edit on or remove from MyAnimeList, when logged in"},
     {"Ctrl+L", "My anime lists, when logged in to MyAnimeList"},
-    {"Enter in my lists", "Find the anime's episodes with the current provider"},
     {"Ctrl+M, Delete, F5 in my lists", "Edit, remove, refresh"},
     {"Ctrl+P", "Preferences"},
-    {"F1", "Keyboard shortcuts"},
     {"Space", "Play or pause"},
     {"Left, Right", "Seek 10 seconds"},
     {"Shift+Left, Shift+Right", "Seek 60 seconds"},
@@ -37,11 +29,6 @@ constexpr std::array<std::pair<const char*, const char*>, 28> shortcuts{{
     {"N, P", "Next and previous episode"},
     {"F11", "Full screen"},
     {"Escape", "Leave full screen, then close the player"},
-    {"Alt+T", "Position slider"},
-    {"Alt+M", "Time"},
-    {"Alt+V", "Volume slider"},
-    {"Alt+S in the player", "Subtitles"},
-    {"Alt+A in the player", "Audio language, when the episode has more than one"},
 }};
 
 }

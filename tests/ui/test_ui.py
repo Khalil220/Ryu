@@ -553,8 +553,10 @@ def run(app, speech_log):
     check(wait_for(shortcuts.exists, 10) is not None, "F1 opens the keyboard shortcuts")
     if shortcuts.exists():
         rows = shortcuts.child_window(title="Keyboard shortcuts", control_type="List").children(control_type="ListItem")
-        check(len(rows) > 10 and rows[0].window_text() == "Enter",
-              f"the shortcuts list starts with the Enter key ({len(rows)} rows)")
+        keys = [row.window_text() for row in rows]
+        check(len(rows) == 15 and keys[0] == "Ctrl+D in Results" and "T" in keys and
+              not any(key.startswith(("Alt+", "Enter", "Applications", "F1")) for key in keys if key != "F11"),
+              f"the shortcuts list holds the keys that do something, not access keys or standard ones ({keys})")
         send_keys("{ESC}")
         check(wait_for(lambda: not shortcuts.exists(), 5) is not None, "Escape closes the keyboard shortcuts")
 
