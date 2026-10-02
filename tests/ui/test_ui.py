@@ -385,13 +385,27 @@ def run(app, speech_log):
         player_preferences.child_window(title="Cancel", control_type="Button").invoke()
         wait_for(lambda: not player_preferences.exists(), 10)
     check(main.window_text().startswith("Episode 1:"), "Ctrl+P does not step to the previous episode")
-    pause_button.set_focus()
+    end_slider = player.child_window(title="Position", control_type="Slider")
+    end_slider.set_focus()
+    wait_for(end_slider.has_keyboard_focus, 5)
+    mark = len(spoken(speech_log))
+    send_keys("{END}")
+    check(wait_for(lambda: "End of episode" in spoken(speech_log)[mark:], 30) is not None,
+          "End on the position slider goes to the end of the episode")
+    play_button = main.child_window(title="Play", control_type="Button")
+    check(wait_for(play_button.exists, 10) is not None, "the player pauses at the end of the episode")
+    if play_button.exists():
+        play_button.set_focus()
+        wait_for(play_button.has_keyboard_focus, 5)
 
     send_keys("n", vk_packet=False)
     check(wait_for(lambda: main.window_text().startswith("Episode 2:"), 45) is not None,
           f"N plays the next episode ({main.window_text()})")
     check(wait_for(lambda: 1 <= seconds(time_box.get_value()) < 60, 60) is not None,
-          f"the next episode plays, repairing its host if it is banned ({time_box.get_value()})")
+          f"the next episode plays after the previous one ended, repairing its host if it is banned "
+          f"({time_box.get_value()})")
+    check(wait_for(main.child_window(title="Pause", control_type="Button").exists, 5) is not None,
+          "and it isn't left paused")
     check(read.get_toggle_state() == 1, "the subtitle reading choice carries over to the next episode")
 
     main.child_window(title="Pause", control_type="Button").set_focus()
