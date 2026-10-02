@@ -34,6 +34,8 @@ public:
     virtual HttpResponse get(const std::string& url, const Headers& headers = {}) = 0;
     virtual HttpResponse post(const std::string& url, const std::string& body, const Headers& headers = {}) = 0;
     virtual HttpResponse probe(const std::string& url, const Headers& headers = {}) = 0;
+    virtual HttpResponse send(const std::string& method, const std::string& url, const std::string& body,
+                              const Headers& headers = {}) = 0;
     virtual HttpResponse download(const std::string& url, const Progress& progress);
 };
 
@@ -48,12 +50,14 @@ public:
     HttpResponse get(const std::string& url, const Headers& headers = {}) override;
     HttpResponse post(const std::string& url, const std::string& body, const Headers& headers = {}) override;
     HttpResponse probe(const std::string& url, const Headers& headers = {}) override;
+    HttpResponse send(const std::string& method, const std::string& url, const std::string& body,
+                      const Headers& headers = {}) override;
     HttpResponse download(const std::string& url, const Progress& progress) override;
 
 private:
     enum class Mode { Get, Post, Probe };
     HttpResponse perform(Mode mode, const std::string& url, const std::string* body, const Headers& headers,
-                         const Progress* progress = nullptr);
+                         const Progress* progress = nullptr, const char* method = nullptr);
 
     std::string userAgent_;
     std::chrono::seconds timeout_;

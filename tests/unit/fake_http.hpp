@@ -47,6 +47,11 @@ public:
         return respond("POST", url, headers, body);
     }
 
+    HttpResponse send(const std::string& method, const std::string& url, const std::string& body,
+                      const Headers& headers) override {
+        return respond(method, url, headers, body);
+    }
+
     HttpResponse probe(const std::string& url, const Headers& headers) override {
         auto response = respond("PROBE", url, headers, {});
         response.body = response.body.substr(0, 16);

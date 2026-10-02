@@ -74,12 +74,17 @@ HttpResponse CurlHttpClient::probe(const std::string& url, const Headers& header
     return perform(Mode::Probe, url, nullptr, headers);
 }
 
+HttpResponse CurlHttpClient::send(const std::string& method, const std::string& url, const std::string& body,
+                                  const Headers& headers) {
+    return perform(Mode::Post, url, &body, headers, nullptr, method.c_str());
+}
+
 HttpResponse CurlHttpClient::download(const std::string& url, const Progress& progress) {
     return perform(Mode::Get, url, nullptr, {}, &progress);
 }
 
 HttpResponse CurlHttpClient::perform(Mode mode, const std::string& url, const std::string* body,
-                                     const Headers& headers, const Progress* progress) {
+                                     const Headers& headers, const Progress* progress, const char* method) {
     std::unique_ptr<CURL, EasyDeleter> handle(curl_easy_init());
     if (!handle) {
         throw HttpError("Could not create an HTTP handle");
@@ -113,8 +118,11 @@ HttpResponse CurlHttpClient::perform(Mode mode, const std::string& url, const st
         curl_easy_setopt(easy, CURLOPT_POSTFIELDS, body->c_str());
         curl_easy_setopt(easy, CURLOPT_POSTFIELDSIZE, static_cast<long>(body->size()));
     }
+    if (method) {
+        curl_easy_setopt(easy, CURLOPT_CUSTOMREQUEST, method);
+    }
 
-    const char* verb = mode == Mode::Post ? "POST" : mode == Mode::Probe ? "PROBE" : "GET";
+    const char* verb = method ? method : mode == Mode::Post ? "POST" : mode == Mode::Probe ? "PROBE" : "GET";
     const auto started = std::chrono::steady_clock::now();
     const CURLcode code = curl_easy_perform(easy);
     const auto elapsed =
