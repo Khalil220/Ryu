@@ -15,6 +15,15 @@ TEST_CASE("base64Decode handles padded, unpadded and URL-safe input") {
           "https://zokoanime.video/stream/mal/52991/1/sub");
 }
 
+TEST_CASE("base64Encode pads its output and round-trips binary data") {
+    CHECK(base64Encode("hello") == "aGVsbG8=");
+    CHECK(base64Encode("hi") == "aGk=");
+    CHECK(base64Encode("hey") == "aGV5");
+    CHECK(base64Encode("") == "");
+    const std::string bytes("\x00\xff\x10\x80" "a", 5);
+    CHECK(base64Decode(base64Encode(bytes)) == bytes);
+}
+
 TEST_CASE("base64Decode rejects characters outside the alphabet") {
     CHECK_THROWS_AS(base64Decode("aGV*bG8="), std::invalid_argument);
 }

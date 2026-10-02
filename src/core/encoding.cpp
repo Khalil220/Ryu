@@ -1,5 +1,6 @@
 #include "encoding.hpp"
 
+#include <algorithm>
 #include <array>
 #include <stdexcept>
 
@@ -57,6 +58,23 @@ std::string base64Decode(std::string_view input) {
         if (bits >= 8) {
             bits -= 8;
             output.push_back(static_cast<char>((buffer >> bits) & 0xFF));
+        }
+    }
+    return output;
+}
+
+std::string base64Encode(std::string_view input) {
+    static constexpr std::string_view alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string output;
+    output.reserve((input.size() + 2) / 3 * 4);
+    for (size_t i = 0; i < input.size(); i += 3) {
+        const size_t taken = std::min<size_t>(3, input.size() - i);
+        unsigned int buffer = 0;
+        for (size_t k = 0; k < 3; ++k) {
+            buffer = (buffer << 8) | (k < taken ? static_cast<unsigned char>(input[i + k]) : 0U);
+        }
+        for (size_t k = 0; k < 4; ++k) {
+            output.push_back(k <= taken ? alphabet[(buffer >> (18 - 6 * k)) & 0x3F] : '=');
         }
     }
     return output;

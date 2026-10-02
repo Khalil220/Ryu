@@ -6,12 +6,15 @@ add_library(ryu_core STATIC
     http.cpp
     language.cpp
     log.cpp
+    mal.cpp
+    mal_login.cpp
     playlist_server.cpp
     registry.cpp
     providers/anizone.cpp
     providers/hianime.cpp
     providers/miruro.cpp
     resolvers/megaplay.cpp
+    secret.cpp
     stream_finder.cpp
     update.cpp
 )
@@ -21,5 +24,5 @@ target_link_libraries(ryu_core
     PRIVATE nlohmann_json::nlohmann_json ZLIB::ZLIB ${RYU_LEXBOR}
 )
 if(WIN32)
-    target_link_libraries(ryu_core PRIVATE bcrypt ws2_32)
+    target_link_libraries(ryu_core PRIVATE bcrypt crypt32 ws2_32)
 endif()

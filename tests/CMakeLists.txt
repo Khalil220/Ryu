@@ -11,6 +11,7 @@ add_executable(ryu_unit_tests
     unit/test_language.cpp
     unit/test_log.cpp
     unit/test_lru_cache.cpp
+    unit/test_mal.cpp
     unit/test_miruro.cpp
     unit/test_hianime.cpp
     unit/test_hls.cpp
@@ -32,6 +33,7 @@ add_executable(ryu_live_tests
     live/test_live_anizone.cpp
     live/test_live_fallback.cpp
     live/test_live_hianime.cpp
+    live/test_live_mal.cpp
     live/test_live_miruro.cpp
     live/test_live_repair.cpp
     live/test_live_update.cpp

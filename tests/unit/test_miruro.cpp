@@ -51,6 +51,7 @@ TEST_CASE("Miruro search reads titles, format, year, audio counts and cover") {
     CHECK(shows[0].dubEpisodes == 28);
     CHECK(shows[0].posterUrl.starts_with("https://s4.anilist.co/"));
     CHECK_FALSE(shows[0].synopsis.empty());
+    CHECK(shows[0].malId == 52991);
     CHECK(http.header(0, "Referer") == "https://www.miruro.tv/");
 }
 

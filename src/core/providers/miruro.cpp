@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <charconv>
 #include <cmath>
 
 namespace ryu {
@@ -61,6 +62,21 @@ std::string tidy(std::string text) {
         }
     }
     return text;
+}
+
+int malIdOf(const json& item) {
+    const auto ids = item.find("external_ids");
+    if (ids == item.end() || !ids->is_object()) {
+        return 0;
+    }
+    const auto mal = ids->find("mal");
+    if (mal == ids->end() || !mal->is_array() || mal->size() != 1 || !mal->front().is_string()) {
+        return 0;
+    }
+    const auto text = mal->front().get<std::string>();
+    int id = 0;
+    const auto parsed = std::from_chars(text.data(), text.data() + text.size(), id);
+    return parsed.ec == std::errc() && parsed.ptr == text.data() + text.size() ? id : 0;
 }
 
 std::string formatOf(std::string_view format) {
@@ -148,6 +164,7 @@ std::vector<Show> MiruroProvider::search(std::string_view query) {
         }
         show.posterUrl = stringField(item, "cover_url");
         show.synopsis = stringField(item, "description");
+        show.malId = malIdOf(item);
         shows.push_back(std::move(show));
     }
     return shows;
