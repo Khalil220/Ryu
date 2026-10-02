@@ -280,8 +280,8 @@ void MainFrame::createControls() {
         }
         event.Skip();
     });
-    const int speakSynopsisId = wxWindow::NewControlId();
-    const int malEditId = wxWindow::NewControlId();
+    const wxWindowIDRef speakSynopsisId = wxWindow::NewControlId();
+    const wxWindowIDRef malEditId = wxWindow::NewControlId();
     results_->Bind(wxEVT_CONTEXT_MENU, [this, speakSynopsisId, malEditId](wxContextMenuEvent& event) {
         const long row = results_->GetFirstSelected();
         if (row < 0 || static_cast<size_t>(row) >= shows_.size()) {

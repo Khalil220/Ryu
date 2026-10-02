@@ -54,10 +54,10 @@ MalPage::MalPage(wxWindow* parent, Actions actions) : wxPanel(parent), actions_(
     removeButton_->SetToolTip("Remove it from your lists (Delete)");
     close->SetToolTip("Back to searching (Escape)");
 
-    const int openId = wxWindow::NewControlId();
-    const int editId = wxWindow::NewControlId();
-    const int removeId = wxWindow::NewControlId();
-    const int refreshId = wxWindow::NewControlId();
+    const wxWindowIDRef openId = wxWindow::NewControlId();
+    const wxWindowIDRef editId = wxWindow::NewControlId();
+    const wxWindowIDRef removeId = wxWindow::NewControlId();
+    const wxWindowIDRef refreshId = wxWindow::NewControlId();
     listChoice_->Bind(wxEVT_CHOICE, [this](wxCommandEvent&) { showList(); });
     list_->Bind(wxEVT_LIST_ITEM_ACTIVATED, [this](wxListEvent&) { act(actions_.open); });
     list_->Bind(wxEVT_KEY_DOWN, [this](wxKeyEvent& event) {

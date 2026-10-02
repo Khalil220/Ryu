@@ -33,6 +33,16 @@ def wait_for(probe, seconds=30):
     return None
 
 
+def alt_key_free(letter):
+    user32 = ctypes.windll.user32
+    if user32.RegisterHotKey(None, 1, 0x0001, ord(letter.upper())):
+        user32.UnregisterHotKey(None, 1)
+        return True
+    print(f"SKIP: another program holds Alt+{letter.upper()} as a global hotkey, so Ryu never receives it",
+          flush=True)
+    return False
+
+
 def seconds(clock):
     match = re.match(r"^(?:(\d+):)?(\d+):(\d\d)", clock or "")
     if not match:
@@ -189,6 +199,11 @@ def run(app, speech_log):
     if menu_item.exists():
         send_keys("{DOWN}{ENTER}")
         check(wait_for(lambda: spoke_synopsis(mark), 5) is not None, "Speak synopsis in the menu speaks it")
+    send_keys("+{F10}")
+    time.sleep(0.5)
+    alerts = [window.window_text() for window in main.children(control_type="Window")]
+    check(not alerts, f"opening the results context menu a second time raises no alert ({alerts})")
+    send_keys("{ESC}")
     search.set_focus()
     mark = len(spoken(speech_log))
     send_keys("^d", vk_packet=False)
@@ -391,19 +406,23 @@ def run(app, speech_log):
           f"the episode two ahead plays ({time_box.get_value()})")
 
     main.child_window(title="Pause", control_type="Button").set_focus()
-    send_keys("%v", vk_packet=False)
-    volume = player.child_window(title="Volume", control_type="Slider")
-    check(wait_for(volume.has_keyboard_focus, 5) is not None, "Alt+V moves to the volume slider")
-    send_keys("%s", vk_packet=False)
-    check(wait_for(subtitles.has_keyboard_focus, 5) is not None, "Alt+S moves to the subtitles choice")
-    before_key = seconds(time_box.get_value())
-    send_keys("%f", vk_packet=False)
-    check(wait_for(lambda: seconds(time_box.get_value()) >= before_key + 8, 15) is not None,
-          f"Alt+F seeks forward ({before_key} to {time_box.get_value()})")
-    after_forward = seconds(time_box.get_value())
-    send_keys("%b", vk_packet=False)
-    check(wait_for(lambda: seconds(time_box.get_value()) <= after_forward - 5, 15) is not None,
-          f"Alt+B seeks back ({after_forward} to {time_box.get_value()})")
+    if alt_key_free("v"):
+        send_keys("%v", vk_packet=False)
+        volume = player.child_window(title="Volume", control_type="Slider")
+        check(wait_for(volume.has_keyboard_focus, 5) is not None, "Alt+V moves to the volume slider")
+    if alt_key_free("s"):
+        send_keys("%s", vk_packet=False)
+        check(wait_for(subtitles.has_keyboard_focus, 5) is not None, "Alt+S moves to the subtitles choice")
+    if alt_key_free("f"):
+        before_key = seconds(time_box.get_value())
+        send_keys("%f", vk_packet=False)
+        check(wait_for(lambda: seconds(time_box.get_value()) >= before_key + 8, 15) is not None,
+              f"Alt+F seeks forward ({before_key} to {time_box.get_value()})")
+    if alt_key_free("b"):
+        after_forward = seconds(time_box.get_value())
+        send_keys("%b", vk_packet=False)
+        check(wait_for(lambda: seconds(time_box.get_value()) <= after_forward - 5, 15) is not None,
+              f"Alt+B seeks back ({after_forward} to {time_box.get_value()})")
 
     screen = (ctypes.windll.user32.GetSystemMetrics(0), ctypes.windll.user32.GetSystemMetrics(1))
     full_screen = lambda: (main.rectangle().width(), main.rectangle().height()) == screen

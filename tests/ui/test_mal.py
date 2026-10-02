@@ -343,6 +343,14 @@ def lists_flow(exe, env, speech_log, urls_file):
               f"it starts on Watching, with titles, progress and no extra counts ({labels(anime)})")
         check(wait_for(lambda: anime.has_keyboard_focus() or items(anime)[0].has_keyboard_focus(), 5) is not None,
               "focus lands in the anime list")
+        anime.set_focus()
+        for _ in range(2):
+            send_keys("+{F10}")
+            time.sleep(0.5)
+            send_keys("{ESC}")
+            time.sleep(0.3)
+        alerts = [window.window_text() for window in main.children(control_type="Window")]
+        check(not alerts, f"opening the anime list's context menu twice raises no alert ({alerts})")
         chooser.select("Plan to watch")
         check(wait_for(lambda: labels(anime) == ["Frieren: Beyond Journey's End Season 2, 10 episodes"], 5) is not None,
               f"choosing another list shows its anime ({labels(anime)})")

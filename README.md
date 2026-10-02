@@ -62,7 +62,7 @@ The test presets use the debug build (`cmake --build --preset debug`).
 
 - `ctest --preset unit`: offline, against saved site responses
 - `ctest --preset live`: resolves real episodes from all three sites and queries MyAnimeList
-- `ctest --preset ui`: drives the app through UI Automation, including a full update and a MyAnimeList session against local test servers, and takes over the keyboard for about five minutes
+- `ctest --preset ui`: drives the app through UI Automation, including a full update and a MyAnimeList session against local test servers, and takes over the keyboard for about four minutes
 
 The UI tests need Python with pywinauto:
 
