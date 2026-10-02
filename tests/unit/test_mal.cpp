@@ -147,20 +147,19 @@ TEST_CASE("the MAL list follows paging and reads each entry's status") {
 TEST_CASE("a MAL update sends only what changed and returns the new status") {
     FakeHttpClient http;
     const auto url = std::string(api) + "/anime/52991/my_list_status";
-    http.serve(url, R"({"status":"completed","score":8,"num_episodes_watched":28,"is_rewatching":false,)"
-                    R"("updated_at":"2026-10-02T05:00:00+00:00","start_date":"2026-09-20","finish_date":"2026-10-02"})");
+    http.serve(url, readFixture("mal/update_52991.json"));
     MalClient client(http, {}, "token-1");
     MalChanges changes;
-    changes.status = MalStatus::Completed;
-    changes.watched = 28;
-    changes.finishDate = "2026-10-02";
+    changes.status = MalStatus::Watching;
+    changes.watched = 3;
+    changes.finishDate = "2026-10-03";
 
     const auto status = client.update(52991, changes);
 
-    CHECK(status == MalListStatus{MalStatus::Completed, 8, 28, false, "2026-09-20", "2026-10-02"});
+    CHECK(status == MalListStatus{MalStatus::Watching, 8, 3, false, "2026-10-02", "2026-10-03"});
     REQUIRE(http.requests.size() == 1);
     CHECK(http.requests[0].method == "PATCH");
-    CHECK(http.requests[0].body == "status=completed&num_watched_episodes=28&finish_date=2026-10-02");
+    CHECK(http.requests[0].body == "status=watching&num_watched_episodes=3&finish_date=2026-10-03");
     CHECK(http.header(0, "Content-Type") == "application/x-www-form-urlencoded");
     CHECK(http.header(0, "Authorization") == "Bearer token-1");
 
