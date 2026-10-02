@@ -210,4 +210,84 @@ std::vector<TrackEntry> inRequestedOrder(std::vector<TrackEntry> tracks, const s
     return tracks;
 }
 
+bool countsAsWatched(double position, double duration) {
+    constexpr double watchedFraction = 0.85;
+    return duration > 0 && position >= duration * watchedFraction;
+}
+
+std::string malTitle(const MalAnime& anime) {
+    return anime.englishTitle.empty() ? anime.title : anime.englishTitle;
+}
+
+std::string malStatusLabel(MalStatus status) {
+    switch (status) {
+    case MalStatus::Watching:
+        return "Watching";
+    case MalStatus::Completed:
+        return "Completed";
+    case MalStatus::OnHold:
+        return "On hold";
+    case MalStatus::Dropped:
+        return "Dropped";
+    case MalStatus::PlanToWatch:
+        return "Plan to watch";
+    case MalStatus::None:
+        break;
+    }
+    return "Not on my list";
+}
+
+std::string malEntryLabel(const MalAnime& anime) {
+    const auto episodes = [](int count) { return std::to_string(count) + (count == 1 ? " episode" : " episodes"); };
+    auto label = malTitle(anime);
+    const int watched = anime.list.watched;
+    if (anime.episodes > 0 && (watched == 0 || watched >= anime.episodes)) {
+        label += ", " + episodes(anime.episodes);
+    } else if (anime.episodes > 0) {
+        label += ", " + std::to_string(watched) + " of " + episodes(anime.episodes);
+    } else if (watched > 0) {
+        label += ", " + episodes(watched) + " watched";
+    }
+    if (anime.list.rewatching) {
+        label += ", rewatching";
+    }
+    if (anime.list.score > 0) {
+        label += ", score " + std::to_string(anime.list.score);
+    }
+    return label;
+}
+
+std::string malCandidateLabel(const MalAnime& anime) {
+    auto label = malTitle(anime);
+    std::string type = anime.mediaType;
+    if (type == "tv" || type == "ova" || type == "ona") {
+        std::ranges::transform(type, type.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+    } else if (!type.empty() && type != "unknown") {
+        std::ranges::replace(type, '_', ' ');
+        type[0] = static_cast<char>(std::toupper(static_cast<unsigned char>(type[0])));
+    } else {
+        type.clear();
+    }
+    if (!type.empty()) {
+        label += ", " + type;
+    }
+    if (anime.year > 0) {
+        label += ", " + std::to_string(anime.year);
+    }
+    if (anime.episodes > 0) {
+        label += ", " + std::to_string(anime.episodes) + (anime.episodes == 1 ? " episode" : " episodes");
+    }
+    if (anime.list.status != MalStatus::None) {
+        label += ", on your " + malStatusLabel(anime.list.status) + " list";
+    }
+    return label;
+}
+
+std::string malProgressMessage(const MalAnime& anime, const MalChanges& changes) {
+    if (changes.status == MalStatus::Completed) {
+        return "Finished " + malTitle(anime) + ", moved to Completed on MyAnimeList";
+    }
+    return "Episode " + std::to_string(changes.watched.value_or(anime.list.watched)) + " marked as watched on MyAnimeList";
+}
+
 }

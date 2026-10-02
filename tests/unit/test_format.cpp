@@ -137,3 +137,70 @@ TEST_CASE("inRequestedOrder puts added tracks back in the order they were reques
     CHECK(ordered[2].label == "English");
     CHECK(ordered[3].label == "French");
 }
+
+TEST_CASE("an episode counts as watched once 85 percent of it has played") {
+    CHECK_FALSE(countsAsWatched(0, 1440));
+    CHECK_FALSE(countsAsWatched(1223, 1440));
+    CHECK(countsAsWatched(1224, 1440));
+    CHECK(countsAsWatched(1440, 1440));
+    CHECK_FALSE(countsAsWatched(10, 0));
+}
+
+namespace {
+
+MalAnime malEntry(std::string title, std::string english, int episodes, MalStatus status, int watched, int score) {
+    MalAnime anime;
+    anime.id = 1;
+    anime.title = std::move(title);
+    anime.englishTitle = std::move(english);
+    anime.mediaType = "tv";
+    anime.episodes = episodes;
+    anime.year = 2013;
+    anime.list.status = status;
+    anime.list.watched = watched;
+    anime.list.score = score;
+    return anime;
+}
+
+}
+
+TEST_CASE("MAL entries read with their English title, progress and score") {
+    CHECK(malEntryLabel(malEntry("Shingeki no Kyojin", "Attack on Titan", 25, MalStatus::Watching, 11, 0)) ==
+          "Attack on Titan, 11 of 25 episodes");
+    CHECK(malEntryLabel(malEntry("Karakai Jouzu no Takagi-san", "", 12, MalStatus::Completed, 12, 10)) ==
+          "Karakai Jouzu no Takagi-san, 12 episodes, score 10");
+    CHECK(malEntryLabel(malEntry("One Piece", "One Piece", 0, MalStatus::OnHold, 751, 10)) ==
+          "One Piece, 751 episodes watched, score 10");
+    CHECK(malEntryLabel(malEntry("X", "", 12, MalStatus::PlanToWatch, 0, 0)) == "X, 12 episodes");
+    CHECK(malEntryLabel(malEntry("X", "", 0, MalStatus::PlanToWatch, 0, 0)) == "X");
+    CHECK(malEntryLabel(malEntry("A Movie", "", 1, MalStatus::Completed, 1, 8)) == "A Movie, 1 episode, score 8");
+    auto rewatch = malEntry("X", "", 12, MalStatus::Completed, 3, 9);
+    rewatch.list.rewatching = true;
+    CHECK(malEntryLabel(rewatch) == "X, 3 of 12 episodes, rewatching, score 9");
+}
+
+TEST_CASE("MAL candidates read with type, year, length and the list they're on") {
+    CHECK(malCandidateLabel(malEntry("Shingeki no Kyojin", "Attack on Titan", 25, MalStatus::Watching, 11, 0)) ==
+          "Attack on Titan, TV, 2013, 25 episodes, on your Watching list");
+    auto movie = malEntry("Kimi no Na wa.", "Your Name.", 1, MalStatus::None, 0, 0);
+    movie.mediaType = "movie";
+    movie.year = 2016;
+    CHECK(malCandidateLabel(movie) == "Your Name., Movie, 2016, 1 episode");
+    auto special = malEntry("X", "", 0, MalStatus::PlanToWatch, 0, 0);
+    special.mediaType = "tv_special";
+    special.year = 0;
+    CHECK(malCandidateLabel(special) == "X, Tv special, on your Plan to watch list");
+    CHECK(malStatusLabel(MalStatus::OnHold) == "On hold");
+    CHECK(malStatusLabel(MalStatus::None) == "Not on my list");
+}
+
+TEST_CASE("the progress message says which episode was marked, or that the show is finished") {
+    const auto anime = malEntry("Shingeki no Kyojin", "Attack on Titan", 25, MalStatus::Watching, 11, 0);
+    MalChanges next;
+    next.watched = 12;
+    CHECK(malProgressMessage(anime, next) == "Episode 12 marked as watched on MyAnimeList");
+    MalChanges last;
+    last.watched = 25;
+    last.status = MalStatus::Completed;
+    CHECK(malProgressMessage(anime, last) == "Finished Attack on Titan, moved to Completed on MyAnimeList");
+}

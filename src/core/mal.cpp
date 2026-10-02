@@ -511,6 +511,51 @@ std::vector<MalAnime> findMalCandidates(MalClient& client, const Show& show) {
     return found;
 }
 
+MalChanges malChangesBetween(const MalListStatus& before, const MalListStatus& after) {
+    MalChanges changes;
+    if (after.status != before.status) {
+        changes.status = after.status;
+    }
+    if (after.score != before.score) {
+        changes.score = after.score;
+    }
+    if (after.watched != before.watched) {
+        changes.watched = after.watched;
+    }
+    if (after.rewatching != before.rewatching) {
+        changes.rewatching = after.rewatching;
+    }
+    if (after.startDate != before.startDate) {
+        changes.startDate = after.startDate;
+    }
+    if (after.finishDate != before.finishDate) {
+        changes.finishDate = after.finishDate;
+    }
+    return changes;
+}
+
+bool validMalDate(std::string_view date) {
+    if (date.empty()) {
+        return true;
+    }
+    if (date.size() != 10 || date[4] != '-' || date[7] != '-') {
+        return false;
+    }
+    int year = 0;
+    int month = 0;
+    int day = 0;
+    const auto number = [&](size_t from, size_t length, int& value) {
+        const auto parsed = std::from_chars(date.data() + from, date.data() + from + length, value);
+        return parsed.ec == std::errc() && parsed.ptr == date.data() + from + length;
+    };
+    if (!number(0, 4, year) || !number(5, 2, month) || !number(8, 2, day) || year < 1900 || month < 1 || month > 12) {
+        return false;
+    }
+    constexpr std::array<int, 12> lengths{31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    const bool leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+    return day >= 1 && day <= lengths[static_cast<size_t>(month - 1)] + (month == 2 && leap ? 1 : 0);
+}
+
 std::optional<MalChanges> malProgress(const MalAnime& anime, std::string_view episodeNumber, std::string_view today) {
     int episode = 0;
     const auto parsed = std::from_chars(episodeNumber.data(), episodeNumber.data() + episodeNumber.size(), episode);

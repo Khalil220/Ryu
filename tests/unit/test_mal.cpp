@@ -459,6 +459,47 @@ TEST_CASE("malProgress counts a rewatch without touching the status or dates") {
     CHECK_FALSE(end->finishDate.has_value());
 }
 
+TEST_CASE("malChangesBetween lists only the fields that differ") {
+    const MalListStatus before{MalStatus::Watching, 0, 5, false, "", ""};
+    CHECK(malChangesBetween(before, before).empty());
+
+    auto after = before;
+    after.status = MalStatus::Completed;
+    after.watched = 12;
+    after.score = 9;
+    after.finishDate = "2026-10-02";
+    MalChanges expected;
+    expected.status = MalStatus::Completed;
+    expected.watched = 12;
+    expected.score = 9;
+    expected.finishDate = "2026-10-02";
+    CHECK(malChangesBetween(before, after) == expected);
+
+    const MalListStatus dated{MalStatus::Completed, 8, 12, false, "2026-01-01", "2026-02-01"};
+    auto cleared = dated;
+    cleared.startDate.clear();
+    MalChanges clearing;
+    clearing.startDate = "";
+    CHECK(malChangesBetween(dated, cleared) == clearing);
+
+    MalChanges adding;
+    adding.status = MalStatus::PlanToWatch;
+    CHECK(malChangesBetween({}, MalListStatus{MalStatus::PlanToWatch}) == adding);
+}
+
+TEST_CASE("validMalDate accepts real calendar dates and nothing else") {
+    CHECK(validMalDate(""));
+    CHECK(validMalDate("2026-10-02"));
+    CHECK(validMalDate("2024-02-29"));
+    CHECK_FALSE(validMalDate("2026-02-29"));
+    CHECK_FALSE(validMalDate("2026-13-01"));
+    CHECK_FALSE(validMalDate("2026-04-31"));
+    CHECK_FALSE(validMalDate("2026-10-2"));
+    CHECK_FALSE(validMalDate("02/10/2026"));
+    CHECK_FALSE(validMalDate("2026-1x-02"));
+    CHECK_FALSE(validMalDate("today"));
+}
+
 TEST_CASE("saved secrets are unreadable in the file and come back for the same Windows account") {
     const std::string token = "def50200-access-token-with-\xC3\xA9";
     const auto stored = protectSecret(token);

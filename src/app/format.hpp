@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mal.hpp"
 #include "provider.hpp"
 
 #include <cstdint>
@@ -27,5 +28,11 @@ std::string trackLabel(std::string_view title, std::string_view language, int64_
 std::string preferredAudioLanguages(std::string_view preferred, std::string_view fallback);
 std::vector<TrackEntry> distinctTracks(const std::vector<TrackEntry>& tracks);
 std::vector<TrackEntry> inRequestedOrder(std::vector<TrackEntry> tracks, const std::vector<std::string>& requested);
+bool countsAsWatched(double position, double duration);
+std::string malTitle(const MalAnime& anime);
+std::string malStatusLabel(MalStatus status);
+std::string malEntryLabel(const MalAnime& anime);
+std::string malCandidateLabel(const MalAnime& anime);
+std::string malProgressMessage(const MalAnime& anime, const MalChanges& changes);
 
 }

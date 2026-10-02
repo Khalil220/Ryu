@@ -160,6 +160,8 @@ private:
 std::optional<size_t> matchMalAnime(const Show& show, const std::vector<MalAnime>& candidates);
 std::optional<size_t> matchShowForMal(const MalAnime& anime, const std::vector<Show>& shows);
 std::vector<MalAnime> findMalCandidates(MalClient& client, const Show& show);
+MalChanges malChangesBetween(const MalListStatus& before, const MalListStatus& after);
+bool validMalDate(std::string_view date);
 std::optional<MalChanges> malProgress(const MalAnime& anime, std::string_view episodeNumber, std::string_view today);
 
 }
