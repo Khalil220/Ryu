@@ -79,6 +79,29 @@ TEST_CASE("MAL search reads ids, titles, type, episode count and year") {
     CHECK(http.header(0, "Authorization").empty());
 }
 
+TEST_CASE("MAL search text is kept within the 3 to 64 characters MAL accepts") {
+    CHECK(malSearchText("  Frieren ") == "Frieren");
+    CHECK(malSearchText("Rez") == "Rez");
+    CHECK(malSearchText("K").empty());
+    CHECK(malSearchText("   ").empty());
+    CHECK(malSearchText("Is It Wrong to Try to Pick Up Girls in a Dungeon? Familia Myth Astrea Record") ==
+          "Is It Wrong to Try to Pick Up Girls in a Dungeon? Familia Myth");
+    CHECK(malSearchText(std::string(70, 'a')) == std::string(64, 'a'));
+    const std::string kana = "\xE3\x81\x82";
+    std::string japanese;
+    for (int i = 0; i < 30; ++i) {
+        japanese += kana;
+    }
+    const auto clipped = malSearchText(japanese);
+    CHECK(clipped.size() == 63);
+    CHECK(clipped.size() % 3 == 0);
+
+    FakeHttpClient http;
+    MalClient client(http, {}, "");
+    CHECK(client.search("K").empty());
+    CHECK(http.requests.empty());
+}
+
 TEST_CASE("MAL requests carry the login once there is one") {
     FakeHttpClient http;
     http.serve(std::string(api) + "/anime/52991?fields=" + animeFields, readFixture("mal/anime_52991.json"));
@@ -165,12 +188,12 @@ TEST_CASE("removing from MAL treats an anime that isn't listed as done") {
 TEST_CASE("a rejected MAL token is reported as an expired login, other failures by their message") {
     FakeHttpClient http;
     http.serve(std::string(api) + "/users/@me", R"({"error":"invalid_token"})", 401);
-    http.serve(searchUrl("x"), "<html>blocked</html>", 403);
+    http.serve(searchUrl("xyz"), "<html>blocked</html>", 403);
     http.serve(std::string(api) + "/anime/5/my_list_status", R"({"error":"invalid_token"})", 401);
     MalClient client(http, {}, "stale");
 
     CHECK_THROWS_AS(client.userName(), MalLoginExpired);
-    CHECK_THROWS_WITH_AS(client.search("x"), "MyAnimeList returned HTTP 403", MalError);
+    CHECK_THROWS_WITH_AS(client.search("xyz"), "MyAnimeList returned HTTP 403", MalError);
     CHECK_THROWS_AS(client.update(5, {}), MalLoginExpired);
     CHECK_THROWS_AS(client.remove(5), MalLoginExpired);
 }

@@ -24,6 +24,8 @@ constexpr std::string_view animeFields = "my_list_status,alternative_titles,medi
 constexpr int listPageSize = 1000;
 constexpr int searchLimit = 20;
 constexpr int verifierLength = 64;
+constexpr size_t shortestQuery = 3;
+constexpr size_t longestQuery = 64;
 
 constexpr std::array<std::pair<MalStatus, std::string_view>, 5> statusCodes{{
     {MalStatus::Watching, "watching"},
@@ -198,6 +200,23 @@ MalStatus malStatusFrom(std::string_view code) {
     return MalStatus::None;
 }
 
+std::string malSearchText(std::string_view query) {
+    const auto first = query.find_first_not_of(' ');
+    if (first == std::string_view::npos) {
+        return {};
+    }
+    query = query.substr(first, query.find_last_not_of(' ') - first + 1);
+    if (query.size() > longestQuery) {
+        size_t end = longestQuery;
+        while (end > 0 && (static_cast<unsigned char>(query[end]) & 0xC0) == 0x80) {
+            --end;
+        }
+        const auto space = query.substr(0, end + 1).rfind(' ');
+        query = query.substr(0, space != std::string_view::npos && space >= shortestQuery ? space : end);
+    }
+    return query.size() < shortestQuery ? std::string() : std::string(query);
+}
+
 std::string malCodeVerifier() {
     static constexpr std::string_view alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
     std::random_device device;
@@ -317,7 +336,11 @@ std::vector<MalAnime> MalClient::list(MalStatus status) {
 }
 
 std::vector<MalAnime> MalClient::search(std::string_view query) {
-    const auto parsed = json::parse(fetch(endpoints_.api + "/anime?q=" + urlEncode(query) +
+    const auto text = malSearchText(query);
+    if (text.empty()) {
+        return {};
+    }
+    const auto parsed = json::parse(fetch(endpoints_.api + "/anime?q=" + urlEncode(text) +
                                           "&limit=" + std::to_string(searchLimit) +
                                           "&nsfw=true&fields=" + std::string(animeFields)),
                                     nullptr, false);

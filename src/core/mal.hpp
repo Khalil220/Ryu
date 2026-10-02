@@ -94,6 +94,7 @@ struct MalRedirect {
     std::string error;
 };
 
+std::string malSearchText(std::string_view query);
 std::string malCodeVerifier();
 std::string malAuthorizationUrl(const MalEndpoints& endpoints, std::string_view verifier, std::string_view state);
 MalRedirect parseMalRedirect(std::string_view target);
