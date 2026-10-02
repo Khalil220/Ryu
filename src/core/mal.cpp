@@ -623,7 +623,8 @@ std::optional<MalChanges> malProgress(const MalAnime& anime, std::string_view ep
         return std::nullopt;
     }
     const auto& list = anime.list;
-    if (list.status != MalStatus::Watching && !list.rewatching) {
+    const bool resumed = list.status == MalStatus::PlanToWatch || list.status == MalStatus::OnHold;
+    if (list.status != MalStatus::Watching && !resumed && !list.rewatching) {
         return std::nullopt;
     }
     if (episode <= list.watched || (anime.episodes > 0 && episode > anime.episodes)) {
@@ -640,6 +641,9 @@ std::optional<MalChanges> malProgress(const MalAnime& anime, std::string_view ep
     }
     if (list.watched == 0 && list.startDate.empty()) {
         changes.startDate = std::string(today);
+    }
+    if (resumed) {
+        changes.status = MalStatus::Watching;
     }
     if (last) {
         changes.status = MalStatus::Completed;

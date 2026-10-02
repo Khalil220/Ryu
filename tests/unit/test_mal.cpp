@@ -450,10 +450,40 @@ TEST_CASE("malProgress sets the start date on the first episode and completes th
     CHECK_FALSE(unknownLength->status.has_value());
 }
 
-TEST_CASE("malProgress leaves alone what isn't being watched, odd episode numbers and episodes past the end") {
+TEST_CASE("malProgress moves a planned or paused show to Watching when an episode further on is watched") {
     auto planned = watching(0, 28);
     planned.list.status = MalStatus::PlanToWatch;
-    CHECK_FALSE(malProgress(planned, "1", "2026-10-02").has_value());
+    planned.list.startDate.clear();
+    const auto started = malProgress(planned, "1", "2026-10-02");
+    REQUIRE(started.has_value());
+    CHECK(started->status == MalStatus::Watching);
+    CHECK(started->watched == 1);
+    CHECK(started->startDate == "2026-10-02");
+
+    auto paused = watching(11, 24);
+    paused.list.status = MalStatus::OnHold;
+    const auto resumed = malProgress(paused, "12", "2026-10-02");
+    REQUIRE(resumed.has_value());
+    CHECK(resumed->status == MalStatus::Watching);
+    CHECK(resumed->watched == 12);
+    CHECK_FALSE(resumed->startDate.has_value());
+    CHECK_FALSE(malProgress(paused, "5", "2026-10-02").has_value());
+
+    auto film = watching(0, 1);
+    film.list.status = MalStatus::PlanToWatch;
+    const auto finished = malProgress(film, "1", "2026-10-02");
+    REQUIRE(finished.has_value());
+    CHECK(finished->status == MalStatus::Completed);
+    CHECK(finished->finishDate == "2026-10-02");
+}
+
+TEST_CASE("malProgress leaves alone what was dropped, finished or never listed, odd episode numbers and episodes past the end") {
+    auto dropped = watching(3, 28);
+    dropped.list.status = MalStatus::Dropped;
+    CHECK_FALSE(malProgress(dropped, "4", "2026-10-02").has_value());
+    auto finished = watching(28, 28);
+    finished.list.status = MalStatus::Completed;
+    CHECK_FALSE(malProgress(finished, "3", "2026-10-02").has_value());
     auto unlisted = watching(0, 28);
     unlisted.list.status = MalStatus::None;
     CHECK_FALSE(malProgress(unlisted, "1", "2026-10-02").has_value());
