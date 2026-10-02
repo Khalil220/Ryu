@@ -406,10 +406,31 @@ def run(app, speech_log):
           f"the episode two ahead plays ({time_box.get_value()})")
 
     main.child_window(title="Pause", control_type="Button").set_focus()
+    volume = player.child_window(title="Volume", control_type="Slider")
     if alt_key_free("v"):
         send_keys("%v", vk_packet=False)
-        volume = player.child_window(title="Volume", control_type="Slider")
         check(wait_for(volume.has_keyboard_focus, 5) is not None, "Alt+V moves to the volume slider")
+    volume.set_focus()
+    wait_for(volume.has_keyboard_focus, 5)
+    loudness = volume.value()
+    heard = []
+    for key, change in (("{DOWN}", -5), ("{UP}", 0), ("{PGDN}", -20), ("{PGUP}", 0), ("{LEFT}", -5), ("{RIGHT}", 0)):
+        send_keys(key)
+        wait_for(lambda: volume.value() == loudness + change, 3)
+        heard.append((key, volume.value() - loudness))
+    check(heard == [("{DOWN}", -5), ("{UP}", 0), ("{PGDN}", -20), ("{PGUP}", 0), ("{LEFT}", -5), ("{RIGHT}", 0)],
+          f"on a slider Up, Page Up and Right raise the value and Down, Page Down and Left lower it ({heard}, from {loudness})")
+    position = player.child_window(title="Position", control_type="Slider")
+    position.set_focus()
+    wait_for(position.has_keyboard_focus, 5)
+    before_step = seconds(time_box.get_value())
+    send_keys("{UP}")
+    check(wait_for(lambda: seconds(time_box.get_value()) >= before_step + 8, 15) is not None,
+          f"Up on the position slider moves forward ({before_step} to {time_box.get_value()})")
+    after_step = seconds(time_box.get_value())
+    send_keys("{DOWN}")
+    check(wait_for(lambda: seconds(time_box.get_value()) <= after_step - 5, 15) is not None,
+          f"Down on the position slider moves back ({after_step} to {time_box.get_value()})")
     if alt_key_free("s"):
         send_keys("%s", vk_packet=False)
         check(wait_for(subtitles.has_keyboard_focus, 5) is not None, "Alt+S moves to the subtitles choice")
@@ -605,6 +626,7 @@ def run(app, speech_log):
 
 
 def main(exe):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     config = os.path.join(tempfile.gettempdir(), f"ryu-ui-test-{os.getpid()}.ini")
     speech_log = os.path.join(tempfile.gettempdir(), f"ryu-ui-speech-{os.getpid()}.log")
     ryu_log = os.path.join(tempfile.gettempdir(), f"ryu-test-{os.getpid()}.log")

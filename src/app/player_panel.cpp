@@ -23,6 +23,10 @@
 #include <wx/toplevel.h>
 #include <wx/utils.h>
 
+#ifdef __WXMSW__
+#include <wx/msw/wrapwin.h>
+#endif
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -820,6 +824,20 @@ void PlayerPanel::onCharHook(wxKeyEvent& event) {
         togglePause();
         return;
     }
+
+#ifdef __WXMSW__
+    if (plain && (focus == positionSlider_ || focus == volumeSlider_)) {
+        const WPARAM native = key == WXK_UP         ? VK_RIGHT
+                              : key == WXK_DOWN     ? VK_LEFT
+                              : key == WXK_PAGEUP   ? VK_NEXT
+                              : key == WXK_PAGEDOWN ? VK_PRIOR
+                                                    : 0;
+        if (native) {
+            ::SendMessage(static_cast<HWND>(focus->GetHWND()), WM_KEYDOWN, native, 0);
+            return;
+        }
+    }
+#endif
 
     const bool focusUsesArrows =
         focus == positionSlider_ || focus == volumeSlider_ || focus == timeText_ || focus == subtitleChoice_ ||
