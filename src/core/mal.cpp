@@ -9,6 +9,7 @@
 #include <array>
 #include <charconv>
 #include <cstdlib>
+#include <ctime>
 #include <random>
 #include <utility>
 
@@ -388,6 +389,39 @@ void MalClient::remove(int id) {
     if (response.status != 404 && (response.status < 200 || response.status >= 300)) {
         throw MalError(errorMessage(response));
     }
+}
+
+MalAccess::MalAccess(HttpClient& http, MalEndpoints endpoints, MalTokens tokens, Clock clock)
+    : http_(http), endpoints_(std::move(endpoints)), clock_(std::move(clock)), tokens_(std::move(tokens)) {}
+
+MalTokens MalAccess::tokens() {
+    std::scoped_lock lock(mutex_);
+    return tokens_;
+}
+
+void MalAccess::setTokens(MalTokens tokens) {
+    std::scoped_lock lock(mutex_);
+    tokens_ = std::move(tokens);
+}
+
+std::int64_t MalAccess::now() const {
+    return clock_ ? clock_() : static_cast<std::int64_t>(std::time(nullptr));
+}
+
+std::string MalAccess::freshAccess(const std::string& rejected) {
+    std::scoped_lock lock(mutex_);
+    if (tokens_.refresh.empty()) {
+        throw MalLoginExpired();
+    }
+    if (!tokens_.usable(now()) || tokens_.access == rejected) {
+        try {
+            tokens_ = refreshMalTokens(http_, endpoints_, tokens_.refresh, now());
+        } catch (const MalLoginExpired&) {
+            tokens_ = {};
+            throw;
+        }
+    }
+    return tokens_.access;
 }
 
 namespace {

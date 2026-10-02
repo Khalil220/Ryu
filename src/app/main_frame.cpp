@@ -4,6 +4,7 @@
 #include "background.hpp"
 #include "format.hpp"
 #include "log.hpp"
+#include "mal_session.hpp"
 #include "stream_finder.hpp"
 #include "playlist_server.hpp"
 #include "player_panel.hpp"
@@ -106,6 +107,10 @@ MainFrame::MainFrame(SettingsStore& store)
     setStatus("Ready");
     searchBox_->SetFocus();
     updater_ = std::make_unique<Updater>(this, alive_, [this](const wxString& text) { setStatus(text); });
+    mal_ = std::make_unique<MalSession>(settings_.mal, alive_, [this](const MalAccount& account) {
+        settings_.mal = account;
+        store_.save(settings_);
+    });
     Updater::cleanUp();
     if (settings_.checkForUpdates) {
         CallAfter([this] { updater_->check(false); });
@@ -611,7 +616,7 @@ bool MainFrame::browsing() const {
 }
 
 void MainFrame::showPreferences() {
-    PreferencesDialog dialog(this, settings_);
+    PreferencesDialog dialog(this, settings_, *mal_);
     if (dialog.ShowModal() != wxID_OK) {
         return;
     }
@@ -621,6 +626,7 @@ void MainFrame::showPreferences() {
         showBrowser();
     }
     settings_ = dialog.settings();
+    settings_.mal = mal_->account();
     store_.save(settings_);
     applySettings();
     if (providerChanged) {

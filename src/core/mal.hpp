@@ -4,6 +4,8 @@
 #include "provider.hpp"
 
 #include <cstdint>
+#include <functional>
+#include <mutex>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -83,6 +85,7 @@ struct MalTokens {
     std::int64_t expiresAt = 0;
 
     bool usable(std::int64_t now) const { return !access.empty() && now + malRefreshMargin < expiresAt; }
+    bool operator==(const MalTokens&) const = default;
 };
 
 struct MalRedirect {
@@ -117,6 +120,41 @@ private:
     HttpClient& http_;
     MalEndpoints endpoints_;
     std::string accessToken_;
+};
+
+class MalAccess {
+public:
+    using Clock = std::function<std::int64_t()>;
+
+    MalAccess(HttpClient& http, MalEndpoints endpoints, MalTokens tokens, Clock clock = {});
+
+    const MalEndpoints& endpoints() const { return endpoints_; }
+    HttpClient& http() { return http_; }
+    MalTokens tokens();
+    void setTokens(MalTokens tokens);
+    std::int64_t now() const;
+
+    template <typename Result>
+    Result call(const std::function<Result(MalClient&)>& work) {
+        auto access = freshAccess({});
+        try {
+            MalClient client(http_, endpoints_, access);
+            return work(client);
+        } catch (const MalLoginExpired&) {
+            access = freshAccess(access);
+        }
+        MalClient client(http_, endpoints_, access);
+        return work(client);
+    }
+
+private:
+    std::string freshAccess(const std::string& rejected);
+
+    HttpClient& http_;
+    MalEndpoints endpoints_;
+    Clock clock_;
+    std::mutex mutex_;
+    MalTokens tokens_;
 };
 
 std::optional<size_t> matchMalAnime(const Show& show, const std::vector<MalAnime>& candidates);

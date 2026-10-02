@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mal.hpp"
 #include "provider.hpp"
 #include "registry.hpp"
 #include "subtitle_choice.hpp"
@@ -39,6 +40,14 @@ struct ScreenArea {
 
 WindowPlacement fitToArea(const WindowPlacement& saved, const ScreenArea& area, int minWidth, int minHeight);
 
+struct MalAccount {
+    std::string userName;
+    MalTokens tokens;
+
+    bool loggedIn() const { return !tokens.refresh.empty(); }
+    bool operator==(const MalAccount&) const = default;
+};
+
 struct Settings {
     std::string providerId = "hianime";
     Theme theme = Theme::Dark;
@@ -53,6 +62,7 @@ struct Settings {
     std::string audioLanguageSubbed;
     std::string audioLanguageDubbed;
     WindowPlacement window;
+    MalAccount mal;
 
     bool readSubtitlesFor(Audio kind) const { return kind == Audio::Dub ? readSubtitlesDubbed : readSubtitlesSubbed; }
     const SubtitlePreference& subtitlesFor(Audio kind) const {

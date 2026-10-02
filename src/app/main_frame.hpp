@@ -30,6 +30,7 @@ class PlayerPanel;
 class TextList;
 class PlaylistServer;
 struct ProviderSession;
+class MalSession;
 class Updater;
 
 class MainFrame : public wxFrame {
@@ -67,6 +68,7 @@ private:
     std::shared_ptr<PlaylistServer> playlistServer_;
     std::shared_ptr<int> alive_;
     std::unique_ptr<Updater> updater_;
+    std::unique_ptr<MalSession> mal_;
     std::vector<ryu::Show> shows_;
     std::vector<Episode> episodes_;
     std::vector<size_t> visibleEpisodes_;

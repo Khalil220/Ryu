@@ -1,5 +1,7 @@
 #include "settings.hpp"
 
+#include "secret.hpp"
+
 #include <algorithm>
 
 #include <wx/fileconf.h>
@@ -112,6 +114,15 @@ Settings loadSettings(wxConfigBase& config) {
             settings.baseUrlOverrides[info.id] = value;
         }
     }
+    settings.mal.userName = config.Read("/MyAnimeList/User", wxString()).utf8_string();
+    settings.mal.tokens.access = revealSecret(config.Read("/MyAnimeList/AccessToken", wxString()).utf8_string());
+    settings.mal.tokens.refresh = revealSecret(config.Read("/MyAnimeList/RefreshToken", wxString()).utf8_string());
+    long long expiresAt = 0;
+    config.Read("/MyAnimeList/ExpiresAt", wxString()).ToLongLong(&expiresAt);
+    settings.mal.tokens.expiresAt = expiresAt;
+    if (!settings.mal.loggedIn()) {
+        settings.mal = {};
+    }
     return settings;
 }
 
@@ -143,6 +154,14 @@ void saveSettings(wxConfigBase& config, const Settings& settings) {
         } else {
             config.DeleteEntry(baseUrlKey(info.id), false);
         }
+    }
+    if (settings.mal.loggedIn()) {
+        config.Write("/MyAnimeList/User", wxString::FromUTF8(settings.mal.userName));
+        config.Write("/MyAnimeList/AccessToken", wxString::FromUTF8(protectSecret(settings.mal.tokens.access)));
+        config.Write("/MyAnimeList/RefreshToken", wxString::FromUTF8(protectSecret(settings.mal.tokens.refresh)));
+        config.Write("/MyAnimeList/ExpiresAt", wxString::FromUTF8(std::to_string(settings.mal.tokens.expiresAt)));
+    } else {
+        config.DeleteGroup("/MyAnimeList");
     }
 }
 

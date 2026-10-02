@@ -93,6 +93,30 @@ TEST_CASE("an override equal to the default is not stored") {
     CHECK_FALSE(config.HasEntry("/BaseUrls/hianime"));
 }
 
+TEST_CASE("the MyAnimeList login is saved encrypted and removed on logging out") {
+    wxInitializer init;
+    auto config = configFrom("");
+    CHECK_FALSE(loadSettings(config).mal.loggedIn());
+
+    Settings settings;
+    settings.mal = {"khalil", {"access-token-1", "refresh-token-1", 1790000000}};
+    saveSettings(config, settings);
+
+    CHECK(config.Read("/MyAnimeList/User", "") == "khalil");
+    const auto stored = config.Read("/MyAnimeList/RefreshToken", "").utf8_string();
+    CHECK_FALSE(stored.empty());
+    CHECK(stored.find("refresh-token-1") == std::string::npos);
+    CHECK(config.Read("/MyAnimeList/AccessToken", "").utf8_string().find("access-token-1") == std::string::npos);
+    CHECK(loadSettings(config).mal == settings.mal);
+
+    config.Write("/MyAnimeList/RefreshToken", "tampered");
+    CHECK(loadSettings(config).mal == MalAccount{});
+
+    settings.mal = {};
+    saveSettings(config, settings);
+    CHECK_FALSE(config.HasGroup("/MyAnimeList"));
+}
+
 TEST_CASE("an unknown provider in the file falls back to the first registered one") {
     wxInitializer init;
     auto config = configFrom("Provider=wcostream\nAudio=dub\n");

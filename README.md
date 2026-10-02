@@ -80,6 +80,8 @@ These environment variables override the defaults:
 - `RYU_SPEECH_LOG`: file that receives every spoken announcement
 - `RYU_MPV_OPTIONS`: extra mpv options as comma-separated `name=value` pairs
 - `RYU_UPDATE_FEED`: address of the release feed the updater reads
+- `RYU_MAL_SERVER`: server to use in place of MyAnimeList's login and API hosts
+- `RYU_OPENED_URLS`: file that receives addresses Ryu would have opened in the browser
 
 ## Command-line tool
 

@@ -238,6 +238,64 @@ TEST_CASE("a refused refresh means logging in again, a refused code says why") {
     CHECK_THROWS_AS(exchangeMalCode(empty, {}, "code", "verifier", 0), MalError);
 }
 
+TEST_CASE("MalAccess uses a token that is still good without asking for a new one") {
+    FakeHttpClient http;
+    http.serve(std::string(api) + "/users/@me", R"({"name":"khalil"})");
+    MalAccess access(http, {}, {"access-1", "refresh-1", 5000}, [] { return std::int64_t{1000}; });
+
+    CHECK(access.call<std::string>([](MalClient& client) { return client.userName(); }) == "khalil");
+    CHECK(http.requests.size() == 1);
+    CHECK(http.header(0, "Authorization") == "Bearer access-1");
+    CHECK(access.tokens() == MalTokens{"access-1", "refresh-1", 5000});
+}
+
+TEST_CASE("MalAccess renews a token that is about to run out before using it") {
+    FakeHttpClient http;
+    http.serve(tokenUrl, R"({"token_type":"Bearer","expires_in":3600,"access_token":"access-2","refresh_token":"refresh-2"})");
+    http.serve(std::string(api) + "/users/@me", R"({"name":"khalil"})");
+    MalAccess access(http, {}, {"access-1", "refresh-1", 5000}, [] { return std::int64_t{4950}; });
+
+    CHECK(access.call<std::string>([](MalClient& client) { return client.userName(); }) == "khalil");
+    REQUIRE(http.requests.size() == 2);
+    CHECK(http.requests[0].url == tokenUrl);
+    CHECK(http.requests[0].body.ends_with("grant_type=refresh_token&refresh_token=refresh-1"));
+    CHECK(http.header(1, "Authorization") == "Bearer access-2");
+    CHECK(access.tokens() == MalTokens{"access-2", "refresh-2", 8550});
+}
+
+TEST_CASE("MalAccess renews and retries once when MAL rejects a token that looked good") {
+    FakeHttpClient http;
+    http.serve(tokenUrl, R"({"token_type":"Bearer","expires_in":3600,"access_token":"access-2","refresh_token":"refresh-2"})");
+    MalAccess access(http, {}, {"access-1", "refresh-1", 5000}, [] { return std::int64_t{1000}; });
+    int attempts = 0;
+
+    const auto name = access.call<std::string>([&](MalClient&) -> std::string {
+        if (++attempts == 1) {
+            throw MalLoginExpired();
+        }
+        return "second try";
+    });
+
+    CHECK(name == "second try");
+    CHECK(attempts == 2);
+    CHECK(access.tokens().access == "access-2");
+    CHECK_THROWS_AS(access.call<int>([](MalClient&) -> int { throw MalLoginExpired(); }), MalLoginExpired);
+}
+
+TEST_CASE("MalAccess forgets a login MAL won't renew") {
+    FakeHttpClient http;
+    http.serve(tokenUrl, readFixture("mal/token_refused.json"), 401);
+    MalAccess access(http, {}, {"access-1", "refresh-1", 5000}, [] { return std::int64_t{9000}; });
+
+    CHECK_THROWS_AS(access.call<int>([](MalClient&) { return 1; }), MalLoginExpired);
+    CHECK(access.tokens() == MalTokens{});
+    CHECK_THROWS_AS(access.call<int>([](MalClient&) { return 1; }), MalLoginExpired);
+    CHECK(http.requests.size() == 1);
+
+    access.setTokens({"access-3", "refresh-3", 20000});
+    CHECK(access.call<int>([](MalClient&) { return 7; }) == 7);
+}
+
 TEST_CASE("matchMalAnime uses the provider's MAL id when it has one") {
     const std::vector<MalAnime> list{entry(1, "Other", "", "tv", 12, 2020),
                                      entry(52991, "Sousou no Frieren", "Frieren: Beyond Journey's End", "tv", 28, 2023)};

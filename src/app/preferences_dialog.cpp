@@ -1,6 +1,7 @@
 #include "preferences_dialog.hpp"
 
 #include "accessibility.hpp"
+#include "mal_session.hpp"
 
 #include <wx/button.h>
 #include <wx/checkbox.h>
@@ -10,10 +11,22 @@
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
 
+#include <memory>
+
 namespace ryu {
 
-PreferencesDialog::PreferencesDialog(wxWindow* parent, const Settings& settings)
-    : wxDialog(parent, wxID_ANY, "Preferences"), settings_(settings) {
+namespace {
+
+struct LoginWait {
+    wxDialog* dialog = nullptr;
+    bool finished = false;
+    std::string error;
+};
+
+}
+
+PreferencesDialog::PreferencesDialog(wxWindow* parent, const Settings& settings, MalSession& mal)
+    : wxDialog(parent, wxID_ANY, "Preferences"), settings_(settings), mal_(mal) {
     const auto& providers = availableProviders();
 
     auto* grid = new wxFlexGridSizer(2, 6, 8);
@@ -54,6 +67,14 @@ PreferencesDialog::PreferencesDialog(wxWindow* parent, const Settings& settings)
     grid->AddSpacer(0);
     grid->Add(new wxStaticText(this, wxID_ANY, "A new theme applies the next time Ryu starts."), 0);
 
+    grid->Add(new wxStaticText(this, wxID_ANY, "MyAnimeList:"), 0, wxALIGN_CENTER_VERTICAL);
+    auto* malRow = new wxBoxSizer(wxHORIZONTAL);
+    malButton_ = new wxButton(this, wxID_ANY, "Log in to &MyAnimeList");
+    malRow->Add(malButton_, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, 8);
+    malStatus_ = new wxStaticText(this, wxID_ANY, wxEmptyString);
+    malRow->Add(malStatus_, 1, wxALIGN_CENTER_VERTICAL);
+    grid->Add(malRow, 1, wxEXPAND);
+
     fallbackCheck_ = new wxCheckBox(this, wxID_ANY, "&Try other providers when an episode won't play");
     fallbackCheck_->SetValue(settings_.useFallback);
     updatesCheck_ = new wxCheckBox(this, wxID_ANY, "Check for &updates when Ryu starts");
@@ -85,8 +106,65 @@ PreferencesDialog::PreferencesDialog(wxWindow* parent, const Settings& settings)
         baseUrl_->SetFocus();
     });
     Bind(wxEVT_BUTTON, &PreferencesDialog::onOk, this, wxID_OK);
+    malButton_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) {
+        if (mal_.loggedIn()) {
+            mal_.logOut();
+            showMalAccount();
+        } else {
+            logInToMal();
+        }
+    });
+    showMalAccount();
 
     providerChoice_->SetFocus();
+}
+
+void PreferencesDialog::showMalAccount() {
+    const auto user = wxString::FromUTF8(mal_.account().userName);
+    if (mal_.loggedIn()) {
+        setAccessibleName(malButton_, "Log out of MyAnimeList, logged in as " + user);
+        malButton_->SetLabel("Log out of &MyAnimeList");
+        malStatus_->SetLabel("Logged in as " + user);
+    } else {
+        setAccessibleName(malButton_, "Log in to MyAnimeList");
+        malButton_->SetLabel("Log in to &MyAnimeList");
+        malStatus_->SetLabel("Not logged in");
+    }
+    GetSizer()->SetSizeHints(this);
+}
+
+void PreferencesDialog::logInToMal() {
+    wxDialog waiting(this, wxID_ANY, "MyAnimeList login");
+    auto* sizer = new wxBoxSizer(wxVERTICAL);
+    sizer->Add(new wxStaticText(&waiting, wxID_ANY,
+                                "Approve Ryu in your browser, then come back here.\n"
+                                "Ryu is waiting for MyAnimeList."),
+               0, wxALL, 16);
+    auto* cancel = new wxButton(&waiting, wxID_CANCEL, "Cancel");
+    sizer->Add(cancel, 0, wxALIGN_RIGHT | wxLEFT | wxRIGHT | wxBOTTOM, 16);
+    waiting.SetSizerAndFit(sizer);
+    waiting.CentreOnParent();
+    cancel->SetFocus();
+
+    const auto wait = std::make_shared<LoginWait>();
+    wait->dialog = &waiting;
+    mal_.logIn([wait](bool, const std::string& error) {
+        wait->finished = true;
+        wait->error = error;
+        if (wait->dialog) {
+            wait->dialog->EndModal(wxID_OK);
+        }
+    });
+    waiting.ShowModal();
+    wait->dialog = nullptr;
+    if (!wait->finished) {
+        mal_.cancelLogin();
+        return;
+    }
+    showMalAccount();
+    if (!wait->error.empty()) {
+        wxMessageBox(wxString::FromUTF8(wait->error), "Could not log in", wxOK | wxICON_ERROR, this);
+    }
 }
 
 void PreferencesDialog::showProvider(int index) {
