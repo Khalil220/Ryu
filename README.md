@@ -10,6 +10,7 @@ An accessible anime player for Windows, written in C++ with wxWidgets and libmpv
 - Audio language choice on episodes with several dubs
 - Skip intro on episodes that have intro times
 - Swaps banned video hosts for working ones before playback
+- MyAnimeList list browsing and editing, with episodes tracked as they're watched
 
 ## Keyboard shortcuts
 
@@ -23,6 +24,8 @@ An accessible anime player for Windows, written in C++ with wxWidgets and libmpv
 - F11: full screen
 - Escape: leave full screen, or go back to the episode list
 - Ctrl+D in the results: speak the selected show's synopsis
+- Ctrl+M in the results: add the show to MyAnimeList, or edit or remove it
+- Ctrl+L: your MyAnimeList lists
 - Ctrl+P: preferences
 - F1: all keyboard shortcuts
 
@@ -58,8 +61,8 @@ The first configure builds wxWidgets, libcurl, lexbor and nlohmann-json through 
 The test presets use the debug build (`cmake --build --preset debug`).
 
 - `ctest --preset unit`: offline, against saved site responses
-- `ctest --preset live`: resolves real episodes from all three sites
-- `ctest --preset ui`: drives the app through UI Automation, including a full update from a local test server, and takes over the keyboard for about three minutes
+- `ctest --preset live`: resolves real episodes from all three sites and queries MyAnimeList
+- `ctest --preset ui`: drives the app through UI Automation, including a full update and a MyAnimeList session against local test servers, and takes over the keyboard for about five minutes
 
 The UI tests need Python with pywinauto:
 

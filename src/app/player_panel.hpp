@@ -30,7 +30,7 @@ public:
     PlayerPanel(wxWindow* parent, std::function<void()> onLeave, std::function<void(int)> onStep,
                 std::function<void(bool)> onReadSubtitlesChanged,
                 std::function<void(const SubtitlePreference&)> onSubtitlesChosen,
-                std::function<void(const std::string&)> onAudioChosen);
+                std::function<void(const std::string&)> onAudioChosen, std::function<void()> onWatched);
     ~PlayerPanel() override;
 
     void play(const Stream& stream, const std::string& heading, bool readSubtitles,
@@ -72,6 +72,8 @@ private:
     std::function<void(bool)> onReadSubtitlesChanged_;
     std::function<void(const SubtitlePreference&)> onSubtitlesChosen_;
     std::function<void(const std::string&)> onAudioChosen_;
+    std::function<void()> onWatched_;
+    bool watchedReported_ = false;
     mpv_handle* mpv_ = nullptr;
     std::vector<Subtitle> pendingSubtitles_;
     std::vector<std::string> subtitleOrder_;

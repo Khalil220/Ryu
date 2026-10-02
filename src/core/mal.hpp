@@ -88,6 +88,16 @@ struct MalTokens {
     bool operator==(const MalTokens&) const = default;
 };
 
+struct MalDate {
+    int year = 0;
+    int month = 0;
+    int day = 0;
+
+    bool empty() const { return year == 0 && month == 0 && day == 0; }
+    bool complete() const { return year > 0 && month > 0 && day > 0; }
+    bool operator==(const MalDate&) const = default;
+};
+
 struct MalRedirect {
     std::string code;
     std::string state;
@@ -163,6 +173,8 @@ std::optional<size_t> matchShowForMal(const MalAnime& anime, const std::vector<S
 std::vector<MalAnime> findMalCandidates(MalClient& client, const Show& show);
 MalChanges malChangesBetween(const MalListStatus& before, const MalListStatus& after);
 bool validMalDate(std::string_view date);
+MalDate malDateFrom(std::string_view text);
+std::string malDateText(const MalDate& date);
 std::optional<MalChanges> malProgress(const MalAnime& anime, std::string_view episodeNumber, std::string_view today);
 
 }

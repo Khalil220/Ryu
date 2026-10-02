@@ -114,10 +114,10 @@ std::string endReason(const mpv_event_end_file& end) {
 PlayerPanel::PlayerPanel(wxWindow* parent, std::function<void()> onLeave, std::function<void(int)> onStep,
                          std::function<void(bool)> onReadSubtitlesChanged,
                          std::function<void(const SubtitlePreference&)> onSubtitlesChosen,
-                         std::function<void(const std::string&)> onAudioChosen)
+                         std::function<void(const std::string&)> onAudioChosen, std::function<void()> onWatched)
     : wxPanel(parent), onLeave_(std::move(onLeave)), onStep_(std::move(onStep)),
       onReadSubtitlesChanged_(std::move(onReadSubtitlesChanged)), onSubtitlesChosen_(std::move(onSubtitlesChosen)),
-      onAudioChosen_(std::move(onAudioChosen)) {
+      onAudioChosen_(std::move(onAudioChosen)), onWatched_(std::move(onWatched)) {
     createControls();
     Bind(wxEVT_CHAR_HOOK, &PlayerPanel::onCharHook, this);
     stallTimer_.SetOwner(this);
@@ -437,6 +437,7 @@ void PlayerPanel::resetState(const wxString& timeText) {
     shownSecond_ = -1;
     paused_ = -1;
     ended_ = false;
+    watchedReported_ = false;
     introAnnounced_ = false;
     lastSubtitle_.clear();
     stallWatch_.reset();
@@ -519,6 +520,10 @@ void PlayerPanel::onPropertyChange(uint64_t id, const mpv_event_property& proper
         updateTime();
         announceIntro();
         updateIntroButton();
+        if (active_ && !watchedReported_ && countsAsWatched(position_, duration_)) {
+            watchedReported_ = true;
+            onWatched_();
+        }
         break;
     case Duration:
         duration_ = isDouble ? *static_cast<double*>(property.data) : 0;

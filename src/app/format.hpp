@@ -34,5 +34,11 @@ std::string malStatusLabel(MalStatus status);
 std::string malEntryLabel(const MalAnime& anime);
 std::string malCandidateLabel(const MalAnime& anime);
 std::string malProgressMessage(const MalAnime& anime, const MalChanges& changes);
+std::string malWatchedText(int watched, int episodes);
+int malWatchedFrom(std::string_view text, int episodes, int unchanged);
+int leadingNumber(std::string_view text);
+
+enum class MalDatePart { None, Year, Month, Day };
+MalDatePart wrongMalDatePart(const MalDate& date, int thisYear);
 
 }

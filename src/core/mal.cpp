@@ -579,6 +579,43 @@ bool validMalDate(std::string_view date) {
     return day >= 1 && day <= lengths[static_cast<size_t>(month - 1)] + (month == 2 && leap ? 1 : 0);
 }
 
+MalDate malDateFrom(std::string_view text) {
+    MalDate date;
+    int* const parts[] = {&date.year, &date.month, &date.day};
+    for (int* part : parts) {
+        const auto end = text.find('-');
+        const auto piece = text.substr(0, end);
+        const auto parsed = std::from_chars(piece.data(), piece.data() + piece.size(), *part);
+        if (piece.empty() || parsed.ec != std::errc() || parsed.ptr != piece.data() + piece.size() || *part < 0) {
+            *part = 0;
+            break;
+        }
+        if (end == std::string_view::npos) {
+            break;
+        }
+        text.remove_prefix(end + 1);
+    }
+    return date;
+}
+
+std::string malDateText(const MalDate& date) {
+    if (date.year <= 0) {
+        return {};
+    }
+    const auto padded = [](int value, size_t width) {
+        auto text = std::to_string(value);
+        return std::string(width > text.size() ? width - text.size() : 0, '0') + text;
+    };
+    auto text = padded(date.year, 4);
+    if (date.month > 0) {
+        text += "-" + padded(date.month, 2);
+        if (date.day > 0) {
+            text += "-" + padded(date.day, 2);
+        }
+    }
+    return text;
+}
+
 std::optional<MalChanges> malProgress(const MalAnime& anime, std::string_view episodeNumber, std::string_view today) {
     int episode = 0;
     const auto parsed = std::from_chars(episodeNumber.data(), episodeNumber.data() + episodeNumber.size(), episode);

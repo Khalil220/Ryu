@@ -204,3 +204,36 @@ TEST_CASE("the progress message says which episode was marked, or that the show 
     last.status = MalStatus::Completed;
     CHECK(malProgressMessage(anime, last) == "Finished Attack on Titan, moved to Completed on MyAnimeList");
 }
+
+TEST_CASE("episodes watched read as n/m, are read back from what was typed, and stay put when the box is emptied") {
+    CHECK(malWatchedText(5, 28) == "5/28");
+    CHECK(malWatchedText(751, 0) == "751/?");
+    CHECK(malWatchedFrom("5/28", 28, 9) == 5);
+    CHECK(malWatchedFrom("665", 0, 9) == 665);
+    CHECK(malWatchedFrom(" 12 ", 28, 9) == 12);
+    CHECK(malWatchedFrom("0", 28, 9) == 0);
+    CHECK(malWatchedFrom("30", 28, 9) == 28);
+    CHECK(malWatchedFrom("30/28", 28, 9) == 28);
+    CHECK(malWatchedFrom("999999999999", 0, 9) == 99999);
+    CHECK(malWatchedFrom("", 28, 9) == 9);
+    CHECK(malWatchedFrom("   ", 28, 9) == 9);
+    CHECK(malWatchedFrom("/28", 28, 9) == 9);
+    CHECK(malWatchedFrom("abc", 28, 9) == 9);
+    CHECK(leadingNumber("2026") == 2026);
+    CHECK(leadingNumber("07") == 7);
+}
+
+TEST_CASE("wrongMalDatePart names the part of a date to fix, and no year may be later than this one") {
+    CHECK(wrongMalDatePart({}, 2026) == MalDatePart::None);
+    CHECK(wrongMalDatePart({2026, 10, 2}, 2026) == MalDatePart::None);
+    CHECK(wrongMalDatePart({1999, 10, 16}, 2026) == MalDatePart::None);
+    CHECK(wrongMalDatePart({2024, 2, 29}, 2026) == MalDatePart::None);
+    CHECK(wrongMalDatePart({2027, 1, 1}, 2026) == MalDatePart::Year);
+    CHECK(wrongMalDatePart({2999, 13, 40}, 2026) == MalDatePart::Year);
+    CHECK(wrongMalDatePart({0, 10, 2}, 2026) == MalDatePart::Year);
+    CHECK(wrongMalDatePart({1899, 10, 2}, 2026) == MalDatePart::Year);
+    CHECK(wrongMalDatePart({2026, 0, 2}, 2026) == MalDatePart::Month);
+    CHECK(wrongMalDatePart({2026, 13, 1}, 2026) == MalDatePart::Month);
+    CHECK(wrongMalDatePart({2026, 10, 0}, 2026) == MalDatePart::Day);
+    CHECK(wrongMalDatePart({2025, 2, 29}, 2026) == MalDatePart::Day);
+}

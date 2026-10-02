@@ -4,6 +4,8 @@
 #include "background.hpp"
 #include "format.hpp"
 #include "log.hpp"
+#include "mal_edit_dialog.hpp"
+#include "mal_page.hpp"
 #include "mal_session.hpp"
 #include "stream_finder.hpp"
 #include "playlist_server.hpp"
@@ -20,6 +22,7 @@
 #include <wx/aboutdlg.h>
 #include <wx/button.h>
 #include <wx/choice.h>
+#include <wx/datetime.h>
 #include <wx/display.h>
 #include <wx/iconbndl.h>
 #include <wx/image.h>
@@ -39,6 +42,9 @@ namespace {
 
 constexpr int slowLoadMilliseconds = 700;
 constexpr int detailsDelayMilliseconds = 100;
+constexpr int browsePage = 0;
+constexpr int playerPage = 1;
+constexpr int listsPage = 2;
 
 }
 
@@ -110,7 +116,20 @@ MainFrame::MainFrame(SettingsStore& store)
     mal_ = std::make_unique<MalSession>(settings_.mal, alive_, [this](const MalAccount& account) {
         settings_.mal = account;
         store_.save(settings_);
+        GetMenuBar()->Enable(malListsId_, account.loggedIn());
+        if (!account.loggedIn() && book_->GetSelection() == listsPage) {
+            leaveMalLists();
+        }
     });
+    mal_->whenEntriesChange([this] {
+        if (book_->GetSelection() == listsPage) {
+            malPage_->showEntries(mal_->entries(), mal_->entriesLoaded());
+        }
+    });
+    GetMenuBar()->Enable(malListsId_, mal_->loggedIn());
+    if (mal_->loggedIn()) {
+        mal_->refresh([](const std::string&) {});
+    }
     Updater::cleanUp();
     if (settings_.checkForUpdates) {
         CallAfter([this] { updater_->check(false); });
@@ -121,6 +140,8 @@ MainFrame::~MainFrame() = default;
 
 void MainFrame::createMenu() {
     auto* file = new wxMenu;
+    malListsId_ = wxWindow::NewControlId();
+    file->Append(malListsId_, "My anime &lists\tCtrl+L");
     file->Append(wxID_PREFERENCES, "&Preferences...\tCtrl+P");
     file->AppendSeparator();
     file->Append(wxID_EXIT, "E&xit");
@@ -134,6 +155,9 @@ void MainFrame::createMenu() {
     bar->Append(file, "&File");
     bar->Append(help, "&Help");
     SetMenuBar(bar);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) { showMalLists(); }, malListsId_);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(mal_ && mal_->loggedIn() && browsing()); },
+         malListsId_);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { showPreferences(); }, wxID_PREFERENCES);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { Close(); }, wxID_EXIT);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShortcutsDialog(this).ShowModal(); }, shortcutsId);
@@ -207,9 +231,19 @@ void MainFrame::createControls() {
         [this](const std::string& language) {
             settings_.audioLanguageFor(playingAudio_) = language;
             store_.save(settings_);
-        });
+        },
+        [this] { trackProgress(); });
+    MalPage::Actions actions;
+    actions.leave = [this] { leaveMalLists(); };
+    actions.refresh = [this] { refreshMalLists(); };
+    actions.open = [this](const MalAnime& anime) { openMalEntry(anime); };
+    actions.edit = [this](const MalAnime& anime) { editOnMal({anime}, 0, {}); };
+    actions.remove = [this](const MalAnime& anime) { removeFromMal(anime, true); };
+    actions.status = [this](const wxString& text) { setStatus(text); };
+    malPage_ = new MalPage(book_, std::move(actions));
     book_->AddPage(browsePage_, "Browse", true);
     book_->AddPage(player_, "Player");
+    book_->AddPage(malPage_, "MyAnimeList");
 
     setAccessibleName(searchBox_, "Search");
     setAccessibleName(results_, "Results");
@@ -228,16 +262,24 @@ void MainFrame::createControls() {
             speakSynopsis();
             return;
         }
+        if (event.GetKeyCode() == 'M' && event.GetModifiers() == wxMOD_CONTROL) {
+            editShowOnMal();
+            return;
+        }
         event.Skip();
     });
     const int speakSynopsisId = wxWindow::NewControlId();
-    results_->Bind(wxEVT_CONTEXT_MENU, [this, speakSynopsisId](wxContextMenuEvent& event) {
+    const int malEditId = wxWindow::NewControlId();
+    results_->Bind(wxEVT_CONTEXT_MENU, [this, speakSynopsisId, malEditId](wxContextMenuEvent& event) {
         const long row = results_->GetFirstSelected();
         if (row < 0 || static_cast<size_t>(row) >= shows_.size()) {
             return;
         }
         wxMenu menu;
         menu.Append(speakSynopsisId, "&Speak synopsis\tCtrl+D");
+        if (mal_->loggedIn()) {
+            menu.Append(malEditId, "&MyAnimeList...\tCtrl+M");
+        }
         auto position = event.GetPosition();
         if (position == wxDefaultPosition) {
             wxRect item;
@@ -247,6 +289,7 @@ void MainFrame::createControls() {
         results_->PopupMenu(&menu, results_->ScreenToClient(position));
     });
     results_->Bind(wxEVT_MENU, [this](wxCommandEvent&) { speakSynopsis(); }, speakSynopsisId);
+    results_->Bind(wxEVT_MENU, [this](wxCommandEvent&) { editShowOnMal(); }, malEditId);
     episodeList_->Bind(wxEVT_LIST_ITEM_ACTIVATED,
                        [this](wxListEvent& event) { playEpisode(static_cast<size_t>(event.GetIndex())); });
     playButton_->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { playEpisode(episodeList_->selectedIndex()); });
@@ -282,7 +325,7 @@ void MainFrame::applySettings() {
     SetTitle("Ryu - " + wxString::FromUTF8(settings_.provider().name));
 }
 
-void MainFrame::startSearch() {
+void MainFrame::startSearch(std::optional<MalAnime> sought, bool retried) {
     wxString query = searchBox_->GetValue();
     query.Trim().Trim(false);
     if (query.empty()) {
@@ -308,11 +351,22 @@ void MainFrame::startSearch() {
     auto session = session_;
     runInBackground<std::vector<ryu::Show>>(
         alive_, [session, text = query.utf8_string()] { return session->primary().search(text); },
-        [this, generation, query](std::vector<ryu::Show> shows) {
+        [this, generation, query, sought, retried](std::vector<ryu::Show> shows) {
             if (generation != searchGeneration_) {
                 return;
             }
             shows_ = std::move(shows);
+            std::optional<size_t> found;
+            if (sought) {
+                found = matchShowForMal(*sought, shows_);
+                if (found) {
+                    shows_[*found].malId = sought->id;
+                } else if (!retried && sought->title != malTitle(*sought) && browsing()) {
+                    searchBox_->ChangeValue(wxString::FromUTF8(sought->title));
+                    startSearch(sought, true);
+                    return;
+                }
+            }
             std::vector<wxString> labels;
             if (shows_.empty()) {
                 labels.push_back("No results for " + query);
@@ -324,11 +378,14 @@ void MainFrame::startSearch() {
                 setStatus(wxString::Format("%zu results for %s", shows_.size(), query));
             }
             results_->setItems(std::move(labels));
-            results_->selectItem(0);
+            results_->selectItem(static_cast<long>(found.value_or(0)));
             if (!browsing()) {
                 return;
             }
             results_->SetFocus();
+            if (found) {
+                loadEpisodes(sought->list.watched + 1);
+            }
         },
         [this, generation](const std::string& message) {
             if (generation == searchGeneration_) {
@@ -338,7 +395,7 @@ void MainFrame::startSearch() {
         });
 }
 
-void MainFrame::loadEpisodes() {
+void MainFrame::loadEpisodes(int preferredNumber) {
     const size_t index = results_->selectedIndex();
     if (index >= shows_.size()) {
         return;
@@ -355,13 +412,19 @@ void MainFrame::loadEpisodes() {
     auto session = session_;
     runInBackground<std::vector<Episode>>(
         alive_, [session, show = currentShow_] { return session->primary().episodes(show); },
-        [this, generation, title](std::vector<Episode> episodes) {
+        [this, generation, title, preferredNumber](std::vector<Episode> episodes) {
             if (generation != episodeGeneration_) {
                 return;
             }
             loadFinished();
             episodes_ = std::move(episodes);
-            showEpisodes(0);
+            size_t preferred = 0;
+            for (size_t i = 0; preferredNumber > 0 && i < episodes_.size(); ++i) {
+                if (sameEpisodeNumber(episodes_[i].number, std::to_string(preferredNumber))) {
+                    preferred = i;
+                }
+            }
+            showEpisodes(preferred);
             setStatus(episodes_.empty() ? "No episodes available for " + title
                                         : episodeCountLabel(false) + " of " + title);
             if (!browsing()) {
@@ -588,7 +651,7 @@ void MainFrame::stepEpisode(int delta) {
 
 void MainFrame::showPlayer(const wxString& title) {
     if (browsing()) {
-        book_->ChangeSelection(1);
+        book_->ChangeSelection(playerPage);
     }
     SetTitle(title + " - Ryu");
     setStatus("Playing " + title);
@@ -600,7 +663,7 @@ void MainFrame::showBrowser() {
     pendingEpisode_.reset();
     loadFinished();
     player_->stop();
-    book_->ChangeSelection(0);
+    book_->ChangeSelection(browsePage);
     SetTitle("Ryu - " + wxString::FromUTF8(settings_.provider().name));
     setStatus("Stopped");
     if (const auto row = std::ranges::find(visibleEpisodes_, currentEpisode_); row != visibleEpisodes_.end()) {
@@ -612,7 +675,170 @@ void MainFrame::showBrowser() {
 }
 
 bool MainFrame::browsing() const {
-    return book_->GetSelection() == 0;
+    return book_->GetSelection() == browsePage;
+}
+
+void MainFrame::showMalLists() {
+    if (!mal_->loggedIn() || !browsing()) {
+        return;
+    }
+    focusBeforeLists_ = FindFocus();
+    book_->ChangeSelection(listsPage);
+    SetTitle("My anime lists - Ryu");
+    malPage_->showEntries(mal_->entries(), mal_->entriesLoaded());
+    malPage_->focusList();
+    refreshMalLists();
+}
+
+void MainFrame::leaveMalLists() {
+    loadFinished();
+    book_->ChangeSelection(browsePage);
+    SetTitle("Ryu - " + wxString::FromUTF8(settings_.provider().name));
+    setStatus("Ready");
+    auto* focus = focusBeforeLists_ && browsePage_->IsDescendant(focusBeforeLists_) ? focusBeforeLists_ : searchBox_;
+    focus->SetFocus();
+}
+
+void MainFrame::refreshMalLists() {
+    if (!mal_->entriesLoaded()) {
+        setStatus("Loading your lists from MyAnimeList...");
+    }
+    mal_->refresh([this](const std::string& error) {
+        loadFinished();
+        if (!error.empty() && book_->GetSelection() == listsPage) {
+            setStatus("Could not load your lists");
+            showError("Could not load your lists", error);
+        }
+    });
+}
+
+void MainFrame::openMalEntry(const MalAnime& anime) {
+    loadFinished();
+    book_->ChangeSelection(browsePage);
+    SetTitle("Ryu - " + wxString::FromUTF8(settings_.provider().name));
+    searchBox_->ChangeValue(wxString::FromUTF8(malTitle(anime)));
+    searchBox_->SetFocus();
+    startSearch(anime);
+}
+
+void MainFrame::editShowOnMal() {
+    const size_t row = results_->selectedIndex();
+    if (!mal_->loggedIn() || row >= shows_.size()) {
+        return;
+    }
+    const auto show = shows_[row];
+    if (show.malId > 0 && mal_->entriesLoaded()) {
+        if (const auto match = matchMalAnime(show, mal_->entries())) {
+            editOnMal({mal_->entries()[*match]}, 0, show.id);
+            return;
+        }
+    }
+    const auto title = wxString::FromUTF8(show.title);
+    setStatus("Looking up " + title + " on MyAnimeList...");
+    mal_->run<std::vector<MalAnime>>(
+        [show](MalClient& client) { return findMalCandidates(client, show); },
+        [this, show, title](std::vector<MalAnime> candidates) {
+            loadFinished();
+            setStatus("Ready");
+            if (candidates.empty()) {
+                wxMessageBox("No anime called " + title + " was found.", "MyAnimeList",
+                             wxOK | wxICON_INFORMATION, this);
+                return;
+            }
+            const auto match = matchMalAnime(show, candidates);
+            editOnMal(std::move(candidates), match.value_or(0), show.id);
+        },
+        [this](const std::string& message) {
+            loadFinished();
+            setStatus("Could not look it up on MyAnimeList");
+            showError("Could not look it up", message);
+        });
+}
+
+void MainFrame::editOnMal(std::vector<MalAnime> candidates, size_t selected, const std::string& showId) {
+    MalEditDialog dialog(this, std::move(candidates), selected);
+    const int answer = dialog.ShowModal();
+    if (answer == wxID_CANCEL) {
+        return;
+    }
+    const auto anime = dialog.anime();
+    if (!showId.empty()) {
+        for (auto& show : shows_) {
+            if (show.id == showId) {
+                show.malId = anime.id;
+            }
+        }
+        if (currentShow_.id == showId) {
+            currentShow_.malId = anime.id;
+        }
+    }
+    if (answer == wxID_DELETE) {
+        removeFromMal(anime, false);
+        return;
+    }
+    const auto changes = malChangesBetween(anime.list, dialog.edited());
+    if (changes.empty()) {
+        return;
+    }
+    const auto title = wxString::FromUTF8(malTitle(anime));
+    setStatus("Saving " + title + " to MyAnimeList...");
+    mal_->save(anime, changes, [this, title](const std::string& error) {
+        if (error.empty()) {
+            setStatus("Saved " + title + " to MyAnimeList");
+        } else {
+            setStatus("Could not save to MyAnimeList");
+            showError("Could not save", error);
+        }
+    });
+}
+
+void MainFrame::removeFromMal(const MalAnime& anime, bool confirm) {
+    const auto title = wxString::FromUTF8(malTitle(anime));
+    const auto list = wxString::FromUTF8(malStatusLabel(anime.list.status));
+    if (confirm && wxMessageBox("Remove " + title + " from your " + list + " list?", "MyAnimeList",
+                                wxYES_NO | wxNO_DEFAULT | wxICON_QUESTION, this) != wxYES) {
+        return;
+    }
+    setStatus("Removing " + title + " from MyAnimeList...");
+    mal_->remove(anime.id, [this, title](const std::string& error) {
+        if (error.empty()) {
+            setStatus("Removed " + title + " from MyAnimeList");
+        } else {
+            setStatus("Could not remove it from MyAnimeList");
+            showError("Could not remove", error);
+        }
+    });
+}
+
+void MainFrame::trackProgress() {
+    if (!mal_->loggedIn() || currentEpisode_ >= episodes_.size()) {
+        return;
+    }
+    const auto update = [this, show = currentShow_, number = episodes_[currentEpisode_].number] {
+        const auto match = matchMalAnime(show, mal_->entries());
+        if (!match) {
+            return;
+        }
+        const auto anime = mal_->entries()[*match];
+        const auto changes = malProgress(anime, number, wxDateTime::Now().FormatISODate().utf8_string());
+        if (!changes) {
+            return;
+        }
+        logLine("Marking episode " + number + " of " + malTitle(anime) + " as watched on MyAnimeList");
+        mal_->save(anime, *changes, [this, anime, changes](const std::string& error) {
+            setStatus(error.empty() ? wxString::FromUTF8(malProgressMessage(anime, *changes))
+                                    : wxString("Could not update MyAnimeList"));
+        });
+    };
+    if (mal_->entriesLoaded()) {
+        update();
+        return;
+    }
+    mal_->refresh([update](const std::string& error) {
+        if (error.empty()) {
+            update();
+        }
+    });
 }
 
 void MainFrame::showPreferences() {

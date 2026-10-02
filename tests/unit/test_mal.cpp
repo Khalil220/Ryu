@@ -523,6 +523,28 @@ TEST_CASE("validMalDate accepts real calendar dates and nothing else") {
     CHECK_FALSE(validMalDate("today"));
 }
 
+TEST_CASE("MAL dates split into year, month and day and join back, whole or partial") {
+    CHECK(malDateFrom("2026-10-02") == MalDate{2026, 10, 2});
+    CHECK(malDateFrom("2019-05") == MalDate{2019, 5, 0});
+    CHECK(malDateFrom("2019") == MalDate{2019, 0, 0});
+    CHECK(malDateFrom("") == MalDate{});
+    CHECK(malDateFrom("soon") == MalDate{});
+    CHECK(malDateFrom("2019-xx-04") == MalDate{2019, 0, 0});
+
+    CHECK(malDateText({2026, 10, 2}) == "2026-10-02");
+    CHECK(malDateText({2026, 3, 7}) == "2026-03-07");
+    CHECK(malDateText({2019, 5, 0}) == "2019-05");
+    CHECK(malDateText({2019, 0, 0}) == "2019");
+    CHECK(malDateText({2019, 0, 4}) == "2019");
+    CHECK(malDateText({0, 5, 4}).empty());
+    CHECK(malDateText({}).empty());
+
+    CHECK(MalDate{}.empty());
+    CHECK(MalDate{2026, 10, 2}.complete());
+    CHECK_FALSE(MalDate{2026, 10, 0}.complete());
+    CHECK_FALSE(MalDate{0, 10, 2}.empty());
+}
+
 TEST_CASE("saved secrets are unreadable in the file and come back for the same Windows account") {
     const std::string token = "def50200-access-token-with-\xC3\xA9";
     const auto stored = protectSecret(token);

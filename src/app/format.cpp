@@ -290,4 +290,41 @@ std::string malProgressMessage(const MalAnime& anime, const MalChanges& changes)
     return "Episode " + std::to_string(changes.watched.value_or(anime.list.watched)) + " marked as watched on MyAnimeList";
 }
 
+std::string malWatchedText(int watched, int episodes) {
+    return std::to_string(watched) + "/" + (episodes > 0 ? std::to_string(episodes) : std::string("?"));
+}
+
+int leadingNumber(std::string_view text) {
+    constexpr int largest = 99999;
+    const auto first = text.find_first_not_of(' ');
+    int value = 0;
+    for (size_t i = first; i < text.size() && text[i] >= '0' && text[i] <= '9'; ++i) {
+        value = std::min(largest, value * 10 + (text[i] - '0'));
+    }
+    return value;
+}
+
+int malWatchedFrom(std::string_view text, int episodes, int unchanged) {
+    const auto first = text.find_first_not_of(' ');
+    if (first == std::string_view::npos || text[first] < '0' || text[first] > '9') {
+        return unchanged;
+    }
+    const int watched = leadingNumber(text);
+    return episodes > 0 ? std::min(watched, episodes) : watched;
+}
+
+MalDatePart wrongMalDatePart(const MalDate& date, int thisYear) {
+    const auto real = [](const MalDate& candidate) { return candidate.complete() && validMalDate(malDateText(candidate)); };
+    if (date.empty()) {
+        return MalDatePart::None;
+    }
+    if (date.year > thisYear || !real({date.year, 1, 1})) {
+        return MalDatePart::Year;
+    }
+    if (!real({date.year, date.month, 1})) {
+        return MalDatePart::Month;
+    }
+    return real(date) ? MalDatePart::None : MalDatePart::Day;
+}
+
 }

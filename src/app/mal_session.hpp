@@ -8,12 +8,14 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace ryu {
 
 class MalSession {
 public:
     using LoginDone = std::function<void(bool loggedIn, const std::string& error)>;
+    using Done = std::function<void(const std::string& error)>;
 
     MalSession(const MalAccount& account, std::weak_ptr<void> alive,
                std::function<void(const MalAccount&)> accountChanged);
@@ -23,6 +25,13 @@ public:
     void logIn(LoginDone done);
     void cancelLogin();
     void logOut();
+
+    const std::vector<MalAnime>& entries() const { return entries_; }
+    bool entriesLoaded() const { return entriesLoaded_; }
+    void whenEntriesChange(std::function<void()> listener) { entriesChanged_ = std::move(listener); }
+    void refresh(Done done);
+    void save(const MalAnime& anime, const MalChanges& changes, Done done);
+    void remove(int id, Done done);
 
     template <typename Result>
     void run(std::function<Result(MalClient&)> work, std::function<void(Result)> onSuccess,
@@ -49,12 +58,17 @@ private:
     };
 
     void syncAccount();
+    void setEntries(std::vector<MalAnime> entries, bool loaded);
 
     std::weak_ptr<void> alive_;
     std::function<void(const MalAccount&)> accountChanged_;
     MalAccount account_;
     std::shared_ptr<Shared> shared_;
     bool loggingIn_ = false;
+    std::vector<MalAnime> entries_;
+    bool entriesLoaded_ = false;
+    unsigned entriesGeneration_ = 0;
+    std::function<void()> entriesChanged_;
 };
 
 }

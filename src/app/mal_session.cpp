@@ -6,6 +6,7 @@
 #include <wx/ffile.h>
 #include <wx/utils.h>
 
+#include <algorithm>
 #include <chrono>
 
 namespace ryu {
@@ -88,6 +89,7 @@ void MalSession::logIn(LoginDone done) {
             account_ = {outcome.userName, outcome.tokens};
             accountChanged_(account_);
             done(true, {});
+            refresh([](const std::string&) {});
         },
         [this, done](const std::string& message) {
             loggingIn_ = false;
@@ -104,7 +106,73 @@ void MalSession::cancelLogin() {
 void MalSession::logOut() {
     shared_->access.setTokens({});
     account_ = {};
+    setEntries({}, false);
     accountChanged_(account_);
+}
+
+void MalSession::refresh(Done done) {
+    const unsigned generation = ++entriesGeneration_;
+    run<std::vector<MalAnime>>(
+        [](MalClient& client) { return client.list(MalStatus::None); },
+        [this, generation, done](std::vector<MalAnime> entries) {
+            if (generation == entriesGeneration_ && loggedIn()) {
+                setEntries(std::move(entries), true);
+            }
+            done({});
+        },
+        [done](const std::string& message) {
+            logLine("Could not load the MyAnimeList lists: " + message);
+            done(message);
+        });
+}
+
+void MalSession::save(const MalAnime& anime, const MalChanges& changes, Done done) {
+    run<MalListStatus>(
+        [id = anime.id, changes](MalClient& client) { return client.update(id, changes); },
+        [this, anime, done](MalListStatus status) {
+            ++entriesGeneration_;
+            auto entries = entries_;
+            const auto existing = std::ranges::find(entries, anime.id, &MalAnime::id);
+            if (existing != entries.end()) {
+                existing->list = status;
+            } else {
+                entries.push_back(anime);
+                entries.back().list = status;
+            }
+            setEntries(std::move(entries), entriesLoaded_);
+            done({});
+        },
+        [done](const std::string& message) {
+            logLine("Could not update MyAnimeList: " + message);
+            done(message);
+        });
+}
+
+void MalSession::remove(int id, Done done) {
+    run<bool>(
+        [id](MalClient& client) {
+            client.remove(id);
+            return true;
+        },
+        [this, id, done](bool) {
+            ++entriesGeneration_;
+            auto entries = entries_;
+            std::erase_if(entries, [id](const MalAnime& anime) { return anime.id == id; });
+            setEntries(std::move(entries), entriesLoaded_);
+            done({});
+        },
+        [done](const std::string& message) {
+            logLine("Could not remove from MyAnimeList: " + message);
+            done(message);
+        });
+}
+
+void MalSession::setEntries(std::vector<MalAnime> entries, bool loaded) {
+    entries_ = std::move(entries);
+    entriesLoaded_ = loaded;
+    if (entriesChanged_) {
+        entriesChanged_();
+    }
 }
 
 void MalSession::syncAccount() {
@@ -116,6 +184,7 @@ void MalSession::syncAccount() {
     if (!account_.loggedIn()) {
         logLine("The MyAnimeList login could not be renewed");
         account_ = {};
+        setEntries({}, false);
     }
     accountChanged_(account_);
 }

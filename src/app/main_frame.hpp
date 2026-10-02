@@ -30,6 +30,7 @@ class PlayerPanel;
 class TextList;
 class PlaylistServer;
 struct ProviderSession;
+class MalPage;
 class MalSession;
 class Updater;
 
@@ -42,8 +43,16 @@ private:
     void createMenu();
     void createControls();
     void applySettings();
-    void startSearch();
-    void loadEpisodes();
+    void startSearch(std::optional<MalAnime> sought = std::nullopt, bool retried = false);
+    void loadEpisodes(int preferredNumber = 0);
+    void showMalLists();
+    void leaveMalLists();
+    void refreshMalLists();
+    void openMalEntry(const MalAnime& anime);
+    void editShowOnMal();
+    void editOnMal(std::vector<MalAnime> candidates, size_t selected, const std::string& showId);
+    void removeFromMal(const MalAnime& anime, bool confirm);
+    void trackProgress();
     void showEpisodes(size_t preferred);
     void showSelectedDetails();
     void speakSynopsis();
@@ -87,6 +96,9 @@ private:
     wxString loadingMessage_;
     std::set<std::string> described_;
 
+    int malListsId_ = 0;
+    wxWindow* focusBeforeLists_ = nullptr;
+    MalPage* malPage_ = nullptr;
     wxSimplebook* book_ = nullptr;
     wxPanel* browsePage_ = nullptr;
     PlayerPanel* player_ = nullptr;

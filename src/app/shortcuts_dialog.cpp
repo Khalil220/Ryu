@@ -13,7 +13,7 @@ namespace ryu {
 
 namespace {
 
-constexpr std::array<std::pair<const char*, const char*>, 24> shortcuts{{
+constexpr std::array<std::pair<const char*, const char*>, 28> shortcuts{{
     {"Enter", "Search, open the selected show, or play the selected episode"},
     {"Alt+S", "Search box"},
     {"Alt+R", "Results"},
@@ -21,6 +21,10 @@ constexpr std::array<std::pair<const char*, const char*>, 24> shortcuts{{
     {"Applications key in Results", "Menu for the selected show"},
     {"Alt+E", "Episodes"},
     {"Alt+A", "Audio"},
+    {"Ctrl+M in Results", "Add to, edit on or remove from MyAnimeList, when logged in"},
+    {"Ctrl+L", "My anime lists, when logged in to MyAnimeList"},
+    {"Enter in my lists", "Find the anime's episodes with the current provider"},
+    {"Ctrl+M, Delete, F5 in my lists", "Edit, remove, refresh"},
     {"Ctrl+P", "Preferences"},
     {"F1", "Keyboard shortcuts"},
     {"Space", "Play or pause"},
