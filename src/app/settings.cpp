@@ -1,6 +1,7 @@
 #include "settings.hpp"
 
 #include "secret.hpp"
+#include "stream_finder.hpp"
 
 #include <algorithm>
 
@@ -88,6 +89,34 @@ WindowPlacement fitToArea(const WindowPlacement& saved, const ScreenArea& area, 
     return fitted;
 }
 
+void rememberWatched(std::vector<RecentEntry>& recent, RecentEntry entry) {
+    const auto sameAnime = [](const Show& left, const Show& right) {
+        if (left.malId > 0 && left.malId == right.malId) {
+            return true;
+        }
+        for (const auto& mine : {left.title, left.altTitle}) {
+            for (const auto& theirs : {right.title, right.altTitle}) {
+                if (!mine.empty() && normalizeTitle(mine) == normalizeTitle(theirs)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+    std::erase_if(recent, [&](const RecentEntry& other) {
+        return (other.providerId == entry.providerId && other.show.id == entry.show.id) ||
+               sameAnime(other.show, entry.show);
+    });
+    recent.insert(recent.begin(), std::move(entry));
+    if (recent.size() > recentLimit) {
+        recent.resize(recentLimit);
+    }
+}
+
+std::string recentLabel(const RecentEntry& entry) {
+    return entry.show.title + " episode " + entry.episode;
+}
+
 Settings loadSettings(wxConfigBase& config) {
     Settings settings;
     settings.providerId = config.Read("/Provider", wxString::FromUTF8(settings.providerId)).utf8_string();
@@ -122,6 +151,30 @@ Settings loadSettings(wxConfigBase& config) {
     settings.mal.tokens.expiresAt = expiresAt;
     if (!settings.mal.loggedIn()) {
         settings.mal = {};
+    }
+    for (size_t i = 1; i <= recentLimit; ++i) {
+        const auto key = wxString::Format("/Recent/%zu/", i);
+        const auto text = [&](const char* name) { return config.Read(key + name, wxString()).utf8_string(); };
+        const auto number = [&](const char* name) { return static_cast<int>(config.ReadLong(key + name, 0)); };
+        RecentEntry entry;
+        entry.providerId = text("Provider");
+        entry.show.id = text("Id");
+        entry.show.title = text("Title");
+        entry.episode = text("Episode");
+        if (entry.providerId.empty() || entry.show.id.empty() || entry.show.title.empty() || entry.episode.empty()) {
+            break;
+        }
+        entry.show.altTitle = text("AltTitle");
+        entry.show.format = text("Format");
+        entry.show.year = number("Year");
+        entry.show.subEpisodes = number("Sub");
+        entry.show.dubEpisodes = number("Dub");
+        entry.show.episodeCount = number("Episodes");
+        entry.show.malId = number("MalId");
+        entry.show.pageUrl = text("Page");
+        entry.show.posterUrl = text("Poster");
+        entry.audio = text("Audio") == "dub" ? Audio::Dub : Audio::Sub;
+        settings.recent.push_back(std::move(entry));
     }
     return settings;
 }
@@ -162,6 +215,35 @@ void saveSettings(wxConfigBase& config, const Settings& settings) {
         config.Write("/MyAnimeList/ExpiresAt", wxString::FromUTF8(std::to_string(settings.mal.tokens.expiresAt)));
     } else {
         config.DeleteGroup("/MyAnimeList");
+    }
+    config.DeleteGroup("/Recent");
+    for (size_t i = 0; i < settings.recent.size() && i < recentLimit; ++i) {
+        const auto& entry = settings.recent[i];
+        const auto key = wxString::Format("/Recent/%zu/", i + 1);
+        const auto text = [&](const char* name, const std::string& value) {
+            if (!value.empty()) {
+                config.Write(key + name, wxString::FromUTF8(value));
+            }
+        };
+        const auto number = [&](const char* name, int value) {
+            if (value != 0) {
+                config.Write(key + name, static_cast<long>(value));
+            }
+        };
+        text("Provider", entry.providerId);
+        text("Id", entry.show.id);
+        text("Title", entry.show.title);
+        text("Episode", entry.episode);
+        text("AltTitle", entry.show.altTitle);
+        text("Format", entry.show.format);
+        number("Year", entry.show.year);
+        number("Sub", entry.show.subEpisodes);
+        number("Dub", entry.show.dubEpisodes);
+        number("Episodes", entry.show.episodeCount);
+        number("MalId", entry.show.malId);
+        text("Page", entry.show.pageUrl);
+        text("Poster", entry.show.posterUrl);
+        text("Audio", entry.audio == Audio::Dub ? "dub" : "sub");
     }
 }
 

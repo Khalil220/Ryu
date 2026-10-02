@@ -45,6 +45,8 @@ constexpr int detailsDelayMilliseconds = 100;
 constexpr int browsePage = 0;
 constexpr int playerPage = 1;
 constexpr int listsPage = 2;
+constexpr int recentFirstId = wxID_HIGHEST + 1;
+constexpr int clearRecentId = recentFirstId + static_cast<int>(recentLimit);
 
 }
 
@@ -142,6 +144,8 @@ void MainFrame::createMenu() {
     auto* file = new wxMenu;
     malListsId_ = wxWindow::NewControlId();
     file->Append(malListsId_, "My anime &lists\tCtrl+L");
+    recentMenu_ = new wxMenu;
+    recentItem_ = file->AppendSubMenu(recentMenu_, "&Recently watched");
     file->Append(wxID_PREFERENCES, "&Preferences...\tCtrl+P");
     file->AppendSeparator();
     file->Append(wxID_EXIT, "E&xit");
@@ -158,6 +162,14 @@ void MainFrame::createMenu() {
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { showMalLists(); }, malListsId_);
     Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event) { event.Enable(mal_ && mal_->loggedIn() && browsing()); },
          malListsId_);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event) { playRecent(static_cast<size_t>(event.GetId() - recentFirstId)); },
+         recentFirstId, recentFirstId + static_cast<int>(recentLimit) - 1);
+    Bind(wxEVT_MENU, [this](wxCommandEvent&) {
+        settings_.recent.clear();
+        store_.save(settings_);
+        refreshRecentMenu();
+    }, clearRecentId);
+    refreshRecentMenu();
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { showPreferences(); }, wxID_PREFERENCES);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { Close(); }, wxID_EXIT);
     Bind(wxEVT_MENU, [this](wxCommandEvent&) { ShortcutsDialog(this).ShowModal(); }, shortcutsId);
@@ -384,7 +396,7 @@ void MainFrame::startSearch(std::optional<MalAnime> sought, bool retried) {
             }
             results_->SetFocus();
             if (found) {
-                loadEpisodes(sought->list.watched + 1);
+                loadEpisodes(std::to_string(sought->list.watched + 1));
             }
         },
         [this, generation](const std::string& message) {
@@ -395,7 +407,7 @@ void MainFrame::startSearch(std::optional<MalAnime> sought, bool retried) {
         });
 }
 
-void MainFrame::loadEpisodes(int preferredNumber) {
+void MainFrame::loadEpisodes(const std::string& preferredNumber, bool play) {
     const size_t index = results_->selectedIndex();
     if (index >= shows_.size()) {
         return;
@@ -412,25 +424,28 @@ void MainFrame::loadEpisodes(int preferredNumber) {
     auto session = session_;
     runInBackground<std::vector<Episode>>(
         alive_, [session, show = currentShow_] { return session->primary().episodes(show); },
-        [this, generation, title, preferredNumber](std::vector<Episode> episodes) {
+        [this, generation, title, preferredNumber, play](std::vector<Episode> episodes) {
             if (generation != episodeGeneration_) {
                 return;
             }
             loadFinished();
             episodes_ = std::move(episodes);
-            size_t preferred = 0;
-            for (size_t i = 0; preferredNumber > 0 && i < episodes_.size(); ++i) {
-                if (sameEpisodeNumber(episodes_[i].number, std::to_string(preferredNumber))) {
+            std::optional<size_t> preferred;
+            for (size_t i = 0; !preferredNumber.empty() && i < episodes_.size(); ++i) {
+                if (sameEpisodeNumber(episodes_[i].number, preferredNumber)) {
                     preferred = i;
                 }
             }
-            showEpisodes(preferred);
+            showEpisodes(preferred.value_or(0));
             setStatus(episodes_.empty() ? "No episodes available for " + title
                                         : episodeCountLabel(false) + " of " + title);
             if (!browsing()) {
                 return;
             }
             episodeList_->SetFocus();
+            if (play && preferred && episodes_[*preferred].availableIn(selectedAudio())) {
+                playEpisode(episodeList_->selectedIndex());
+            }
         },
         [this, generation](const std::string& message) {
             if (generation == episodeGeneration_) {
@@ -607,6 +622,10 @@ void MainFrame::playEpisode(size_t row, bool announceNow) {
                               settings_.audioLanguageFor(found.stream.audio));
                 currentEpisode_ = index;
                 showPlayer(title);
+                rememberWatched(settings_.recent,
+                                {settings_.provider().id, currentShow_, episodes_[index].number, playingAudio_});
+                store_.save(settings_);
+                refreshRecentMenu();
                 if (found.fromFallback) {
                     const auto source = wxString::FromUTF8(found.providerName);
                     setStatus("Playing " + title + " from " + source);
@@ -676,6 +695,93 @@ void MainFrame::showBrowser() {
 
 bool MainFrame::browsing() const {
     return book_->GetSelection() == browsePage;
+}
+
+void MainFrame::refreshRecentMenu() {
+    while (recentMenu_->GetMenuItemCount() > 0) {
+        recentMenu_->Destroy(recentMenu_->FindItemByPosition(0));
+    }
+    for (size_t i = 0; i < settings_.recent.size(); ++i) {
+        const auto label = wxControl::EscapeMnemonics(wxString::FromUTF8(recentLabel(settings_.recent[i])));
+        recentMenu_->Append(recentFirstId + static_cast<int>(i),
+                            wxString::Format(i < 9 ? "&%zu %s" : "%zu %s", i + 1, label));
+    }
+    if (!settings_.recent.empty()) {
+        recentMenu_->AppendSeparator();
+        recentMenu_->Append(clearRecentId, "&Clear recently watched");
+    }
+    recentItem_->Enable(!settings_.recent.empty());
+}
+
+void MainFrame::playRecent(size_t index) {
+    if (index >= settings_.recent.size()) {
+        return;
+    }
+    const auto entry = settings_.recent[index];
+    const auto provider = wxString::FromUTF8(settings_.provider().name);
+    const auto title = wxString::FromUTF8(entry.show.title);
+    if (book_->GetSelection() == playerPage) {
+        showBrowser();
+    } else if (book_->GetSelection() == listsPage) {
+        book_->ChangeSelection(browsePage);
+        SetTitle("Ryu - " + provider);
+        results_->SetFocus();
+    }
+    audioChoice_->SetSelection(entry.audio == Audio::Dub ? 1 : 0);
+    searchBox_->ChangeValue(title);
+    if (entry.providerId == settings_.provider().id) {
+        showRecent(entry.show, entry.episode);
+        return;
+    }
+    const unsigned generation = ++searchGeneration_;
+    setStatus("Looking for " + title + " on " + provider + "...");
+    auto session = session_;
+    runInBackground<std::optional<ryu::Show>>(
+        alive_,
+        [session, wanted = entry.show] {
+            auto found = matchShow(wanted, session->primary().search(wanted.title));
+            if (!found && !wanted.altTitle.empty()) {
+                found = matchShow(wanted, session->primary().search(wanted.altTitle));
+            }
+            if (found && found->malId == 0) {
+                found->malId = wanted.malId;
+            }
+            return found;
+        },
+        [this, generation, entry, title, provider](std::optional<ryu::Show> found) {
+            if (generation != searchGeneration_) {
+                return;
+            }
+            loadFinished();
+            if (!found) {
+                setStatus(title + " wasn't found on " + provider);
+                wxMessageBox(title + " wasn't found on " + provider + ".", "Recently watched",
+                             wxOK | wxICON_INFORMATION, this);
+                return;
+            }
+            showRecent(*found, entry.episode);
+        },
+        [this, generation](const std::string& message) {
+            if (generation == searchGeneration_) {
+                loadFinished();
+                setStatus("Search failed");
+                showError("Search failed", message);
+            }
+        });
+}
+
+void MainFrame::showRecent(const ryu::Show& show, const std::string& episode) {
+    ++searchGeneration_;
+    shows_ = {show};
+    episodes_.clear();
+    visibleEpisodes_.clear();
+    ++posterGeneration_;
+    detailsTimer_.Stop();
+    described_.clear();
+    details_->clear();
+    results_->setItems({wxString::FromUTF8(showLabel(show))});
+    results_->selectItem(0);
+    loadEpisodes(episode, true);
 }
 
 void MainFrame::showMalLists() {

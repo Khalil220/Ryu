@@ -117,6 +117,123 @@ TEST_CASE("the MyAnimeList login is saved encrypted and removed on logging out")
     CHECK_FALSE(config.HasGroup("/MyAnimeList"));
 }
 
+namespace {
+
+RecentEntry watched(const std::string& provider, const std::string& id, const std::string& title,
+                    const std::string& episode) {
+    RecentEntry entry;
+    entry.providerId = provider;
+    entry.show.id = id;
+    entry.show.title = title;
+    entry.episode = episode;
+    return entry;
+}
+
+}
+
+TEST_CASE("rememberWatched keeps one entry per show, newest first") {
+    std::vector<RecentEntry> recent;
+    rememberWatched(recent, watched("hianime", "100", "One Piece", "750"));
+    rememberWatched(recent, watched("hianime", "20", "Naruto", "25"));
+    rememberWatched(recent, watched("hianime", "100", "One Piece", "751"));
+
+    REQUIRE(recent.size() == 2);
+    CHECK(recentLabel(recent[0]) == "One Piece episode 751");
+    CHECK(recentLabel(recent[1]) == "Naruto episode 25");
+
+    rememberWatched(recent, watched("miruro", "100", "Bleach", "3"));
+    CHECK(recent.size() == 3);
+    CHECK(recent[0].providerId == "miruro");
+}
+
+TEST_CASE("rememberWatched treats the same anime on another provider as the same entry") {
+    std::vector<RecentEntry> recent;
+    auto first = watched("hianime", "481", "Frieren: Beyond Journey's End", "3");
+    first.show.altTitle = "Sousou no Frieren";
+    rememberWatched(recent, first);
+    rememberWatched(recent, watched("hianime", "20", "Naruto", "25"));
+
+    rememberWatched(recent, watched("anizone", "mdkytdqp", "Sousou no Frieren", "4"));
+    REQUIRE(recent.size() == 2);
+    CHECK(recent[0].providerId == "anizone");
+    CHECK(recent[0].episode == "4");
+    CHECK(recent[1].show.title == "Naruto");
+
+    auto byId = watched("miruro", "abc", "A different spelling", "5");
+    byId.show.malId = 52991;
+    recent[0].show.malId = 52991;
+    rememberWatched(recent, byId);
+    REQUIRE(recent.size() == 2);
+    CHECK(recent[0].providerId == "miruro");
+
+    rememberWatched(recent, watched("miruro", "def", "Frieren: Beyond Journey's End Season 2", "1"));
+    CHECK(recent.size() == 3);
+}
+
+TEST_CASE("rememberWatched stops at fifty shows and drops the oldest") {
+    std::vector<RecentEntry> recent;
+    for (int i = 1; i <= 60; ++i) {
+        rememberWatched(recent, watched("hianime", std::to_string(i), "Show " + std::to_string(i), "1"));
+    }
+    REQUIRE(recent.size() == recentLimit);
+    CHECK(recent.front().show.title == "Show 60");
+    CHECK(recent.back().show.title == "Show 11");
+}
+
+TEST_CASE("recently watched shows are saved with what's needed to load them again, and cleared when emptied") {
+    wxInitializer init;
+    auto config = configFrom("");
+    CHECK(loadSettings(config).recent.empty());
+
+    Settings settings;
+    auto piece = watched("hianime", "100", "One Piece", "750");
+    piece.show.altTitle = "ONE PIECE";
+    piece.show.format = "TV";
+    piece.show.year = 1999;
+    piece.show.subEpisodes = 1180;
+    piece.show.dubEpisodes = 1155;
+    piece.show.malId = 21;
+    piece.show.posterUrl = "https://example.test/one-piece.webp";
+    piece.show.synopsis = "Not saved.";
+    piece.audio = Audio::Dub;
+    auto frieren = watched("anizone", "mdkytdqp", "Sousou no Frieren", "12.5");
+    frieren.show.episodeCount = 28;
+    frieren.show.pageUrl = "https://anizone.to/anime/mdkytdqp";
+    settings.recent = {piece, frieren};
+    saveSettings(config, settings);
+
+    const auto loaded = loadSettings(config).recent;
+    REQUIRE(loaded.size() == 2);
+    CHECK(loaded[0].providerId == "hianime");
+    CHECK(loaded[0].show.id == "100");
+    CHECK(loaded[0].show.title == "One Piece");
+    CHECK(loaded[0].show.altTitle == "ONE PIECE");
+    CHECK(loaded[0].show.format == "TV");
+    CHECK(loaded[0].show.year == 1999);
+    CHECK(loaded[0].show.subEpisodes == 1180);
+    CHECK(loaded[0].show.dubEpisodes == 1155);
+    CHECK(loaded[0].show.malId == 21);
+    CHECK(loaded[0].show.posterUrl == "https://example.test/one-piece.webp");
+    CHECK(loaded[0].show.synopsis.empty());
+    CHECK(loaded[0].episode == "750");
+    CHECK(loaded[0].audio == Audio::Dub);
+    CHECK(loaded[1].providerId == "anizone");
+    CHECK(loaded[1].show.episodeCount == 28);
+    CHECK(loaded[1].show.pageUrl == "https://anizone.to/anime/mdkytdqp");
+    CHECK(loaded[1].episode == "12.5");
+    CHECK(loaded[1].audio == Audio::Sub);
+
+    settings.recent.erase(settings.recent.begin());
+    saveSettings(config, settings);
+    const auto fewer = loadSettings(config).recent;
+    REQUIRE(fewer.size() == 1);
+    CHECK(fewer[0].show.title == "Sousou no Frieren");
+
+    settings.recent.clear();
+    saveSettings(config, settings);
+    CHECK_FALSE(config.HasGroup("/Recent"));
+}
+
 TEST_CASE("an unknown provider in the file falls back to the first registered one") {
     wxInitializer init;
     auto config = configFrom("Provider=wcostream\nAudio=dub\n");

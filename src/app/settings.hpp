@@ -13,6 +13,7 @@
 #include <optional>
 #include <string>
 #include <thread>
+#include <vector>
 
 class wxConfigBase;
 class wxFileConfig;
@@ -48,6 +49,18 @@ struct MalAccount {
     bool operator==(const MalAccount&) const = default;
 };
 
+struct RecentEntry {
+    std::string providerId;
+    Show show;
+    std::string episode;
+    Audio audio = Audio::Sub;
+};
+
+inline constexpr size_t recentLimit = 50;
+
+void rememberWatched(std::vector<RecentEntry>& recent, RecentEntry entry);
+std::string recentLabel(const RecentEntry& entry);
+
 struct Settings {
     std::string providerId = "hianime";
     Theme theme = Theme::Dark;
@@ -63,6 +76,7 @@ struct Settings {
     std::string audioLanguageDubbed;
     WindowPlacement window;
     MalAccount mal;
+    std::vector<RecentEntry> recent;
 
     bool readSubtitlesFor(Audio kind) const { return kind == Audio::Dub ? readSubtitlesDubbed : readSubtitlesSubbed; }
     const SubtitlePreference& subtitlesFor(Audio kind) const {

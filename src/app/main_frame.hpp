@@ -16,6 +16,8 @@
 
 class wxButton;
 class wxChoice;
+class wxMenu;
+class wxMenuItem;
 class wxPanel;
 class wxSimplebook;
 class wxTextCtrl;
@@ -44,7 +46,10 @@ private:
     void createControls();
     void applySettings();
     void startSearch(std::optional<MalAnime> sought = std::nullopt, bool retried = false);
-    void loadEpisodes(int preferredNumber = 0);
+    void loadEpisodes(const std::string& preferredNumber = {}, bool play = false);
+    void refreshRecentMenu();
+    void playRecent(size_t index);
+    void showRecent(const ryu::Show& show, const std::string& episode);
     void showMalLists();
     void leaveMalLists();
     void refreshMalLists();
@@ -97,6 +102,8 @@ private:
     std::set<std::string> described_;
 
     int malListsId_ = 0;
+    wxMenu* recentMenu_ = nullptr;
+    wxMenuItem* recentItem_ = nullptr;
     wxWindow* focusBeforeLists_ = nullptr;
     MalPage* malPage_ = nullptr;
     wxSimplebook* book_ = nullptr;
