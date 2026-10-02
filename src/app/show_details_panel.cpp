@@ -2,6 +2,7 @@
 
 #include "format.hpp"
 
+#include <wx/bmpbndl.h>
 #include <wx/image.h>
 #include <wx/scrolwin.h>
 #include <wx/settings.h>
@@ -109,7 +110,13 @@ void ShowDetailsPanel::showDetails(const ryu::Show& show) {
     }
 }
 
-void ShowDetailsPanel::setPoster(const wxBitmap& poster) {
+wxBitmapBundle ShowDetailsPanel::posterFrom(const wxImage& fitted) const {
+    wxBitmap bitmap(fitted);
+    bitmap.SetScaleFactor(GetDPIScaleFactor());
+    return bitmap;
+}
+
+void ShowDetailsPanel::setPoster(const wxBitmapBundle& poster) {
     poster_->SetBitmap(poster);
     Layout();
 }

@@ -486,10 +486,10 @@ void MainFrame::loadPoster(const std::string& url, unsigned generation) {
             return fitPoster(image, box);
         },
         [this, generation, url](wxImage poster) {
-            const wxBitmap bitmap(poster);
-            posterCache_.put(url, bitmap);
+            const auto bundle = details_->posterFrom(poster);
+            posterCache_.put(url, bundle);
             if (generation == posterGeneration_) {
-                details_->setPoster(bitmap);
+                details_->setPoster(bundle);
             }
         },
         [](const std::string&) {});

@@ -4,7 +4,7 @@
 
 #include <wx/panel.h>
 
-class wxBitmap;
+class wxBitmapBundle;
 class wxImage;
 class wxStaticBitmap;
 class wxStaticText;
@@ -20,7 +20,8 @@ public:
     explicit ShowDetailsPanel(wxWindow* parent);
 
     void showDetails(const ryu::Show& show);
-    void setPoster(const wxBitmap& poster);
+    wxBitmapBundle posterFrom(const wxImage& fitted) const;
+    void setPoster(const wxBitmapBundle& poster);
     void clearPoster();
     void clear();
     wxSize posterSize() const { return posterSize_; }

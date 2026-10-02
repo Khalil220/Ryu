@@ -4,7 +4,7 @@
 #include "provider.hpp"
 #include "settings.hpp"
 
-#include <wx/bitmap.h>
+#include <wx/bmpbndl.h>
 #include <wx/frame.h>
 #include <wx/timer.h>
 
@@ -79,7 +79,7 @@ private:
     unsigned episodeGeneration_ = 0;
     unsigned streamGeneration_ = 0;
     unsigned posterGeneration_ = 0;
-    LruCache<std::string, wxBitmap> posterCache_{posterCacheSize};
+    LruCache<std::string, wxBitmapBundle> posterCache_{posterCacheSize};
     wxTimer detailsTimer_;
     wxTimer loadingTimer_;
     wxString loadingMessage_;
