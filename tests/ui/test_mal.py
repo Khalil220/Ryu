@@ -28,6 +28,9 @@ CATALOGUE = {
             "media_type": "tv", "num_episodes": 10, "start_season": {"year": 2026, "season": "winter"}},
     21: {"id": 21, "title": "One Piece", "alternative_titles": {"synonyms": [], "en": "One Piece", "ja": ""},
          "media_type": "tv", "num_episodes": 0, "start_season": {"year": 1999, "season": "fall"}},
+    35860: {"id": 35860, "title": "Karakai Jouzu no Takagi-san",
+            "alternative_titles": {"synonyms": [], "en": "Teasing Master Takagi-san", "ja": ""},
+            "media_type": "tv", "num_episodes": 12, "start_season": {"year": 2018, "season": "winter"}},
     11061: {"id": 11061, "title": "Hunter x Hunter (2011)",
             "alternative_titles": {"synonyms": ["HxH (2011)"], "en": "Hunter x Hunter", "ja": ""},
             "media_type": "tv", "num_episodes": 148, "start_season": {"year": 2011, "season": "fall"}},
@@ -43,6 +46,7 @@ STARTING_LISTS = {
     21: {"status": "watching", "score": 0, "num_episodes_watched": 1100, "is_rewatching": False},
     59978: {"status": "plan_to_watch", "score": 0, "num_episodes_watched": 0, "is_rewatching": False},
     136: {"status": "completed", "score": 9, "num_episodes_watched": 62, "is_rewatching": False},
+    35860: {"status": "plan_to_watch", "score": 0, "num_episodes_watched": 0, "is_rewatching": False},
 }
 
 
@@ -50,6 +54,8 @@ class FakeMal(http.server.BaseHTTPRequestHandler):
     token_requests = []
     lists = copy.deepcopy(STARTING_LISTS)
     writes = []
+    refused = []
+    fail_writes = 0
 
     def reply(self, status, body):
         data = json.dumps(body).encode()
@@ -120,6 +126,11 @@ class FakeMal(http.server.BaseHTTPRequestHandler):
             return
         if anime_id not in CATALOGUE:
             self.reply(404, {"error": "not_found"})
+            return
+        if FakeMal.fail_writes > 0:
+            FakeMal.fail_writes -= 1
+            FakeMal.refused.append((anime_id, form))
+            self.reply(503, {"message": "down for maintenance"})
             return
         FakeMal.writes.append(("PATCH", anime_id, form))
         status = FakeMal.lists.setdefault(anime_id, {"status": "watching", "score": 0, "num_episodes_watched": 0,
@@ -326,6 +337,21 @@ def edit_dialog(main):
 def lists_flow(exe, env, speech_log, urls_file):
     FakeMal.lists = copy.deepcopy(STARTING_LISTS)
     FakeMal.writes.clear()
+    FakeMal.refused.clear()
+    FakeMal.fail_writes = 0
+    settings = env["RYU_CONFIG_FILE"]
+
+    def saved():
+        try:
+            with open(settings, encoding="utf-8") as f:
+                return f.read()
+        except FileNotFoundError:
+            return ""
+
+    def status_text():
+        return " ".join(text.window_text() for text in main.child_window(control_type="StatusBar").descendants())
+
+    takagi = "Teasing Master Takagi-san, 12 episodes"
     process, main = launch(exe, env)
     try:
         preferences = open_preferences(main)
@@ -352,7 +378,8 @@ def lists_flow(exe, env, speech_log, urls_file):
         alerts = [window.window_text() for window in main.children(control_type="Window")]
         check(not alerts, f"opening the anime list's context menu twice raises no alert ({alerts})")
         chooser.select("Plan to watch")
-        check(wait_for(lambda: labels(anime) == ["Frieren: Beyond Journey's End Season 2, 10 episodes"], 5) is not None,
+        check(wait_for(lambda: labels(anime) == ["Frieren: Beyond Journey's End Season 2, 10 episodes", takagi], 5)
+              is not None,
               f"choosing another list shows its anime ({labels(anime)})")
         chooser.select("Dropped")
         check(wait_for(lambda: labels(anime) == ["Nothing on your Dropped list"], 5) is not None and
@@ -510,6 +537,60 @@ def lists_flow(exe, env, speech_log, urls_file):
             dialog.child_window(title="Cancel", control_type="Button").invoke()
             wait_for(lambda: not dialog.exists(), 5)
 
+        search.set_edit_text("frieren")
+        main.child_window(title="Search", control_type="Button").invoke()
+        found = wait_for(lambda: [item for item in items(results)
+                                  if item.window_text().startswith("Frieren: Beyond Journey's End, TV")], 30)
+        if not found:
+            check(False, "searching for Frieren finds the series again")
+            return
+        results.set_focus()
+        found[0].select()
+        send_keys("{ENTER}")
+        episode_items = wait_for(lambda: items(episodes) if len(items(episodes)) > 6 else None, 45)
+        check(bool(episode_items) and wait_for(lambda: episode_items[6].is_selected(), 10) is not None,
+              "opening a listed show from an ordinary search also lands on the next episode, the seventh")
+
+        FakeMal.fail_writes = 1
+        send_keys("{ENTER}")
+        wait_for(lambda: re.match(r"Episode 7: .* - Ryu$", main.window_text()), 60)
+        check(wait_for(lambda: FakeMal.refused == [(52991, {"num_watched_episodes": "7"})], 60) is not None,
+              f"the update for episode 7 is sent and MyAnimeList refuses it ({FakeMal.refused})")
+        check(wait_for(lambda: "Could not update MyAnimeList" in status_text(), 10) is not None and
+              wait_for(lambda: "[MalPending" in saved(), 10) is not None,
+              f"the status bar says so and the update is kept in the settings file ({status_text()})")
+        wait_for(main.child_window(title="Pause", control_type="Button").has_keyboard_focus, 10)
+        send_keys("{ESC}")
+        wait_for(search.exists, 10)
+        chooser, anime = open_lists(main)
+        check(wait_for(lambda: ("PATCH", {"num_watched_episodes": "7"}) in writes_to(52991), 20) is not None,
+              f"the kept update is sent the next time Ryu talks to MyAnimeList ({writes_to(52991)})")
+        check(wait_for(lambda: "[MalPending" not in saved(), 10) is not None and
+              wait_for(lambda: "Frieren: Beyond Journey's End, 7 of 28 episodes" in labels(anime), 10) is not None,
+              f"and it is then forgotten, with the list showing the new count ({labels(anime)})")
+
+        chooser.select("Plan to watch")
+        planned = wait_for(lambda: [item for item in items(anime) if item.window_text() == takagi], 10)
+        check(bool(planned), f"a planned show is on the Plan to watch list ({labels(anime)})")
+        if not planned:
+            return
+        anime.set_focus()
+        planned[0].select()
+        send_keys("{ENTER}")
+        episode_items = wait_for(lambda: items(episodes) if search.exists() and len(items(episodes)) == 12 else None, 45)
+        check(bool(episode_items) and wait_for(lambda: episode_items[0].is_selected() and
+                                               (episodes.has_keyboard_focus() or
+                                                episode_items[0].has_keyboard_focus()), 10) is not None,
+              "opening a planned show lands on its first episode")
+        send_keys("{ENTER}")
+        wait_for(lambda: re.match(r"Episode 1\b.* - Ryu$", main.window_text()), 60)
+        started = {"status": "watching", "num_watched_episodes": "1", "start_date": time.strftime("%Y-%m-%d")}
+        check(wait_for(lambda: ("PATCH", started) in writes_to(35860), 60) is not None,
+              f"watching its first episode moves it to Watching, with the count and today as the start ({writes_to(35860)})")
+        wait_for(main.child_window(title="Pause", control_type="Button").has_keyboard_focus, 10)
+        send_keys("{ESC}")
+        wait_for(search.exists, 10)
+
         search.set_edit_text("one piece")
         main.child_window(title="Search", control_type="Button").invoke()
         found = wait_for(lambda: [item for item in items(results) if item.window_text().startswith("One Piece, TV")], 30)
@@ -527,10 +608,12 @@ def lists_flow(exe, env, speech_log, urls_file):
               f"Ctrl+M on a result that isn't listed looks it up and offers to add it "
               f"({chosen.selected_text() if chosen.exists() else None})")
         if dialog.exists():
+            chosen.select("One Piece: The Movie, Movie, 2000, 1 episode")
             dialog.child_window(title="Status", control_type="ComboBox").select("Plan to watch")
             dialog.child_window(title="Save", control_type="Button").invoke()
-        check(wait_for(lambda: ("PATCH", {"status": "plan_to_watch"}) in writes_to(21), 10) is not None,
-              f"saving adds it to the chosen list ({writes_to(21)})")
+        check(wait_for(lambda: ("PATCH", {"status": "plan_to_watch"}) in writes_to(459), 10) is not None and
+              not [write for write in writes_to(21) if write[1] == {"status": "plan_to_watch"}],
+              f"saving adds the anime picked in the dialog, not the first guess ({writes_to(459)})")
 
         search.set_edit_text("hunter x hunter")
         main.child_window(title="Search", control_type="Button").invoke()
@@ -559,12 +642,37 @@ def lists_flow(exe, env, speech_log, urls_file):
 
         chooser, anime = open_lists(main)
         chooser.select("Plan to watch")
-        check(wait_for(lambda: "One Piece" in labels(anime), 10) is not None,
+        check(wait_for(lambda: "One Piece: The Movie, 1 episode" in labels(anime), 10) is not None,
               f"the added anime shows up on that list ({labels(anime)})")
         send_keys("{ESC}")
         check(wait_for(lambda: results.exists() and
                        (results.has_keyboard_focus() or any(i.has_keyboard_focus() for i in items(results))), 10)
               is not None, "Escape leaves the lists and puts focus back where it was")
+        wait_for(lambda: "[MalMatches" in saved(), 10)
+        main.close()
+        process.wait(15)
+
+        process, main = launch(exe, env)
+        search = main.child_window(title="Search", control_type="Edit")
+        results = main.child_window(title="Results", control_type="List")
+        search.set_edit_text("one piece")
+        main.child_window(title="Search", control_type="Button").invoke()
+        found = wait_for(lambda: [item for item in items(results) if item.window_text().startswith("One Piece, TV")], 30)
+        if found:
+            results.set_focus()
+            found[0].select()
+            send_keys("^m", vk_packet=False)
+            dialog = edit_dialog(main)
+            check(dialog.exists() and dialog.window_text() == "Edit on MyAnimeList" and
+                  any(text.startswith("One Piece: The Movie, Movie, 2000, 1 episode, on your Plan to watch list")
+                      for text in texts(dialog)),
+                  f"after a restart the show still goes to the entry that was picked for it "
+                  f"({texts(dialog)[:1] if dialog.exists() else None})")
+            if dialog.exists():
+                dialog.child_window(title="Cancel", control_type="Button").invoke()
+                wait_for(lambda: not dialog.exists(), 5)
+        else:
+            check(False, "searching for One Piece after the restart finds the series")
         main.close()
         process.wait(15)
     finally:

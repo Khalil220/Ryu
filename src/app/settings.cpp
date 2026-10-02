@@ -9,6 +9,7 @@
 #include <wx/sstream.h>
 #include <wx/wfstream.h>
 
+#include <charconv>
 #include <chrono>
 #include <fstream>
 
@@ -89,20 +90,50 @@ WindowPlacement fitToArea(const WindowPlacement& saved, const ScreenArea& area, 
     return fitted;
 }
 
-void rememberWatched(std::vector<RecentEntry>& recent, RecentEntry entry) {
-    const auto sameAnime = [](const Show& left, const Show& right) {
-        if (left.malId > 0 && left.malId == right.malId) {
-            return true;
-        }
-        for (const auto& mine : {left.title, left.altTitle}) {
-            for (const auto& theirs : {right.title, right.altTitle}) {
-                if (!mine.empty() && normalizeTitle(mine) == normalizeTitle(theirs)) {
-                    return true;
-                }
+namespace {
+
+bool sameAnime(const Show& left, const Show& right) {
+    if (left.malId > 0 && left.malId == right.malId) {
+        return true;
+    }
+    for (const auto& mine : {left.title, left.altTitle}) {
+        for (const auto& theirs : {right.title, right.altTitle}) {
+            if (!mine.empty() && normalizeTitle(mine) == normalizeTitle(theirs)) {
+                return true;
             }
         }
-        return false;
-    };
+    }
+    return false;
+}
+
+double episodeValue(const std::string& number) {
+    double value = 0;
+    const auto parsed = std::from_chars(number.data(), number.data() + number.size(), value);
+    return parsed.ec == std::errc() ? value : 0;
+}
+
+}
+
+void rememberPending(std::vector<PendingProgress>& pending, PendingProgress progress) {
+    for (auto& other : pending) {
+        if (sameAnime(other.show, progress.show)) {
+            if (episodeValue(progress.episode) > episodeValue(other.episode)) {
+                other = std::move(progress);
+            }
+            return;
+        }
+    }
+    pending.push_back(std::move(progress));
+    if (pending.size() > savedListLimit) {
+        pending.erase(pending.begin());
+    }
+}
+
+std::string malMatchKey(const std::string& providerId, const std::string& showId) {
+    return providerId + " " + showId;
+}
+
+void rememberWatched(std::vector<RecentEntry>& recent, RecentEntry entry) {
     std::erase_if(recent, [&](const RecentEntry& other) {
         return (other.providerId == entry.providerId && other.show.id == entry.show.id) ||
                sameAnime(other.show, entry.show);
@@ -176,6 +207,30 @@ Settings loadSettings(wxConfigBase& config) {
         entry.audio = text("Audio") == "dub" ? Audio::Dub : Audio::Sub;
         settings.recent.push_back(std::move(entry));
     }
+    for (size_t i = 1; i <= savedListLimit; ++i) {
+        const auto key = wxString::Format("/MalMatches/%zu/", i);
+        const auto show = config.Read(key + "Show", wxString()).utf8_string();
+        const auto id = static_cast<int>(config.ReadLong(key + "Id", 0));
+        if (show.empty() || id <= 0) {
+            break;
+        }
+        settings.malMatches[show] = id;
+    }
+    for (size_t i = 1; i <= savedListLimit; ++i) {
+        const auto key = wxString::Format("/MalPending/%zu/", i);
+        PendingProgress progress;
+        progress.show.title = config.Read(key + "Title", wxString()).utf8_string();
+        progress.episode = config.Read(key + "Episode", wxString()).utf8_string();
+        progress.date = config.Read(key + "Date", wxString()).utf8_string();
+        if (progress.show.title.empty() || progress.episode.empty()) {
+            break;
+        }
+        progress.show.altTitle = config.Read(key + "AltTitle", wxString()).utf8_string();
+        progress.show.format = config.Read(key + "Format", wxString()).utf8_string();
+        progress.show.year = static_cast<int>(config.ReadLong(key + "Year", 0));
+        progress.show.malId = static_cast<int>(config.ReadLong(key + "MalId", 0));
+        settings.malPending.push_back(std::move(progress));
+    }
     return settings;
 }
 
@@ -244,6 +299,28 @@ void saveSettings(wxConfigBase& config, const Settings& settings) {
         text("Page", entry.show.pageUrl);
         text("Poster", entry.show.posterUrl);
         text("Audio", entry.audio == Audio::Dub ? "dub" : "sub");
+    }
+    config.DeleteGroup("/MalMatches");
+    size_t position = 0;
+    for (const auto& [show, id] : settings.malMatches) {
+        if (++position > savedListLimit) {
+            break;
+        }
+        const auto key = wxString::Format("/MalMatches/%zu/", position);
+        config.Write(key + "Show", wxString::FromUTF8(show));
+        config.Write(key + "Id", static_cast<long>(id));
+    }
+    config.DeleteGroup("/MalPending");
+    for (size_t i = 0; i < settings.malPending.size() && i < savedListLimit; ++i) {
+        const auto& progress = settings.malPending[i];
+        const auto key = wxString::Format("/MalPending/%zu/", i + 1);
+        config.Write(key + "Title", wxString::FromUTF8(progress.show.title));
+        config.Write(key + "Episode", wxString::FromUTF8(progress.episode));
+        config.Write(key + "Date", wxString::FromUTF8(progress.date));
+        config.Write(key + "AltTitle", wxString::FromUTF8(progress.show.altTitle));
+        config.Write(key + "Format", wxString::FromUTF8(progress.show.format));
+        config.Write(key + "Year", static_cast<long>(progress.show.year));
+        config.Write(key + "MalId", static_cast<long>(progress.show.malId));
     }
 }
 

@@ -127,6 +127,7 @@ MainFrame::MainFrame(SettingsStore& store)
         if (book_->GetSelection() == listsPage) {
             malPage_->showEntries(mal_->entries(), mal_->entriesLoaded());
         }
+        sendPendingProgress();
     });
     GetMenuBar()->Enable(malListsId_, mal_->loggedIn());
     if (mal_->loggedIn()) {
@@ -368,6 +369,7 @@ void MainFrame::startSearch(std::optional<MalAnime> sought, bool retried) {
                 return;
             }
             shows_ = std::move(shows);
+            applySavedMatches();
             std::optional<size_t> found;
             if (sought) {
                 found = matchShowForMal(*sought, shows_);
@@ -413,6 +415,12 @@ void MainFrame::loadEpisodes(const std::string& preferredNumber, bool play) {
         return;
     }
     currentShow_ = shows_[index];
+    auto wanted = preferredNumber;
+    if (wanted.empty() && mal_->entriesLoaded()) {
+        if (const auto match = matchMalAnime(currentShow_, mal_->entries())) {
+            wanted = std::to_string(mal_->entries()[*match].list.watched + 1);
+        }
+    }
     const unsigned generation = ++episodeGeneration_;
     episodes_.clear();
     visibleEpisodes_.clear();
@@ -424,15 +432,15 @@ void MainFrame::loadEpisodes(const std::string& preferredNumber, bool play) {
     auto session = session_;
     runInBackground<std::vector<Episode>>(
         alive_, [session, show = currentShow_] { return session->primary().episodes(show); },
-        [this, generation, title, preferredNumber, play](std::vector<Episode> episodes) {
+        [this, generation, title, wanted, play](std::vector<Episode> episodes) {
             if (generation != episodeGeneration_) {
                 return;
             }
             loadFinished();
             episodes_ = std::move(episodes);
             std::optional<size_t> preferred;
-            for (size_t i = 0; !preferredNumber.empty() && i < episodes_.size(); ++i) {
-                if (sameEpisodeNumber(episodes_[i].number, preferredNumber)) {
+            for (size_t i = 0; !wanted.empty() && i < episodes_.size(); ++i) {
+                if (sameEpisodeNumber(episodes_[i].number, wanted)) {
                     preferred = i;
                 }
             }
@@ -773,6 +781,7 @@ void MainFrame::playRecent(size_t index) {
 void MainFrame::showRecent(const ryu::Show& show, const std::string& episode) {
     ++searchGeneration_;
     shows_ = {show};
+    applySavedMatches();
     episodes_.clear();
     visibleEpisodes_.clear();
     ++posterGeneration_;
@@ -869,14 +878,9 @@ void MainFrame::editOnMal(std::vector<MalAnime> candidates, size_t selected, con
     }
     const auto anime = dialog.anime();
     if (!showId.empty()) {
-        for (auto& show : shows_) {
-            if (show.id == showId) {
-                show.malId = anime.id;
-            }
-        }
-        if (currentShow_.id == showId) {
-            currentShow_.malId = anime.id;
-        }
+        settings_.malMatches[malMatchKey(settings_.provider().id, showId)] = anime.id;
+        store_.save(settings_);
+        applySavedMatches();
     }
     if (answer == wxID_DELETE) {
         removeFromMal(anime, false);
@@ -916,35 +920,105 @@ void MainFrame::removeFromMal(const MalAnime& anime, bool confirm) {
     });
 }
 
+void MainFrame::applySavedMatches() {
+    const auto& provider = settings_.provider().id;
+    const auto saved = [&](ryu::Show& show) {
+        const auto key = malMatchKey(provider, show.id);
+        for (const auto* matches : {&settings_.malMatches, &sessionMatches_}) {
+            if (const auto match = matches->find(key); match != matches->end()) {
+                show.malId = match->second;
+                return;
+            }
+        }
+    };
+    for (auto& show : shows_) {
+        saved(show);
+    }
+    saved(currentShow_);
+}
+
 void MainFrame::trackProgress() {
     if (!mal_->loggedIn() || currentEpisode_ >= episodes_.size()) {
         return;
     }
-    const auto update = [this, show = currentShow_, number = episodes_[currentEpisode_].number] {
-        const auto match = matchMalAnime(show, mal_->entries());
-        if (!match) {
-            return;
-        }
-        const auto anime = mal_->entries()[*match];
-        const auto changes = malProgress(anime, number, wxDateTime::Now().FormatISODate().utf8_string());
-        if (!changes) {
-            return;
-        }
-        logLine("Marking episode " + number + " of " + malTitle(anime) + " as watched on MyAnimeList");
-        mal_->save(anime, *changes, [this, anime, changes](const std::string& error) {
-            setStatus(error.empty() ? wxString::FromUTF8(malProgressMessage(anime, *changes))
-                                    : wxString("Could not update MyAnimeList"));
-        });
-    };
+    const PendingProgress progress{currentShow_, episodes_[currentEpisode_].number,
+                                   wxDateTime::Now().FormatISODate().utf8_string()};
     if (mal_->entriesLoaded()) {
-        update();
+        applyProgress(progress);
         return;
     }
-    mal_->refresh([update](const std::string& error) {
+    mal_->refresh([this, progress](const std::string& error) {
         if (error.empty()) {
-            update();
+            applyProgress(progress);
+        } else {
+            keepProgress(progress);
         }
     });
+}
+
+void MainFrame::applyProgress(const PendingProgress& progress) {
+    if (progress.show.malId == 0) {
+        if (!matchMalAnime(progress.show, mal_->entries())) {
+            return;
+        }
+        mal_->run<int>(
+            [show = progress.show](MalClient& client) {
+                const auto candidates = findMalCandidates(client, show);
+                const auto match = matchMalAnime(show, candidates);
+                return match ? candidates[*match].id : 0;
+            },
+            [this, progress](int id) {
+                if (id == 0) {
+                    logLine("Not tracking " + progress.show.title + ": it isn't clear which MyAnimeList entry it is");
+                    return;
+                }
+                auto known = progress;
+                known.show.malId = id;
+                if (!known.show.id.empty()) {
+                    sessionMatches_[malMatchKey(settings_.provider().id, known.show.id)] = id;
+                    applySavedMatches();
+                }
+                applyProgress(known);
+            },
+            [this, progress](const std::string&) { keepProgress(progress); });
+        return;
+    }
+    const auto match = matchMalAnime(progress.show, mal_->entries());
+    if (!match) {
+        return;
+    }
+    const auto anime = mal_->entries()[*match];
+    const auto changes = malProgress(anime, progress.episode, progress.date);
+    if (!changes) {
+        return;
+    }
+    logLine("Marking episode " + progress.episode + " of " + malTitle(anime) + " as watched on MyAnimeList");
+    mal_->save(anime, *changes, [this, anime, changes, progress](const std::string& error) {
+        if (error.empty()) {
+            setStatus(wxString::FromUTF8(malProgressMessage(anime, *changes)));
+            return;
+        }
+        setStatus("Could not update MyAnimeList");
+        keepProgress(progress);
+    });
+}
+
+void MainFrame::keepProgress(const PendingProgress& progress) {
+    logLine("Keeping episode " + progress.episode + " of " + progress.show.title + " to send to MyAnimeList later");
+    rememberPending(settings_.malPending, progress);
+    store_.save(settings_);
+}
+
+void MainFrame::sendPendingProgress() {
+    if (settings_.malPending.empty() || !mal_->loggedIn() || !mal_->entriesLoaded()) {
+        return;
+    }
+    const auto pending = std::move(settings_.malPending);
+    settings_.malPending.clear();
+    store_.save(settings_);
+    for (const auto& progress : pending) {
+        applyProgress(progress);
+    }
 }
 
 void MainFrame::showPreferences() {

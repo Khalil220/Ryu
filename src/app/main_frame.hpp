@@ -58,6 +58,10 @@ private:
     void editOnMal(std::vector<MalAnime> candidates, size_t selected, const std::string& showId);
     void removeFromMal(const MalAnime& anime, bool confirm);
     void trackProgress();
+    void applyProgress(const PendingProgress& progress);
+    void keepProgress(const PendingProgress& progress);
+    void sendPendingProgress();
+    void applySavedMatches();
     void showEpisodes(size_t preferred);
     void showSelectedDetails();
     void speakSynopsis();
@@ -89,6 +93,7 @@ private:
     ryu::Show currentShow_;
     size_t currentEpisode_ = 0;
     std::optional<size_t> pendingEpisode_;
+    std::map<std::string, int> sessionMatches_;
     wxRect normalRect_;
     Audio playingAudio_ = Audio::Sub;
     unsigned searchGeneration_ = 0;

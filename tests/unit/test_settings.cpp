@@ -234,6 +234,70 @@ TEST_CASE("recently watched shows are saved with what's needed to load them agai
     CHECK_FALSE(config.HasGroup("/Recent"));
 }
 
+namespace {
+
+PendingProgress unsent(const std::string& title, const std::string& episode, int malId = 0) {
+    PendingProgress progress;
+    progress.show.title = title;
+    progress.show.malId = malId;
+    progress.episode = episode;
+    progress.date = "2026-10-02";
+    return progress;
+}
+
+}
+
+TEST_CASE("rememberPending keeps one unsent update per anime, the furthest episode") {
+    std::vector<PendingProgress> pending;
+    rememberPending(pending, unsent("Frieren: Beyond Journey's End", "6"));
+    rememberPending(pending, unsent("One Piece", "1101", 21));
+    rememberPending(pending, unsent("Frieren: Beyond Journey's End", "7"));
+    rememberPending(pending, unsent("frieren beyond journey's end", "5"));
+    rememberPending(pending, unsent("A different title for it", "1102", 21));
+
+    REQUIRE(pending.size() == 2);
+    CHECK(pending[0].episode == "7");
+    CHECK(pending[1].episode == "1102");
+    CHECK(pending[1].show.title == "A different title for it");
+}
+
+TEST_CASE("chosen MyAnimeList matches and unsent progress survive a restart") {
+    wxInitializer init;
+    auto config = configFrom("");
+    CHECK(loadSettings(config).malMatches.empty());
+    CHECK(loadSettings(config).malPending.empty());
+
+    Settings settings;
+    settings.malMatches[malMatchKey("hianime", "100")] = 21;
+    settings.malMatches[malMatchKey("anizone", "mdkytdqp")] = 52991;
+    auto progress = unsent("Frieren: Beyond Journey's End", "7", 52991);
+    progress.show.altTitle = "Sousou no Frieren";
+    progress.show.format = "TV";
+    progress.show.year = 2023;
+    progress.show.synopsis = "Not saved.";
+    settings.malPending = {progress, unsent("One Piece", "1101")};
+    saveSettings(config, settings);
+
+    const auto loaded = loadSettings(config);
+    CHECK(loaded.malMatches == settings.malMatches);
+    REQUIRE(loaded.malPending.size() == 2);
+    CHECK(loaded.malPending[0].show.title == "Frieren: Beyond Journey's End");
+    CHECK(loaded.malPending[0].show.altTitle == "Sousou no Frieren");
+    CHECK(loaded.malPending[0].show.format == "TV");
+    CHECK(loaded.malPending[0].show.year == 2023);
+    CHECK(loaded.malPending[0].show.malId == 52991);
+    CHECK(loaded.malPending[0].show.synopsis.empty());
+    CHECK(loaded.malPending[0].episode == "7");
+    CHECK(loaded.malPending[0].date == "2026-10-02");
+    CHECK(loaded.malPending[1].show.title == "One Piece");
+
+    settings.malMatches.clear();
+    settings.malPending.clear();
+    saveSettings(config, settings);
+    CHECK_FALSE(config.HasGroup("/MalMatches"));
+    CHECK_FALSE(config.HasGroup("/MalPending"));
+}
+
 TEST_CASE("an unknown provider in the file falls back to the first registered one") {
     wxInitializer init;
     auto config = configFrom("Provider=wcostream\nAudio=dub\n");

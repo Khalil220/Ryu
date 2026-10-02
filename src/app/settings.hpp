@@ -56,7 +56,17 @@ struct RecentEntry {
     Audio audio = Audio::Sub;
 };
 
+struct PendingProgress {
+    Show show;
+    std::string episode;
+    std::string date;
+};
+
 inline constexpr size_t recentLimit = 50;
+inline constexpr size_t savedListLimit = 500;
+
+void rememberPending(std::vector<PendingProgress>& pending, PendingProgress progress);
+std::string malMatchKey(const std::string& providerId, const std::string& showId);
 
 void rememberWatched(std::vector<RecentEntry>& recent, RecentEntry entry);
 std::string recentLabel(const RecentEntry& entry);
@@ -77,6 +87,8 @@ struct Settings {
     WindowPlacement window;
     MalAccount mal;
     std::vector<RecentEntry> recent;
+    std::map<std::string, int> malMatches;
+    std::vector<PendingProgress> malPending;
 
     bool readSubtitlesFor(Audio kind) const { return kind == Audio::Dub ? readSubtitlesDubbed : readSubtitlesSubbed; }
     const SubtitlePreference& subtitlesFor(Audio kind) const {
