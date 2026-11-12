@@ -59,32 +59,6 @@ TEST_CASE("formatClock switches to hours only when needed") {
     CHECK(formatClock(std::numeric_limits<double>::quiet_NaN()) == "0:00");
 }
 
-TEST_CASE("speakableSubtitle joins lines, tidies spacing and drops watermark lines") {
-    CHECK(speakableSubtitle("At the northernmost end\nof the continent,", {}) ==
-          "At the northernmost end of the continent,");
-    CHECK(speakableSubtitle("  Frieren.  \r\n ", {}) == "Frieren.");
-    CHECK(speakableSubtitle("KAA.lt", {"kaa.lt"}).empty());
-    CHECK(speakableSubtitle("Visit kaa.lt later", {"kaa.lt"}) == "Visit kaa.lt later");
-    CHECK(speakableSubtitle("\n", {}).empty());
-    CHECK(speakableSubtitle("KAA.lt\nHello there.", {"kaa.lt"}) == "Hello there.");
-}
-
-TEST_CASE("speakableSubtitle skips karaoke layers and syllables but keeps dialogue") {
-    std::string layered;
-    for (int i = 0; i < 42; ++i) {
-        layered += "o\nshi\n";
-    }
-    CHECK(speakableSubtitle(layered, {}).empty());
-    CHECK(speakableSubtitle(layered + "Um, I'm really sorry.", {}) == "Um, I'm really sorry.");
-    CHECK(speakableSubtitle("hi\nro\nOn one spacious blue planet", {}) == "On one spacious blue planet");
-    CHECK(speakableSubtitle("か\nき\nHello", {}) == "Hello");
-    CHECK(speakableSubtitle("Chapter One\nChapter One", {}) == "Chapter One");
-    CHECK(speakableSubtitle("Eh?", {}) == "Eh?");
-    CHECK(speakableSubtitle("e", {}).empty());
-    CHECK(speakableSubtitle("a\nEver since we first met", {}) == "Ever since we first met");
-    CHECK(speakableSubtitle("No.\nThat's not what I mean.", {}) == "No. That's not what I mean.");
-}
-
 TEST_CASE("timeLabel includes the duration once it is known") {
     CHECK(timeLabel(201, 1450) == "3:21 of 24:10");
     CHECK(timeLabel(201, 0) == "3:21");

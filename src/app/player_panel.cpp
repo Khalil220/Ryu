@@ -393,7 +393,7 @@ void PlayerPanel::play(const Stream& stream, const std::string& heading, bool re
     pendingSubtitles_ = stream.subtitles;
     subtitlePreference_ = subtitles;
     heading_ = heading;
-    subtitleNoise_ = stream.subtitleNoise;
+    subtitleReader_.setNoise(stream.subtitleNoise);
     intro_ = stream.intro;
     readSubtitles_ = readSubtitles;
     readCheck_->SetValue(readSubtitles);
@@ -442,7 +442,7 @@ void PlayerPanel::resetState(const wxString& timeText) {
     ended_ = false;
     watchedReported_ = false;
     introAnnounced_ = false;
-    lastSubtitle_.clear();
+    subtitleReader_.clear();
     stallWatch_.reset();
     positionSlider_->SetValue(0);
     showPaused(false);
@@ -663,16 +663,8 @@ void PlayerPanel::showAudioChoice(bool show) {
 }
 
 void PlayerPanel::speakSubtitle(const char* raw) {
-    const auto text = speakableSubtitle(raw ? raw : "", subtitleNoise_);
-    if (text.empty()) {
-        lastSubtitle_.clear();
-        return;
-    }
-    if (text == lastSubtitle_) {
-        return;
-    }
-    lastSubtitle_ = text;
-    if (readSubtitles_) {
+    const auto text = subtitleReader_.next(raw ? raw : "");
+    if (!text.empty() && readSubtitles_) {
         announce(wxString::FromUTF8(text), false);
     }
 }

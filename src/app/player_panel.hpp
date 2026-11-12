@@ -3,6 +3,7 @@
 #include "provider.hpp"
 #include "stall_watch.hpp"
 #include "subtitle_choice.hpp"
+#include "subtitle_reader.hpp"
 
 #include <wx/panel.h>
 #include <wx/timer.h>
@@ -91,8 +92,7 @@ private:
     int paused_ = -1;
     bool active_ = false;
     bool readSubtitles_ = false;
-    std::string lastSubtitle_;
-    std::vector<std::string> subtitleNoise_;
+    SubtitleReader subtitleReader_;
     std::optional<TimeRange> intro_;
     bool introAnnounced_ = false;
     bool ended_ = false;
