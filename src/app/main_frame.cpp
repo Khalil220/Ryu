@@ -342,7 +342,7 @@ void MainFrame::applySettings() {
     session_ = std::move(session);
     audioChoice_->SetSelection(settings_.audio == Audio::Dub ? 1 : 0);
     if (browsing()) {
-        SetTitle("Ryu - " + wxString::FromUTF8(settings_.provider().name));
+        showBrowseTitle();
     }
 }
 
@@ -681,7 +681,7 @@ void MainFrame::showBrowser() {
     loadFinished();
     player_->stop();
     book_->ChangeSelection(browsePage);
-    SetTitle("Ryu - " + wxString::FromUTF8(settings_.provider().name));
+    showBrowseTitle();
     setStatus("Stopped");
     if (const auto row = std::ranges::find(visibleEpisodes_, currentEpisode_); row != visibleEpisodes_.end()) {
         episodeList_->selectItem(static_cast<long>(row - visibleEpisodes_.begin()));
@@ -722,7 +722,7 @@ void MainFrame::playRecent(size_t index) {
         showBrowser();
     } else if (book_->GetSelection() == listsPage) {
         book_->ChangeSelection(browsePage);
-        SetTitle("Ryu - " + provider);
+        showBrowseTitle();
         results_->SetFocus();
     }
     audioChoice_->SetSelection(entry.audio == Audio::Dub ? 1 : 0);
@@ -800,7 +800,7 @@ void MainFrame::showMalLists() {
 
 void MainFrame::leaveMalLists() {
     book_->ChangeSelection(browsePage);
-    SetTitle("Ryu - " + wxString::FromUTF8(settings_.provider().name));
+    showBrowseTitle();
     setStatus("Ready");
     auto* focus = focusBeforeLists_ && browsePage_->IsDescendant(focusBeforeLists_) ? focusBeforeLists_ : searchBox_;
     focus->SetFocus();
@@ -820,7 +820,7 @@ void MainFrame::refreshMalLists() {
 
 void MainFrame::openMalEntry(const MalAnime& anime) {
     book_->ChangeSelection(browsePage);
-    SetTitle("Ryu - " + wxString::FromUTF8(settings_.provider().name));
+    showBrowseTitle();
     searchBox_->ChangeValue(wxString::FromUTF8(malTitle(anime)));
     searchBox_->SetFocus();
     startSearch(anime);
@@ -1055,6 +1055,10 @@ void MainFrame::announceIfSlow(const wxString& message) {
 void MainFrame::loadFinished() {
     loadingTimer_.Stop();
     loadingMessage_.clear();
+}
+
+void MainFrame::showBrowseTitle() {
+    SetTitle("Ryu - " + wxString::FromUTF8(settings_.provider().name));
 }
 
 void MainFrame::cancelPendingStream() {

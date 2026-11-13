@@ -74,6 +74,7 @@ private:
     void announceIfSlow(const wxString& message);
     void loadFinished();
     void cancelPendingStream();
+    void showBrowseTitle();
     void refilterEpisodes();
     void clearBrowse();
     void stepEpisode(int delta);
