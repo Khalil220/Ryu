@@ -503,6 +503,7 @@ void PlayerPanel::processEvents() {
                     message += "\n" + wxString::FromUTF8(lastError_);
                 }
                 timeText_->ChangeValue("Failed");
+                stallTimer_.Stop();
                 CallAfter([this, message] { wxMessageBox(message, "Ryu", wxOK | wxICON_ERROR, this); });
             }
             break;
