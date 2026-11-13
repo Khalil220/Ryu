@@ -348,17 +348,7 @@ void MainFrame::startSearch(std::optional<MalAnime> sought, bool retried) {
     }
 
     const unsigned generation = ++searchGeneration_;
-    ++episodeGeneration_;
-    loadFinished();
-    shows_.clear();
-    episodes_.clear();
-    visibleEpisodes_.clear();
-    ++posterGeneration_;
-    detailsTimer_.Stop();
-    described_.clear();
-    details_->clear();
-    results_->setItems({});
-    episodeList_->setItems({});
+    clearBrowse();
     setStatus("Searching for " + query + "...");
 
     auto session = session_;
@@ -422,6 +412,7 @@ void MainFrame::loadEpisodes(const std::string& preferredNumber, bool play) {
         }
     }
     const unsigned generation = ++episodeGeneration_;
+    cancelPendingStream();
     episodes_.clear();
     visibleEpisodes_.clear();
     episodeList_->setItems({});
@@ -686,8 +677,7 @@ void MainFrame::showPlayer(const wxString& title) {
 }
 
 void MainFrame::showBrowser() {
-    ++streamGeneration_;
-    pendingEpisode_.reset();
+    cancelPendingStream();
     loadFinished();
     player_->stop();
     book_->ChangeSelection(browsePage);
@@ -780,6 +770,7 @@ void MainFrame::playRecent(size_t index) {
 
 void MainFrame::showRecent(const ryu::Show& show, const std::string& episode) {
     ++searchGeneration_;
+    cancelPendingStream();
     shows_ = {show};
     applySavedMatches();
     episodes_.clear();
@@ -797,6 +788,8 @@ void MainFrame::showMalLists() {
     if (!mal_->loggedIn() || !browsing()) {
         return;
     }
+    cancelPendingStream();
+    loadFinished();
     focusBeforeLists_ = FindFocus();
     book_->ChangeSelection(listsPage);
     SetTitle("My anime lists - Ryu");
@@ -1037,17 +1030,7 @@ void MainFrame::showPreferences() {
     applySettings();
     if (providerChanged) {
         ++searchGeneration_;
-        ++episodeGeneration_;
-        loadFinished();
-        shows_.clear();
-        episodes_.clear();
-        visibleEpisodes_.clear();
-        ++posterGeneration_;
-        detailsTimer_.Stop();
-        described_.clear();
-        details_->clear();
-        results_->setItems({});
-        episodeList_->setItems({});
+        clearBrowse();
         setStatus("Using " + wxString::FromUTF8(settings_.provider().name));
     }
 }
@@ -1060,6 +1043,26 @@ void MainFrame::announceIfSlow(const wxString& message) {
 void MainFrame::loadFinished() {
     loadingTimer_.Stop();
     loadingMessage_.clear();
+}
+
+void MainFrame::cancelPendingStream() {
+    ++streamGeneration_;
+    pendingEpisode_.reset();
+}
+
+void MainFrame::clearBrowse() {
+    ++episodeGeneration_;
+    cancelPendingStream();
+    loadFinished();
+    shows_.clear();
+    episodes_.clear();
+    visibleEpisodes_.clear();
+    ++posterGeneration_;
+    detailsTimer_.Stop();
+    described_.clear();
+    details_->clear();
+    results_->setItems({});
+    episodeList_->setItems({});
 }
 
 void MainFrame::setStatus(const wxString& text) {

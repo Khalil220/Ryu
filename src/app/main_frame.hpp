@@ -71,6 +71,8 @@ private:
     void playEpisode(size_t index, bool announceNow = false);
     void announceIfSlow(const wxString& message);
     void loadFinished();
+    void cancelPendingStream();
+    void clearBrowse();
     void stepEpisode(int delta);
     void showPlayer(const wxString& title);
     void showBrowser();
