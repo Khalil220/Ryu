@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <memory>
 #include <stdexcept>
 
 #ifdef _WIN32
@@ -116,31 +117,21 @@ std::string aes256CbcDecrypt(std::string_view ciphertext, std::string_view key, 
         throw std::invalid_argument("AES-256-CBC ciphertext must be a non-empty multiple of 16 bytes");
     }
 #ifdef _WIN32
-    BCRYPT_ALG_HANDLE algorithm = nullptr;
-    if (!BCRYPT_SUCCESS(BCryptOpenAlgorithmProvider(&algorithm, BCRYPT_AES_ALGORITHM, nullptr, 0))) {
-        throw std::runtime_error("Could not open the AES provider");
-    }
     BCRYPT_KEY_HANDLE handle = nullptr;
-    auto* mode = const_cast<PUCHAR>(reinterpret_cast<const UCHAR*>(BCRYPT_CHAIN_MODE_CBC));
-    const bool ready =
-        BCRYPT_SUCCESS(BCryptSetProperty(algorithm, BCRYPT_CHAINING_MODE, mode, sizeof(BCRYPT_CHAIN_MODE_CBC), 0)) &&
-        BCRYPT_SUCCESS(BCryptGenerateSymmetricKey(algorithm, &handle, nullptr, 0,
-                                                  reinterpret_cast<PUCHAR>(const_cast<char*>(key.data())),
-                                                  static_cast<ULONG>(key.size()), 0));
+    if (!BCRYPT_SUCCESS(BCryptGenerateSymmetricKey(BCRYPT_AES_CBC_ALG_HANDLE, &handle, nullptr, 0,
+                                                   reinterpret_cast<PUCHAR>(const_cast<char*>(key.data())),
+                                                   static_cast<ULONG>(key.size()), 0))) {
+        throw std::runtime_error("Could not prepare the AES key");
+    }
+    const std::unique_ptr<void, decltype(&BCryptDestroyKey)> keyGuard(handle, BCryptDestroyKey);
     std::string plaintext(ciphertext.size(), '\0');
     std::string ivCopy(iv);
     ULONG written = 0;
-    const bool decrypted =
-        ready && BCRYPT_SUCCESS(BCryptDecrypt(handle, reinterpret_cast<PUCHAR>(const_cast<char*>(ciphertext.data())),
-                                              static_cast<ULONG>(ciphertext.size()), nullptr,
-                                              reinterpret_cast<PUCHAR>(ivCopy.data()), static_cast<ULONG>(ivCopy.size()),
-                                              reinterpret_cast<PUCHAR>(plaintext.data()),
-                                              static_cast<ULONG>(plaintext.size()), &written, BCRYPT_BLOCK_PADDING));
-    if (handle) {
-        BCryptDestroyKey(handle);
-    }
-    BCryptCloseAlgorithmProvider(algorithm, 0);
-    if (!decrypted) {
+    if (!BCRYPT_SUCCESS(BCryptDecrypt(handle, reinterpret_cast<PUCHAR>(const_cast<char*>(ciphertext.data())),
+                                      static_cast<ULONG>(ciphertext.size()), nullptr,
+                                      reinterpret_cast<PUCHAR>(ivCopy.data()), static_cast<ULONG>(ivCopy.size()),
+                                      reinterpret_cast<PUCHAR>(plaintext.data()), static_cast<ULONG>(plaintext.size()),
+                                      &written, BCRYPT_BLOCK_PADDING))) {
         throw std::runtime_error("AES decryption failed");
     }
     plaintext.resize(written);
