@@ -88,7 +88,7 @@ These environment variables override the defaults:
 
 ## Command-line tool
 
-`ryu-cli` queries the sites without the GUI: `providers`, `search <query>`, `episodes <show id>` and `streams <episode id> [sub|dub]`, each taking `--provider <id>` and `--base-url <url>`.
+`ryu-cli` queries the sites without the GUI: `providers`, `search <query>`, `episodes <show id>`, `streams <episode id> [sub|dub]` and `start <episode id> [sub|dub]`, which times the steps before playback and takes `--wait` to keep the local playlists served. Each takes `--provider <id>` and `--base-url <url>`, and `RYU_LOG` names a file for the request log.
 
 ## Contributing
 

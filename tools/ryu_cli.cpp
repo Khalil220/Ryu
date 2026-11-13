@@ -1,6 +1,11 @@
+#include "host_repair.hpp"
 #include "http.hpp"
+#include "log.hpp"
+#include "playlist_server.hpp"
 #include "registry.hpp"
 
+#include <chrono>
+#include <cstdlib>
 #include <exception>
 #include <iostream>
 #include <string>
@@ -17,7 +22,10 @@ int usage() {
                  "  ryu-cli providers\n"
                  "  ryu-cli search <query> [--provider id] [--base-url url]\n"
                  "  ryu-cli episodes <show id> [--provider id] [--base-url url]\n"
-                 "  ryu-cli streams <episode id> [sub|dub] [--provider id] [--base-url url]\n";
+                 "  ryu-cli streams <episode id> [sub|dub] [--provider id] [--base-url url]\n"
+                 "  ryu-cli start <episode id> [sub|dub] [--wait] [--provider id] [--base-url url]\n"
+                 "--wait keeps the stream's local playlists served until Enter is pressed.\n"
+                 "Set RYU_LOG to a file to log every request.\n";
     return 2;
 }
 
@@ -54,6 +62,31 @@ void printEpisodes(const std::vector<ryu::Episode>& episodes) {
     }
 }
 
+long long millisecondsSince(std::chrono::steady_clock::time_point started) {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
+}
+
+void timeStart(ryu::HttpClient& http, ryu::Provider& provider, const std::string& episodeId, ryu::Audio audio,
+               bool wait) {
+    const auto started = std::chrono::steady_clock::now();
+    const auto streams = provider.streams(episodeId, audio);
+    std::cout << "Streams resolved after " << millisecondsSince(started) << " ms\n";
+    if (streams.empty()) {
+        std::cout << "No playable streams.\n";
+        return;
+    }
+    ryu::PlaylistServer server;
+    const auto report = ryu::repairStreamHosts(http, server, streams.front());
+    std::cout << "Hosts checked after " << millisecondsSince(started) << " ms\n";
+    for (const auto& host : report.deadHosts) {
+        std::cout << "Dead host " << host << ", replaced by " << report.replacementHost << "\n";
+    }
+    std::cout << streams.front().server << ": " << report.stream.url << std::endl;
+    if (wait) {
+        std::cin.get();
+    }
+}
+
 void printStreams(const std::vector<ryu::Stream>& streams) {
     if (streams.empty()) {
         std::cout << "No playable streams.\n";
@@ -79,16 +112,25 @@ void printStreams(const std::vector<ryu::Stream>& streams) {
 int main(int argc, char** argv) {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
+    wchar_t* logPath = nullptr;
+    size_t length = 0;
+    if (_wdupenv_s(&logPath, &length, L"RYU_LOG") == 0 && logPath) {
+        ryu::openLog(logPath);
+        std::free(logPath);
+    }
 #endif
     std::vector<std::string> positional;
     std::string providerId = "hianime";
     std::string baseUrl;
+    bool wait = false;
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         if (arg == "--provider" && i + 1 < argc) {
             providerId = argv[++i];
         } else if (arg == "--base-url" && i + 1 < argc) {
             baseUrl = argv[++i];
+        } else if (arg == "--wait") {
+            wait = true;
         } else {
             positional.push_back(arg);
         }
@@ -126,6 +168,9 @@ int main(int argc, char** argv) {
         } else if (command == "streams") {
             const bool dub = positional.size() > 2 && positional[2] == "dub";
             printStreams(provider->streams(positional[1], dub ? ryu::Audio::Dub : ryu::Audio::Sub));
+        } else if (command == "start") {
+            const bool dub = positional.size() > 2 && positional[2] == "dub";
+            timeStart(http, *provider, positional[1], dub ? ryu::Audio::Dub : ryu::Audio::Sub, wait);
         } else {
             return usage();
         }
