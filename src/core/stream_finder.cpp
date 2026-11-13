@@ -55,7 +55,14 @@ std::optional<Show> locate(Provider& provider, const Show& wanted) {
 std::string normalizeTitle(std::string_view title) {
     std::string output;
     bool pendingSpace = false;
-    for (const char ch : title) {
+    for (size_t i = 0; i < title.size(); ++i) {
+        const auto rest = title.substr(i);
+        if (rest.starts_with("‘") || rest.starts_with("’")) {
+            pendingSpace = !output.empty();
+            i += std::string_view("’").size() - 1;
+            continue;
+        }
+        const char ch = title[i];
         const auto c = static_cast<unsigned char>(ch);
         if (c < 0x80 && !std::isalnum(c)) {
             pendingSpace = !output.empty();

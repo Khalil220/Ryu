@@ -45,6 +45,9 @@ TEST_CASE("normalizeTitle ignores case, punctuation and spacing") {
     CHECK(normalizeTitle("Frieren: Beyond Journey's End") == "frieren beyond journey s end");
     CHECK(normalizeTitle("  Sousou  no FRIEREN!! ") == "sousou no frieren");
     CHECK(normalizeTitle("Re:Zero") == "re zero");
+    CHECK(normalizeTitle("Frieren: Beyond Journey’s End") == normalizeTitle("Frieren: Beyond Journey's End"));
+    CHECK(normalizeTitle("‘Oshi no Ko’") == "oshi no ko");
+    CHECK(normalizeTitle("Shingeki no Kyojin é") == "shingeki no kyojin é");
 }
 
 TEST_CASE("matchShow matches on either title and prefers the same format") {

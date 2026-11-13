@@ -139,20 +139,10 @@ MalTokens requestTokens(HttpClient& http, const MalEndpoints& endpoints,
     return tokens;
 }
 
-std::string titleKey(std::string_view title) {
-    std::string plain(title);
-    for (const std::string_view curly : {"’", "‘"}) {
-        for (auto at = plain.find(curly); at != std::string::npos; at = plain.find(curly, at + 1)) {
-            plain.replace(at, curly.size(), "'");
-        }
-    }
-    return normalizeTitle(plain);
-}
-
 std::vector<std::string> titleKeys(const MalAnime& anime) {
-    std::vector<std::string> keys{titleKey(anime.title), titleKey(anime.englishTitle)};
+    std::vector<std::string> keys{normalizeTitle(anime.title), normalizeTitle(anime.englishTitle)};
     for (const auto& synonym : anime.synonyms) {
-        keys.push_back(titleKey(synonym));
+        keys.push_back(normalizeTitle(synonym));
     }
     std::erase(keys, std::string());
     return keys;
@@ -451,7 +441,7 @@ int listedEpisodes(const Show& show) {
 }
 
 bool sameTitle(const Show& show, const MalAnime& anime) {
-    std::vector<std::string> wanted{titleKey(show.title), titleKey(show.altTitle)};
+    std::vector<std::string> wanted{normalizeTitle(show.title), normalizeTitle(show.altTitle)};
     std::erase(wanted, std::string());
     const auto keys = titleKeys(anime);
     return std::ranges::any_of(wanted, [&](const std::string& key) { return std::ranges::find(keys, key) != keys.end(); });
@@ -487,7 +477,7 @@ std::optional<size_t> matchMalAnime(const Show& show, const std::vector<MalAnime
         }
     }
     if (matches.size() > 1 && !show.format.empty()) {
-        narrow(matches, [&](size_t i) { return titleKey(candidates[i].mediaType) == titleKey(show.format); });
+        narrow(matches, [&](size_t i) { return normalizeTitle(candidates[i].mediaType) == normalizeTitle(show.format); });
     }
     if (matches.size() > 1 && show.year > 0) {
         narrow(matches, [&](size_t i) { return candidates[i].year == show.year; });
@@ -508,7 +498,7 @@ std::optional<size_t> matchShowForMal(const MalAnime& anime, const std::vector<S
         }
     }
     narrow(matches, [&](size_t i) { return shows[i].malId == anime.id; });
-    narrow(matches, [&](size_t i) { return titleKey(shows[i].format) == titleKey(anime.mediaType); });
+    narrow(matches, [&](size_t i) { return normalizeTitle(shows[i].format) == normalizeTitle(anime.mediaType); });
     narrow(matches, [&](size_t i) { return anime.year > 0 && shows[i].year == anime.year; });
     narrow(matches, [&](size_t i) { return anime.episodes > 0 && listedEpisodes(shows[i]) == anime.episodes; });
     return matches.empty() ? std::nullopt : std::optional<size_t>(matches.front());
