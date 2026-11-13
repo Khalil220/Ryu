@@ -12,7 +12,7 @@ public:
 
     std::vector<Show> search(std::string_view query) override;
     std::vector<Episode> episodes(const Show& show) override;
-    std::vector<Stream> streams(std::string_view episodeId, Audio audio) override;
+    std::vector<StreamSource> sources(std::string_view episodeId, Audio audio) override;
     Show describe(const Show& show) override;
 
 private:

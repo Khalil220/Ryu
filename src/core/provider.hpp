@@ -2,6 +2,7 @@
 
 #include "http.hpp"
 
+#include <functional>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -67,13 +68,40 @@ public:
     explicit ProviderError(const std::string& message) : std::runtime_error(message) {}
 };
 
+struct StreamSource {
+    std::string server;
+    std::function<Stream()> resolve;
+};
+
+inline StreamSource readySource(Stream stream) {
+    auto server = stream.server;
+    return {std::move(server), [stream = std::move(stream)] { return stream; }};
+}
+
 class Provider {
 public:
     virtual ~Provider() = default;
     virtual std::vector<Show> search(std::string_view query) = 0;
     virtual std::vector<Episode> episodes(const Show& show) = 0;
-    virtual std::vector<Stream> streams(std::string_view episodeId, Audio audio) = 0;
+    virtual std::vector<StreamSource> sources(std::string_view episodeId, Audio audio) = 0;
     virtual Show describe(const Show& show) { return show; }
+
+    std::vector<Stream> streams(std::string_view episodeId, Audio audio) {
+        std::string firstError;
+        for (const auto& source : sources(episodeId, audio)) {
+            try {
+                return {source.resolve()};
+            } catch (const std::exception& error) {
+                if (firstError.empty()) {
+                    firstError = error.what();
+                }
+            }
+        }
+        if (!firstError.empty()) {
+            throw ProviderError(firstError);
+        }
+        return {};
+    }
 };
 
 }

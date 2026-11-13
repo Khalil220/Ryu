@@ -4,7 +4,6 @@
 #include "../hls.hpp"
 #include "../html.hpp"
 #include "../json_fields.hpp"
-#include "../log.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -165,12 +164,11 @@ std::vector<Episode> HiAnimeProvider::episodes(const Show& show) {
     return result;
 }
 
-std::vector<Stream> HiAnimeProvider::streams(std::string_view episodeId, Audio audio) {
+std::vector<StreamSource> HiAnimeProvider::sources(std::string_view episodeId, Audio audio) {
     const HtmlDocument servers(
         fetchHtmlFragment(baseUrl_ + "/api/theme/episode/servers?episodeId=" + urlEncode(episodeId)));
     const std::string_view type = audio == Audio::Dub ? "dub" : "sub";
-    std::vector<Stream> result;
-    std::string lastError;
+    std::vector<StreamSource> result;
     auto candidates = servers.select(".server-item");
     std::ranges::stable_partition(
         candidates, [](const HtmlNode& server) { return server.attr("data-server-name") != zokoServer; });
@@ -180,32 +178,22 @@ std::vector<Stream> HiAnimeProvider::streams(std::string_view episodeId, Audio a
             continue;
         }
         offered = true;
-        const auto name = server.attr("data-server-name");
+        std::string name = server.attr("data-server-name");
         std::string embedUrl;
         try {
             embedUrl = base64Decode(server.attr("data-hash"));
         } catch (const std::invalid_argument&) {
             continue;
         }
-        try {
-            if (name == zokoServer) {
-                result.push_back(resolveZoko(embedUrl, audio));
-            } else if (MegaplayResolver::handles(embedUrl)) {
-                auto stream = megaplay_.resolve(embedUrl, audio, baseUrl_ + "/");
-                stream.server = name;
-                result.push_back(std::move(stream));
-            }
-        } catch (const std::exception& error) {
-            lastError = error.what();
-            logLine("HiAnime server " + name + " failed: " + lastError);
+        if (name == zokoServer) {
+            result.push_back({name, [this, embedUrl, audio] { return resolveZoko(embedUrl, audio); }});
+        } else if (MegaplayResolver::handles(embedUrl)) {
+            result.push_back({name, [this, embedUrl, audio, name] {
+                                  auto stream = megaplay_.resolve(embedUrl, audio, baseUrl_ + "/");
+                                  stream.server = name;
+                                  return stream;
+                              }});
         }
-        if (!result.empty()) {
-            logLine("HiAnime server " + name + " resolved");
-            break;
-        }
-    }
-    if (result.empty() && !lastError.empty()) {
-        throw ProviderError(lastError);
     }
     if (result.empty() && offered) {
         throw ProviderError("HiAnime's servers for this episode use a player Ryu can't read");

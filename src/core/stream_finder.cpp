@@ -121,9 +121,9 @@ FoundStream findStream(HttpClient& http, PlaylistServer& server, const std::vect
     for (size_t i = 0; i < providers.size(); ++i) {
         const auto& handle = providers[i];
         try {
-            std::vector<Stream> streams;
+            std::vector<StreamSource> sources;
             if (i == 0) {
-                streams = handle.provider->streams(episode.id, audio);
+                sources = handle.provider->sources(episode.id, audio);
             } else {
                 const auto match = locate(*handle.provider, show);
                 if (!match) {
@@ -137,23 +137,23 @@ FoundStream findStream(HttpClient& http, PlaylistServer& server, const std::vect
                     logLine(handle.name + " has no episode " + episode.number);
                     continue;
                 }
-                streams = handle.provider->streams(same->id, audio);
+                sources = handle.provider->sources(same->id, audio);
             }
-            if (streams.empty()) {
+            if (sources.empty()) {
                 logLine(handle.name + " offered no streams");
             }
-            for (const auto& stream : streams) {
+            for (const auto& source : sources) {
                 try {
-                    auto report = repairStreamHosts(http, server, stream);
+                    auto report = repairStreamHosts(http, server, source.resolve());
                     for (const auto& host : report.deadHosts) {
                         logLine("Dead host " + host + ", replaced by " + report.replacementHost);
                     }
-                    logLine(std::format("Using {} {} after {} ms: {}", handle.name, stream.server, elapsed(),
+                    logLine(std::format("Using {} {} after {} ms: {}", handle.name, source.server, elapsed(),
                                         report.stream.url));
                     return {std::move(report.stream), handle.name, i > 0};
                 } catch (const std::exception& error) {
                     failed(handle.name, error.what());
-                    logLine("Stream from " + handle.name + " " + stream.server + " failed: " + error.what());
+                    logLine(handle.name + " " + source.server + " failed: " + error.what());
                 }
             }
         } catch (const std::exception& error) {

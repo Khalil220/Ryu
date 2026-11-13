@@ -14,7 +14,7 @@ class EmptyProvider : public Provider {
 public:
     std::vector<Show> search(std::string_view) override { return {}; }
     std::vector<Episode> episodes(const Show&) override { return {}; }
-    std::vector<Stream> streams(std::string_view, Audio) override { return {}; }
+    std::vector<StreamSource> sources(std::string_view, Audio) override { return {}; }
 };
 
 }

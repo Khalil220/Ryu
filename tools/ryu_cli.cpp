@@ -1,8 +1,8 @@
-#include "host_repair.hpp"
 #include "http.hpp"
 #include "log.hpp"
 #include "playlist_server.hpp"
 #include "registry.hpp"
+#include "stream_finder.hpp"
 
 #include <chrono>
 #include <cstdlib>
@@ -66,43 +66,44 @@ long long millisecondsSince(std::chrono::steady_clock::time_point started) {
     return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
 }
 
-void timeStart(ryu::HttpClient& http, ryu::Provider& provider, const std::string& episodeId, ryu::Audio audio,
-               bool wait) {
+void timeStart(ryu::HttpClient& http, ryu::Provider& provider, const std::string& name, const std::string& episodeId,
+               ryu::Audio audio, bool wait) {
     const auto started = std::chrono::steady_clock::now();
-    const auto streams = provider.streams(episodeId, audio);
-    std::cout << "Streams resolved after " << millisecondsSince(started) << " ms\n";
-    if (streams.empty()) {
-        std::cout << "No playable streams.\n";
-        return;
-    }
     ryu::PlaylistServer server;
-    const auto report = ryu::repairStreamHosts(http, server, streams.front());
-    std::cout << "Hosts checked after " << millisecondsSince(started) << " ms\n";
-    for (const auto& host : report.deadHosts) {
-        std::cout << "Dead host " << host << ", replaced by " << report.replacementHost << "\n";
-    }
-    std::cout << streams.front().server << ": " << report.stream.url << std::endl;
+    ryu::Episode episode;
+    episode.id = episodeId;
+    const auto found = ryu::findStream(http, server, {{name, &provider}}, ryu::Show{}, episode, audio);
+    std::cout << "Ready to play after " << millisecondsSince(started) << " ms\n";
+    std::cout << found.stream.server << ": " << found.stream.url << std::endl;
     if (wait) {
         std::cin.get();
     }
 }
 
-void printStreams(const std::vector<ryu::Stream>& streams) {
-    if (streams.empty()) {
+void printStream(const ryu::Stream& stream) {
+    std::cout << stream.server << " " << (stream.audio == ryu::Audio::Dub ? "dub" : "sub") << ": " << stream.url
+              << "\n";
+    if (stream.intro) {
+        std::cout << "Intro from " << stream.intro->start << " to " << stream.intro->end << " seconds\n";
+    }
+    for (const auto& [name, value] : stream.headers) {
+        std::cout << "Header " << name << ": " << value << "\n";
+    }
+    for (const auto& subtitle : stream.subtitles) {
+        std::cout << "Subtitle " << subtitle.label << " (" << subtitle.language
+                  << (subtitle.isDefault ? ", default" : "") << "): " << subtitle.url << "\n";
+    }
+}
+
+void printSources(const std::vector<ryu::StreamSource>& sources) {
+    if (sources.empty()) {
         std::cout << "No playable streams.\n";
     }
-    for (const auto& stream : streams) {
-        std::cout << stream.server << " " << (stream.audio == ryu::Audio::Dub ? "dub" : "sub") << ": " << stream.url
-                  << "\n";
-        if (stream.intro) {
-            std::cout << "Intro from " << stream.intro->start << " to " << stream.intro->end << " seconds\n";
-        }
-        for (const auto& [name, value] : stream.headers) {
-            std::cout << "Header " << name << ": " << value << "\n";
-        }
-        for (const auto& subtitle : stream.subtitles) {
-            std::cout << "Subtitle " << subtitle.label << " (" << subtitle.language
-                      << (subtitle.isDefault ? ", default" : "") << "): " << subtitle.url << "\n";
+    for (const auto& source : sources) {
+        try {
+            printStream(source.resolve());
+        } catch (const std::exception& error) {
+            std::cout << source.server << " failed: " << error.what() << "\n";
         }
     }
 }
@@ -167,10 +168,10 @@ int main(int argc, char** argv) {
             printEpisodes(provider->episodes(show));
         } else if (command == "streams") {
             const bool dub = positional.size() > 2 && positional[2] == "dub";
-            printStreams(provider->streams(positional[1], dub ? ryu::Audio::Dub : ryu::Audio::Sub));
+            printSources(provider->sources(positional[1], dub ? ryu::Audio::Dub : ryu::Audio::Sub));
         } else if (command == "start") {
             const bool dub = positional.size() > 2 && positional[2] == "dub";
-            timeStart(http, *provider, positional[1], dub ? ryu::Audio::Dub : ryu::Audio::Sub, wait);
+            timeStart(http, *provider, info->name, positional[1], dub ? ryu::Audio::Dub : ryu::Audio::Sub, wait);
         } else {
             return usage();
         }

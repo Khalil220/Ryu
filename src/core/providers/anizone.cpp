@@ -374,7 +374,7 @@ std::vector<Episode> AniZoneProvider::episodes(const Show& show) {
     return result;
 }
 
-std::vector<Stream> AniZoneProvider::streams(std::string_view episodeId, Audio audio) {
+std::vector<StreamSource> AniZoneProvider::sources(std::string_view episodeId, Audio audio) {
     const auto url = baseUrl_ + "/anime/" + std::string(episodeId);
     const auto response = fetch(url);
     requireSuccess(response);
@@ -425,7 +425,7 @@ std::vector<Stream> AniZoneProvider::streams(std::string_view episodeId, Audio a
             chosen->isDefault = true;
         }
     }
-    return {stream};
+    return {readySource(std::move(stream))};
 }
 
 HttpResponse AniZoneProvider::fetch(const std::string& url) {

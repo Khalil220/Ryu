@@ -26,8 +26,19 @@ public:
         const auto it = searchResults.find(std::string(query));
         return it == searchResults.end() ? std::vector<Show>{} : it->second;
     }
+    std::function<std::vector<StreamSource>(std::string_view, Audio)> onSources;
+
     std::vector<Episode> episodes(const Show& show) override { return episodeLists[show.id]; }
-    std::vector<Stream> streams(std::string_view episodeId, Audio audio) override { return onStreams(episodeId, audio); }
+    std::vector<StreamSource> sources(std::string_view episodeId, Audio audio) override {
+        if (onSources) {
+            return onSources(episodeId, audio);
+        }
+        std::vector<StreamSource> result;
+        for (auto& stream : onStreams(episodeId, audio)) {
+            result.push_back(readySource(std::move(stream)));
+        }
+        return result;
+    }
 };
 
 Stream streamAt(const std::string& url) {
@@ -168,6 +179,47 @@ TEST_CASE("when nobody has the episode the error says what is missing, or why it
     CHECK_THROWS_WITH_AS(
         findStream(http, server, {{"HiAnime", &broken}, {"Backup", &backup}}, frieren, episodeTwo, Audio::Sub),
         "HiAnime: site is down", ProviderError);
+}
+
+TEST_CASE("a site's next server is resolved only when the one before it can't be played") {
+    FakeHttpClient http;
+    const std::string deadUrl = "https://dead.example/master.m3u8";
+    http.serve(deadUrl, "#EXTM3U\n#EXTINF:4,\nhttps://gone.example/seg-1.jpg\n#EXT-X-ENDLIST\n");
+    http.serve("https://gone.example/seg-1.jpg", "<html>404</html>", 404);
+    PlaylistServer server;
+    int resolved = 0;
+    ScriptedProvider primary;
+    primary.onSources = [&](std::string_view, Audio) {
+        return std::vector<StreamSource>{
+            {"HD-1", [&] { ++resolved; return streamAt(deadUrl); }},
+            {"ZokoAnime", [&] { ++resolved; return streamAt("https://zoko.example/master.m3u8"); }},
+            {"Never", [&] { ++resolved; return streamAt("https://never.example/master.m3u8"); }},
+        };
+    };
+
+    const auto found = findStream(http, server, {{"HiAnime", &primary}}, frieren, episodeTwo, Audio::Sub);
+
+    CHECK(found.providerName == "HiAnime");
+    CHECK_FALSE(found.fromFallback);
+    CHECK(found.stream.url == "https://zoko.example/master.m3u8");
+    CHECK(resolved == 2);
+}
+
+TEST_CASE("a server that fails to resolve hands over to the next one on the same site") {
+    FakeHttpClient http;
+    PlaylistServer server;
+    ScriptedProvider primary;
+    primary.onSources = [](std::string_view, Audio) {
+        return std::vector<StreamSource>{
+            {"HD-1", []() -> Stream { throw ProviderError("Megaplay has no stream for this episode"); }},
+            {"ZokoAnime", [] { return streamAt("https://zoko.example/master.m3u8"); }},
+        };
+    };
+
+    const auto found = findStream(http, server, {{"HiAnime", &primary}}, frieren, episodeTwo, Audio::Sub);
+
+    CHECK(found.stream.url == "https://zoko.example/master.m3u8");
+    CHECK_FALSE(found.fromFallback);
 }
 
 TEST_CASE("when every site fails the chosen site's error is reported, without repeating its name") {
