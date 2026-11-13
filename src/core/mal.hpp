@@ -140,7 +140,6 @@ public:
     MalAccess(HttpClient& http, MalEndpoints endpoints, MalTokens tokens, Clock clock = {});
 
     const MalEndpoints& endpoints() const { return endpoints_; }
-    HttpClient& http() { return http_; }
     MalTokens tokens();
     void setTokens(MalTokens tokens);
     std::int64_t now() const;
