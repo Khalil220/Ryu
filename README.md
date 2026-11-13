@@ -17,13 +17,13 @@ An accessible anime player for Windows, written in C++ with wxWidgets and libmpv
 - Space: play or pause
 - Left and Right: seek 10 seconds, or 60 with Shift
 - Up and Down: volume
-- T: current time
+- T: speak the current time with a screen reader
 - I: skip intro
-- R: toggle subtitle reading
+- R: toggle subtitle reading for screen readers
 - N and P: next and previous episode
 - F11: full screen
 - Escape: leave full screen, or go back to the episode list
-- Ctrl+D in the results: speak the selected show's synopsis
+- Ctrl+D in the results: speak the selected show's synopsis with a screen reader
 - Ctrl+M in the results: add the show to MyAnimeList, or edit or remove it
 - Ctrl+L: your MyAnimeList lists
 - Ctrl+P: preferences

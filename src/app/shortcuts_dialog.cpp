@@ -14,7 +14,7 @@ namespace ryu {
 namespace {
 
 constexpr std::array<std::pair<const char*, const char*>, 15> shortcuts{{
-    {"Ctrl+D in Results", "Speak the synopsis"},
+    {"Ctrl+D in Results", "Speak the synopsis with a screen reader"},
     {"Ctrl+M in Results", "Add to, edit on or remove from MyAnimeList, when logged in"},
     {"Ctrl+L", "My anime lists, when logged in to MyAnimeList"},
     {"Ctrl+M, Delete, F5 in my lists", "Edit, remove, refresh"},
@@ -23,9 +23,9 @@ constexpr std::array<std::pair<const char*, const char*>, 15> shortcuts{{
     {"Left, Right", "Seek 10 seconds"},
     {"Shift+Left, Shift+Right", "Seek 60 seconds"},
     {"Up, Down", "Volume"},
-    {"T", "Speak the current time"},
+    {"T", "Speak the current time with a screen reader"},
     {"I", "Skip the intro"},
-    {"R", "Turn subtitle reading on or off"},
+    {"R", "Turn subtitle reading on or off for screen readers"},
     {"N, P", "Next and previous episode"},
     {"F11", "Full screen"},
     {"Escape", "Leave full screen, then close the player"},
