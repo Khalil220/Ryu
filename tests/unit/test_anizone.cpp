@@ -66,6 +66,18 @@ TEST_CASE("AniZone search reads the embedded results with English titles, format
     CHECK(shows[1].year == 2026);
 }
 
+TEST_CASE("AniZone search sends apostrophes as the backticks the site stores") {
+    constexpr const char* backtickUrl = "https://anizone.to/anime?search=Frieren%3A%20Beyond%20Journey%60s%20End";
+    FakeHttpClient http;
+    http.serve(backtickUrl, readFixture("anizone/search_frieren.html"));
+    AniZoneProvider provider(http);
+
+    CHECK(provider.search("Frieren: Beyond Journey's End").size() == 2);
+    CHECK(provider.search("Frieren: Beyond Journey’s End").size() == 2);
+    CHECK(provider.search("Frieren: Beyond Journey‘s End").size() == 2);
+    CHECK(http.requests.at(0).url == backtickUrl);
+}
+
 TEST_CASE("AniZone describe reads the synopsis from the show page") {
     FakeHttpClient http;
     http.serve(showUrl, readFixture("anizone/show_frieren.html"));

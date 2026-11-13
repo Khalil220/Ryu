@@ -58,6 +58,16 @@ TEST_CASE("live: AniZone finds Frieren and plays episode 1 subbed and dubbed") {
     }
 }
 
+TEST_CASE("live: AniZone finds shows by titles with apostrophes") {
+    CurlHttpClient http;
+    AniZoneProvider provider(http);
+
+    for (const std::string_view title : {"Frieren: Beyond Journey's End", "JoJo's Bizarre Adventure", "Hell's Paradise"}) {
+        const auto shows = provider.search(title);
+        CHECK_MESSAGE(std::ranges::any_of(shows, [&](const Show& s) { return s.title.starts_with(title); }), std::string(title));
+    }
+}
+
 TEST_CASE("live: AniZone lists every episode of a long show") {
     CurlHttpClient http;
     AniZoneProvider provider(http);

@@ -121,6 +121,17 @@ std::string tidy(std::string text) {
     return text;
 }
 
+std::string siteQuery(std::string_view query) {
+    std::string text(query);
+    for (const std::string_view curly : {"‘", "’"}) {
+        for (auto at = text.find(curly); at != std::string::npos; at = text.find(curly, at + 1)) {
+            text.replace(at, curly.size(), "`");
+        }
+    }
+    std::ranges::replace(text, '\'', '`');
+    return text;
+}
+
 std::string englishTitle(const json& item, const char* key, std::string_view fallback) {
     if (const auto titles = item.find(key); titles != item.end() && titles->is_object()) {
         if (auto english = stringField(*titles, "1"); !english.empty()) {
@@ -265,7 +276,7 @@ AniZoneProvider::AniZoneProvider(HttpClient& http, std::string baseUrl) : http_(
 }
 
 std::vector<Show> AniZoneProvider::search(std::string_view query) {
-    const auto url = baseUrl_ + "/anime?search=" + urlEncode(query);
+    const auto url = baseUrl_ + "/anime?search=" + urlEncode(siteQuery(query));
     const auto response = fetch(url);
     requireSuccess(response, url);
     std::vector<Show> shows;
