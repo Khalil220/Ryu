@@ -341,7 +341,9 @@ void MainFrame::applySettings() {
     }
     session_ = std::move(session);
     audioChoice_->SetSelection(settings_.audio == Audio::Dub ? 1 : 0);
-    SetTitle("Ryu - " + wxString::FromUTF8(settings_.provider().name));
+    if (browsing()) {
+        SetTitle("Ryu - " + wxString::FromUTF8(settings_.provider().name));
+    }
 }
 
 void MainFrame::startSearch(std::optional<MalAnime> sought, bool retried) {
