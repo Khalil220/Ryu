@@ -799,7 +799,6 @@ void MainFrame::showMalLists() {
 }
 
 void MainFrame::leaveMalLists() {
-    loadFinished();
     book_->ChangeSelection(browsePage);
     SetTitle("Ryu - " + wxString::FromUTF8(settings_.provider().name));
     setStatus("Ready");
@@ -812,7 +811,6 @@ void MainFrame::refreshMalLists() {
         setStatus("Loading your lists from MyAnimeList...");
     }
     mal_->refresh([this](const std::string& error) {
-        loadFinished();
         if (!error.empty() && book_->GetSelection() == listsPage) {
             setStatus("Could not load your lists");
             showError("Could not load your lists", error);
@@ -821,7 +819,6 @@ void MainFrame::refreshMalLists() {
 }
 
 void MainFrame::openMalEntry(const MalAnime& anime) {
-    loadFinished();
     book_->ChangeSelection(browsePage);
     SetTitle("Ryu - " + wxString::FromUTF8(settings_.provider().name));
     searchBox_->ChangeValue(wxString::FromUTF8(malTitle(anime)));
@@ -846,7 +843,6 @@ void MainFrame::editShowOnMal() {
     mal_->run<std::vector<MalAnime>>(
         [show](MalClient& client) { return findMalCandidates(client, show); },
         [this, show, title](std::vector<MalAnime> candidates) {
-            loadFinished();
             setStatus("Ready");
             if (candidates.empty()) {
                 wxMessageBox("No anime called " + title + " was found.", "MyAnimeList",
@@ -857,7 +853,6 @@ void MainFrame::editShowOnMal() {
             editOnMal(std::move(candidates), match.value_or(0), show.id);
         },
         [this](const std::string& message) {
-            loadFinished();
             setStatus("Could not look it up on MyAnimeList");
             showError("Could not look it up", message);
         });
