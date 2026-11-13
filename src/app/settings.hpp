@@ -40,6 +40,7 @@ struct ScreenArea {
 };
 
 WindowPlacement fitToArea(const WindowPlacement& saved, const ScreenArea& area, int minWidth, int minHeight);
+std::optional<size_t> mostOverlapped(const WindowPlacement& saved, const std::vector<ScreenArea>& areas);
 
 struct MalAccount {
     std::string userName;

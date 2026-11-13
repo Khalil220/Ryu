@@ -412,6 +412,15 @@ TEST_CASE("rapid saves end with the last one on disk, and closing the store writ
     std::filesystem::remove_all(directory);
 }
 
+TEST_CASE("mostOverlapped picks the display holding most of the saved window") {
+    const std::vector<ScreenArea> areas{{0, 0, 3840, 2016}, {3840, 0, 1920, 1040}};
+    CHECK(mostOverlapped({420, 0, 3000, 2016}, areas) == 0);
+    CHECK(mostOverlapped({3500, 100, 1500, 800}, areas) == 1);
+    CHECK(mostOverlapped({-5000, -5000, 800, 600}, areas) == std::nullopt);
+    CHECK(mostOverlapped({0, 0, 0, 0}, areas) == std::nullopt);
+    CHECK(mostOverlapped({0, 0, 800, 600}, {}) == std::nullopt);
+}
+
 TEST_CASE("fitToArea leaves a window that already fits alone") {
     const WindowPlacement saved{420, 0, 1500, 1000, true};
     CHECK(fitToArea(saved, {0, 0, 3840, 2080}, 1140, 720) == saved);

@@ -125,6 +125,25 @@ std::string Settings::baseUrlFor(const ProviderInfo& info) const {
     return it != baseUrlOverrides.end() && !it->second.empty() ? it->second : info.defaultBaseUrl;
 }
 
+std::optional<size_t> mostOverlapped(const WindowPlacement& saved, const std::vector<ScreenArea>& areas) {
+    if (saved.width <= 0 || saved.height <= 0) {
+        return std::nullopt;
+    }
+    std::optional<size_t> chosen;
+    long long largest = 0;
+    for (size_t i = 0; i < areas.size(); ++i) {
+        const auto& area = areas[i];
+        const long long width = std::min(saved.x + saved.width, area.x + area.width) - std::max(saved.x, area.x);
+        const long long height = std::min(saved.y + saved.height, area.y + area.height) - std::max(saved.y, area.y);
+        const long long overlap = std::max(0LL, width) * std::max(0LL, height);
+        if (overlap > largest) {
+            largest = overlap;
+            chosen = i;
+        }
+    }
+    return chosen;
+}
+
 WindowPlacement fitToArea(const WindowPlacement& saved, const ScreenArea& area, int minWidth, int minHeight) {
     WindowPlacement fitted = saved;
     fitted.width = std::clamp(saved.width, std::min(minWidth, area.width), area.width);
