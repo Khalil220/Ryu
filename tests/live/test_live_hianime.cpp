@@ -43,6 +43,15 @@ bool firstSegmentIsVideo(HttpClient& http, const Stream& stream) {
 
 }
 
+TEST_CASE("live: requests to one site reuse a connection") {
+    CurlHttpClient http;
+    HiAnimeProvider provider(http);
+
+    CHECK_FALSE(provider.search("frieren").empty());
+    CHECK_FALSE(provider.search("one piece").empty());
+    CHECK(http.connectionsOpened() == 1);
+}
+
 TEST_CASE("live: a recent HiAnime episode resolves to video Ryu can play") {
     CurlHttpClient http;
     HiAnimeProvider provider(http);

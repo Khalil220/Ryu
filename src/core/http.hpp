@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -46,6 +47,9 @@ public:
 
     explicit CurlHttpClient(std::string userAgent = defaultUserAgent,
                             std::chrono::seconds timeout = std::chrono::seconds(15));
+    ~CurlHttpClient() override;
+    CurlHttpClient(const CurlHttpClient&) = delete;
+    CurlHttpClient& operator=(const CurlHttpClient&) = delete;
 
     HttpResponse get(const std::string& url, const Headers& headers = {}) override;
     HttpResponse post(const std::string& url, const std::string& body, const Headers& headers = {}) override;
@@ -53,14 +57,17 @@ public:
     HttpResponse send(const std::string& method, const std::string& url, const std::string& body,
                       const Headers& headers = {}) override;
     HttpResponse download(const std::string& url, const Progress& progress) override;
+    std::uint64_t connectionsOpened() const;
 
 private:
+    struct Pool;
     enum class Mode { Get, Post, Probe };
     HttpResponse perform(Mode mode, const std::string& url, const std::string* body, const Headers& headers,
                          const Progress* progress = nullptr, const char* method = nullptr);
 
     std::string userAgent_;
     std::chrono::seconds timeout_;
+    std::unique_ptr<Pool> pool_;
 };
 
 }

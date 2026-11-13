@@ -4,10 +4,13 @@
 
 #include <curl/curl.h>
 
+#include <array>
+#include <atomic>
 #include <chrono>
 #include <format>
 #include <memory>
 #include <mutex>
+#include <vector>
 
 namespace ryu {
 
@@ -39,15 +42,98 @@ int reportProgress(void* userData, curl_off_t total, curl_off_t done, curl_off_t
     return progress(static_cast<std::uint64_t>(done), static_cast<std::uint64_t>(total)) ? 0 : 1;
 }
 
-struct EasyDeleter {
-    void operator()(CURL* handle) const { curl_easy_cleanup(handle); }
-};
-
 struct ListDeleter {
     void operator()(curl_slist* list) const { curl_slist_free_all(list); }
 };
 
+using ShareLocks = std::array<std::mutex, CURL_LOCK_DATA_LAST>;
+
+void lockShare(CURL*, curl_lock_data data, curl_lock_access, void* locks) {
+    (*static_cast<ShareLocks*>(locks))[data].lock();
 }
+
+void unlockShare(CURL*, curl_lock_data data, void* locks) {
+    (*static_cast<ShareLocks*>(locks))[data].unlock();
+}
+
+std::string originOf(const std::string& url) {
+    const auto scheme = url.find("://");
+    return scheme == std::string::npos ? std::string() : url.substr(0, url.find_first_of("/?#", scheme + 3));
+}
+
+}
+
+struct CurlHttpClient::Pool {
+    static constexpr size_t maxIdle = 16;
+
+    Pool() {
+        ensureGlobalInit();
+        share = curl_share_init();
+        curl_share_setopt(share, CURLSHOPT_LOCKFUNC, lockShare);
+        curl_share_setopt(share, CURLSHOPT_UNLOCKFUNC, unlockShare);
+        curl_share_setopt(share, CURLSHOPT_USERDATA, &locks);
+        curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
+        curl_share_setopt(share, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
+    }
+
+    ~Pool() {
+        for (const auto& entry : idle) {
+            curl_easy_cleanup(entry.second);
+        }
+        curl_share_cleanup(share);
+    }
+
+    Pool(const Pool&) = delete;
+    Pool& operator=(const Pool&) = delete;
+
+    CURL* take(const std::string& origin) {
+        CURL* handle = nullptr;
+        {
+            std::lock_guard lock(mutex);
+            auto chosen = idle.rbegin();
+            for (auto it = idle.rbegin(); it != idle.rend(); ++it) {
+                if (it->first == origin) {
+                    chosen = it;
+                    break;
+                }
+            }
+            if (chosen != idle.rend()) {
+                handle = chosen->second;
+                idle.erase(std::next(chosen).base());
+            }
+        }
+        if (handle) {
+            curl_easy_reset(handle);
+            return handle;
+        }
+        handle = curl_easy_init();
+        if (handle) {
+            curl_easy_setopt(handle, CURLOPT_SHARE, share);
+        }
+        return handle;
+    }
+
+    void give(const std::string& origin, CURL* handle) {
+        CURL* surplus = nullptr;
+        {
+            std::lock_guard lock(mutex);
+            idle.emplace_back(origin, handle);
+            if (idle.size() > maxIdle) {
+                surplus = idle.front().second;
+                idle.erase(idle.begin());
+            }
+        }
+        if (surplus) {
+            curl_easy_cleanup(surplus);
+        }
+    }
+
+    CURLSH* share = nullptr;
+    ShareLocks locks;
+    std::mutex mutex;
+    std::vector<std::pair<std::string, CURL*>> idle;
+    std::atomic<std::uint64_t> connections{0};
+};
 
 HttpResponse HttpClient::download(const std::string& url, const Progress& progress) {
     auto response = get(url);
@@ -58,8 +144,12 @@ HttpResponse HttpClient::download(const std::string& url, const Progress& progre
 }
 
 CurlHttpClient::CurlHttpClient(std::string userAgent, std::chrono::seconds timeout)
-    : userAgent_(std::move(userAgent)), timeout_(timeout) {
-    ensureGlobalInit();
+    : userAgent_(std::move(userAgent)), timeout_(timeout), pool_(std::make_unique<Pool>()) {}
+
+CurlHttpClient::~CurlHttpClient() = default;
+
+std::uint64_t CurlHttpClient::connectionsOpened() const {
+    return pool_->connections;
 }
 
 HttpResponse CurlHttpClient::get(const std::string& url, const Headers& headers) {
@@ -85,7 +175,9 @@ HttpResponse CurlHttpClient::download(const std::string& url, const Progress& pr
 
 HttpResponse CurlHttpClient::perform(Mode mode, const std::string& url, const std::string* body,
                                      const Headers& headers, const Progress* progress, const char* method) {
-    std::unique_ptr<CURL, EasyDeleter> handle(curl_easy_init());
+    const auto origin = originOf(url);
+    const auto release = [this, &origin](CURL* used) { pool_->give(origin, used); };
+    std::unique_ptr<CURL, decltype(release)> handle(pool_->take(origin), release);
     if (!handle) {
         throw HttpError("Could not create an HTTP handle");
     }
@@ -127,6 +219,9 @@ HttpResponse CurlHttpClient::perform(Mode mode, const std::string& url, const st
     const CURLcode code = curl_easy_perform(easy);
     const auto elapsed =
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
+    long connects = 0;
+    curl_easy_getinfo(easy, CURLINFO_NUM_CONNECTS, &connects);
+    pool_->connections += static_cast<std::uint64_t>(connects);
     const bool stoppedEarly = code == CURLE_WRITE_ERROR && sink.limit && response.body.size() >= sink.limit;
     if (code == CURLE_ABORTED_BY_CALLBACK) {
         logLine(std::format("{} {} was cancelled after {} ms", verb, url, elapsed));
