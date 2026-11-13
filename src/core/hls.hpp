@@ -12,6 +12,7 @@ std::string hostOf(std::string_view url);
 std::string withHost(std::string_view url, std::string_view host);
 
 bool isMasterPlaylist(std::string_view playlist);
+std::string withBestVariantOnly(std::string_view master);
 std::vector<std::string> mediaPlaylistUris(std::string_view master, std::string_view baseUrl);
 std::vector<std::string> segmentUris(std::string_view media, std::string_view baseUrl);
 std::string rewritePlaylist(std::string_view playlist, std::string_view baseUrl,

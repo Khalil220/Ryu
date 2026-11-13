@@ -41,12 +41,13 @@ std::string fetchPlaylist(HttpClient& http, const std::string& url, const Header
 
 RepairReport repairStreamHosts(HttpClient& http, PlaylistServer& server, const Stream& stream) {
     RepairReport report{stream, {}, {}};
-    const auto master = fetchPlaylist(http, stream.url, stream.headers);
-    if (master.empty()) {
+    const auto fetched = fetchPlaylist(http, stream.url, stream.headers);
+    if (fetched.empty()) {
         return report;
     }
 
-    const bool hasMaster = isMasterPlaylist(master);
+    const bool hasMaster = isMasterPlaylist(fetched);
+    const auto master = hasMaster ? withBestVariantOnly(fetched) : fetched;
     const auto mediaUrls = hasMaster ? mediaPlaylistUris(master, stream.url) : std::vector<std::string>{stream.url};
     if (mediaUrls.empty()) {
         return report;
@@ -89,26 +90,24 @@ RepairReport repairStreamHosts(HttpClient& http, PlaylistServer& server, const S
     for (size_t i = 0; i < hosts.size(); ++i) {
         (probes[i].get() ? living : report.deadHosts).push_back(hosts[i]);
     }
-    if (report.deadHosts.empty()) {
-        return report;
-    }
-
-    if (living.empty()) {
-        const auto& sample = sampleFor[report.deadHosts.front()];
-        for (const auto& candidate : stream.alternateHosts) {
-            if (std::ranges::find(report.deadHosts, candidate) != report.deadHosts.end()) {
-                continue;
-            }
-            if (probeAlive(http, withHost(sample, candidate), stream.headers)) {
-                living.push_back(candidate);
-                break;
+    if (!report.deadHosts.empty()) {
+        if (living.empty()) {
+            const auto& sample = sampleFor[report.deadHosts.front()];
+            for (const auto& candidate : stream.alternateHosts) {
+                if (std::ranges::find(report.deadHosts, candidate) != report.deadHosts.end()) {
+                    continue;
+                }
+                if (probeAlive(http, withHost(sample, candidate), stream.headers)) {
+                    living.push_back(candidate);
+                    break;
+                }
             }
         }
+        if (living.empty()) {
+            throw ProviderError("The video for this episode is not reachable on any of its hosts");
+        }
+        report.replacementHost = living.front();
     }
-    if (living.empty()) {
-        throw ProviderError("The video for this episode is not reachable on any of its hosts");
-    }
-    report.replacementHost = living.front();
 
     const std::set<std::string> dead(report.deadHosts.begin(), report.deadHosts.end());
     const auto swap = [&](const std::string& url) {

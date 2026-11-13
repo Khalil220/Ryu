@@ -40,6 +40,36 @@ TEST_CASE("mediaPlaylistUris lists variants and renditions but not I-frame playl
     CHECK(uris[1] == "https://cdn.example/m/video/720.m3u8");
 }
 
+TEST_CASE("withBestVariantOnly keeps the highest bandwidth variant and every rendition") {
+    const auto trimmed = withBestVariantOnly(
+        "#EXTM3U\n"
+        "#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"a\",NAME=\"Japanese\",LANGUAGE=\"ja\",URI=\"audio/ja.m3u8\"\n"
+        "#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"a\",NAME=\"English\",LANGUAGE=\"en\",URI=\"audio/en.m3u8\"\n"
+        "#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=9000000,BANDWIDTH=946000,AUDIO=\"a\"\n"
+        "video/360/playlist.m3u8\n"
+        "\n"
+        "#EXT-X-STREAM-INF:BANDWIDTH=3476000,RESOLUTION=1920x1080,AUDIO=\"a\"\n"
+        "video/1080/playlist.m3u8\n"
+        "\n"
+        "#EXT-X-STREAM-INF:BANDWIDTH=2376000,AUDIO=\"a\"\n"
+        "video/720/playlist.m3u8\n"
+        "#EXT-X-I-FRAME-STREAM-INF:BANDWIDTH=49071,URI=\"iframes.m3u8\"\n");
+    CHECK(trimmed == "#EXTM3U\n"
+                     "#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"a\",NAME=\"Japanese\",LANGUAGE=\"ja\",URI=\"audio/ja.m3u8\"\n"
+                     "#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"a\",NAME=\"English\",LANGUAGE=\"en\",URI=\"audio/en.m3u8\"\n"
+                     "\n"
+                     "#EXT-X-STREAM-INF:BANDWIDTH=3476000,RESOLUTION=1920x1080,AUDIO=\"a\"\n"
+                     "video/1080/playlist.m3u8\n"
+                     "\n"
+                     "#EXT-X-I-FRAME-STREAM-INF:BANDWIDTH=49071,URI=\"iframes.m3u8\"\n");
+}
+
+TEST_CASE("withBestVariantOnly keeps the first of equal variants and leaves a single variant alone") {
+    CHECK(withBestVariantOnly("#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=5\na.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=5\nb.m3u8\n") ==
+          "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=5\na.m3u8\n");
+    CHECK(withBestVariantOnly(master) == master);
+}
+
 TEST_CASE("segmentUris resolves every segment line") {
     const auto uris = segmentUris("#EXTM3U\r\n#EXTINF:6,\r\n//a.example/000.jpg\r\n#EXTINF:6,\r\n001.jpg\r\n",
                                   "https://b.example/v/playlist.m3u8");

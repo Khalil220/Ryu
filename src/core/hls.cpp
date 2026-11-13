@@ -1,5 +1,6 @@
 #include "hls.hpp"
 
+#include <charconv>
 #include <sstream>
 
 namespace ryu {
@@ -47,6 +48,18 @@ std::string_view attributeUri(std::string_view line) {
 std::string_view schemeOf(std::string_view url) {
     const auto colon = url.find("://");
     return colon == std::string_view::npos ? std::string_view{} : url.substr(0, colon);
+}
+
+long long bandwidthOf(std::string_view line) {
+    constexpr std::string_view name = "BANDWIDTH=";
+    for (auto at = line.find(name); at != std::string_view::npos; at = line.find(name, at + 1)) {
+        if (at > 0 && (line[at - 1] == ':' || line[at - 1] == ',')) {
+            long long value = 0;
+            std::from_chars(line.data() + at + name.size(), line.data() + line.size(), value);
+            return value;
+        }
+    }
+    return 0;
 }
 
 }
@@ -97,6 +110,36 @@ std::string withHost(std::string_view url, std::string_view host) {
 
 bool isMasterPlaylist(std::string_view playlist) {
     return playlist.find("#EXT-X-STREAM-INF") != std::string_view::npos;
+}
+
+std::string withBestVariantOnly(std::string_view master) {
+    const auto all = lines(master);
+    size_t best = all.size();
+    long long bestBandwidth = -1;
+    for (size_t i = 0; i < all.size(); ++i) {
+        if (startsWithTag(all[i], "#EXT-X-STREAM-INF")) {
+            if (const auto bandwidth = bandwidthOf(all[i]); bandwidth > bestBandwidth) {
+                bestBandwidth = bandwidth;
+                best = i;
+            }
+        }
+    }
+    std::ostringstream output;
+    bool skipping = false;
+    bool first = true;
+    for (size_t i = 0; i < all.size(); ++i) {
+        const auto line = all[i];
+        if (startsWithTag(line, "#EXT-X-STREAM-INF")) {
+            skipping = i != best;
+        }
+        if (skipping) {
+            skipping = !isUriLine(line);
+            continue;
+        }
+        output << (first ? "" : "\n") << line;
+        first = false;
+    }
+    return output.str();
 }
 
 std::vector<std::string> mediaPlaylistUris(std::string_view master, std::string_view baseUrl) {

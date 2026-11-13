@@ -52,7 +52,7 @@ TEST_CASE("the playlist server serves published files over loopback and forgets 
     CHECK(http.get(first + "master.m3u8").status == 404);
 }
 
-TEST_CASE("a stream whose hosts are all alive is left alone") {
+TEST_CASE("a stream whose hosts are all alive is served from loopback with its hosts unchanged") {
     FakeHttpClient http;
     serveMaster(http);
     serveMedia(http, "live.example.site");
@@ -62,8 +62,14 @@ TEST_CASE("a stream whose hosts are all alive is left alone") {
     const auto report = repairStreamHosts(http, server, megaplayStream());
 
     CHECK(report.deadHosts.empty());
-    CHECK(report.stream.url == masterUrl);
+    CHECK(report.replacementHost.empty());
     CHECK(http.header(2, "Referer") == "https://megaplay.buzz/");
+    CHECK(report.stream.url.starts_with("http://127.0.0.1:"));
+    CHECK(report.stream.subtitles[0].url == "https://dead.example.online/anime/a/b/subtitles/eng-2.vtt");
+    CurlHttpClient loopback;
+    const auto media = loopback.get(report.stream.url.substr(0, report.stream.url.size() - 11) + "media-0.m3u8").body;
+    CHECK(media.find("https://live.example.site/anime/a/b/seg-1-f1.jpg") != std::string::npos);
+    CHECK(media.find("https://live.example.site/anime/a/b/seg-2-f1.html") != std::string::npos);
 }
 
 TEST_CASE("a banned host is swapped for a working alternate and served from loopback") {
@@ -93,11 +99,11 @@ TEST_CASE("a banned host is swapped for a working alternate and served from loop
     CHECK(media.find("dead.example.online") == std::string::npos);
 }
 
-TEST_CASE("a dead host behind any quality level is swapped, not only the first level's") {
+TEST_CASE("only the best quality level is served, so a dead host behind a lower one never holds up playback") {
     FakeHttpClient http;
-    http.serve(masterUrl, "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=5500000,RESOLUTION=1920x1080\nindex-f1.m3u8\n"
-                          "#EXT-X-STREAM-INF:BANDWIDTH=2800000,RESOLUTION=1280x720\nindex-f2.m3u8\n"
-                          "#EXT-X-STREAM-INF:BANDWIDTH=800000,RESOLUTION=640x360\nindex-f3.m3u8\n");
+    http.serve(masterUrl, "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=800000,RESOLUTION=640x360\nindex-f3.m3u8\n"
+                          "#EXT-X-STREAM-INF:BANDWIDTH=5500000,RESOLUTION=1920x1080\nindex-f1.m3u8\n"
+                          "#EXT-X-STREAM-INF:BANDWIDTH=2800000,RESOLUTION=1280x720\nindex-f2.m3u8\n");
     const auto level = [&](const std::string& name, const std::string& host) {
         http.serve("https://fetch.example.top/anime/a/b/index-" + name + ".m3u8",
                    "#EXTM3U\n#EXTINF:10,\nhttps://" + host + "/anime/a/b/seg-" + name + "-00000.jpg\n#EXT-X-ENDLIST\n");
@@ -106,22 +112,52 @@ TEST_CASE("a dead host behind any quality level is swapped, not only the first l
     level("f2", "two.example.shop");
     level("f3", "gone.example.shop");
     http.serve("https://one.example.top/anime/a/b/seg-f1-00000.jpg", tsBytes);
-    http.serve("https://two.example.shop/anime/a/b/seg-f2-00000.jpg", tsBytes);
     http.serve("https://gone.example.shop/anime/a/b/seg-f3-00000.jpg", "<html>404</html>", 404);
     PlaylistServer server;
 
     const auto report = repairStreamHosts(http, server, megaplayStream());
 
-    REQUIRE(report.deadHosts == std::vector<std::string>{"gone.example.shop"});
-    CHECK(report.replacementHost == "one.example.top");
+    CHECK(report.deadHosts.empty());
+    CHECK(http.requests.size() == 3);
     CurlHttpClient loopback;
+    const auto master = loopback.get(report.stream.url).body;
+    CHECK(master == "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=5500000,RESOLUTION=1920x1080\nmedia-0.m3u8\n");
     const auto base = report.stream.url.substr(0, report.stream.url.size() - 11);
     CHECK(loopback.get(base + "media-0.m3u8").body.find("https://one.example.top/anime/a/b/seg-f1-00000.jpg") !=
           std::string::npos);
-    CHECK(loopback.get(base + "media-1.m3u8").body.find("https://two.example.shop/anime/a/b/seg-f2-00000.jpg") !=
-          std::string::npos);
-    CHECK(loopback.get(base + "media-2.m3u8").body.find("https://one.example.top/anime/a/b/seg-f3-00000.jpg") !=
-          std::string::npos);
+}
+
+TEST_CASE("audio renditions are served from loopback beside the best video level") {
+    FakeHttpClient http;
+    constexpr const char* base = "https://cdn.example/v/";
+    http.serve(std::string(base) + "master.m3u8",
+               "#EXTM3U\n"
+               "#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"a\",NAME=\"Japanese\",LANGUAGE=\"ja\",URI=\"audio/ja/playlist.m3u8\"\n"
+               "#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID=\"a\",NAME=\"English\",LANGUAGE=\"en\",URI=\"audio/en/playlist.m3u8\"\n"
+               "#EXT-X-STREAM-INF:BANDWIDTH=946000,AUDIO=\"a\"\nvideo/360/playlist.m3u8\n"
+               "#EXT-X-STREAM-INF:BANDWIDTH=3476000,AUDIO=\"a\"\nvideo/1080/playlist.m3u8\n");
+    for (const std::string path : {"audio/ja/", "audio/en/", "video/1080/"}) {
+        http.serve(base + path + "playlist.m3u8",
+                   "#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI=\"key.bin\"\n#EXTINF:6,\n00000.ts\n#EXT-X-ENDLIST\n");
+        http.serve(base + path + "00000.ts", tsBytes);
+    }
+    PlaylistServer server;
+    Stream stream;
+    stream.url = std::string(base) + "master.m3u8";
+
+    const auto report = repairStreamHosts(http, server, stream);
+
+    CHECK(report.deadHosts.empty());
+    CurlHttpClient loopback;
+    const auto master = loopback.get(report.stream.url).body;
+    CHECK(master.find("NAME=\"Japanese\",LANGUAGE=\"ja\",URI=\"media-0.m3u8\"") != std::string::npos);
+    CHECK(master.find("NAME=\"English\",LANGUAGE=\"en\",URI=\"media-1.m3u8\"") != std::string::npos);
+    CHECK(master.find("#EXT-X-STREAM-INF:BANDWIDTH=3476000,AUDIO=\"a\"\nmedia-2.m3u8") != std::string::npos);
+    CHECK(master.find("360") == std::string::npos);
+    const auto served = report.stream.url.substr(0, report.stream.url.size() - 11);
+    const auto english = loopback.get(served + "media-1.m3u8").body;
+    CHECK(english.find("URI=\"https://cdn.example/v/audio/en/key.bin\"") != std::string::npos);
+    CHECK(english.find("https://cdn.example/v/audio/en/00000.ts") != std::string::npos);
 }
 
 TEST_CASE("only the dead hosts in a rotating playlist are swapped, onto a living one") {
