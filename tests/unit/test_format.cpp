@@ -77,6 +77,23 @@ TEST_CASE("steppedRow finds the nearest listed episode when the current one isn'
     CHECK(steppedRow({}, 0, -1) == std::nullopt);
 }
 
+TEST_CASE("episodeNumbered finds the episode with a number, however it is written") {
+    const std::vector<Episode> episodes{{"a", "1"}, {"b", "2"}, {"c", "12.5"}};
+    CHECK(episodeNumbered(episodes, "2") == 1);
+    CHECK(episodeNumbered(episodes, "12.50") == 2);
+    CHECK(episodeNumbered(episodes, "3") == std::nullopt);
+    CHECK(episodeNumbered(episodes, "") == std::nullopt);
+}
+
+TEST_CASE("rowAtOrBefore selects the listed episode at or just before the one wanted") {
+    const std::vector<size_t> visible{0, 2, 3, 7};
+    CHECK(rowAtOrBefore(visible, 3) == 2);
+    CHECK(rowAtOrBefore(visible, 5) == 2);
+    CHECK(rowAtOrBefore(visible, 9) == 3);
+    CHECK(rowAtOrBefore({2, 3}, 0) == 0);
+    CHECK(rowAtOrBefore({}, 4) == 0);
+}
+
 TEST_CASE("timeLabel includes the duration once it is known") {
     CHECK(timeLabel(201, 1450) == "3:21 of 24:10");
     CHECK(timeLabel(201, 0) == "3:21");

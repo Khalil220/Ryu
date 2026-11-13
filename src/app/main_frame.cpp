@@ -424,12 +424,7 @@ void MainFrame::loadEpisodes(const std::string& preferredNumber, bool play) {
             }
             loadFinished();
             episodes_ = std::move(episodes);
-            std::optional<size_t> preferred;
-            for (size_t i = 0; !wanted.empty() && i < episodes_.size(); ++i) {
-                if (sameEpisodeNumber(episodes_[i].number, wanted)) {
-                    preferred = i;
-                }
-            }
+            const auto preferred = episodeNumbered(episodes_, wanted);
             showEpisodes(preferred.value_or(0));
             setStatus(episodes_.empty() ? "No episodes available for " + title
                                         : episodeCountLabel(false) + " of " + title);
@@ -466,11 +461,7 @@ void MainFrame::showEpisodes(size_t preferred) {
                                                : wxString("No subbed episodes"));
     }
     episodeList_->setItems(std::move(labels));
-    long row = 0;
-    for (size_t r = 0; r < visibleEpisodes_.size() && visibleEpisodes_[r] <= preferred; ++r) {
-        row = static_cast<long>(r);
-    }
-    episodeList_->selectItem(row);
+    episodeList_->selectItem(static_cast<long>(rowAtOrBefore(visibleEpisodes_, preferred)));
 }
 
 wxString MainFrame::episodeCountLabel(bool mentionAudio) const {

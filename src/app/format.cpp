@@ -177,6 +177,20 @@ std::optional<size_t> steppedRow(const std::vector<size_t>& visible, size_t curr
     return at == visible.begin() ? std::nullopt : std::optional(static_cast<size_t>(at - visible.begin()) - 1);
 }
 
+std::optional<size_t> episodeNumbered(const std::vector<Episode>& episodes, std::string_view number) {
+    if (number.empty()) {
+        return std::nullopt;
+    }
+    const auto found = std::ranges::find_if(
+        episodes, [&](const Episode& episode) { return sameEpisodeNumber(episode.number, number); });
+    return found == episodes.end() ? std::nullopt : std::optional(static_cast<size_t>(found - episodes.begin()));
+}
+
+size_t rowAtOrBefore(const std::vector<size_t>& visible, size_t episode) {
+    const auto after = std::ranges::upper_bound(visible, episode);
+    return after == visible.begin() ? 0 : static_cast<size_t>(after - visible.begin()) - 1;
+}
+
 std::string malTitle(const MalAnime& anime) {
     return anime.englishTitle.empty() ? anime.title : anime.englishTitle;
 }
