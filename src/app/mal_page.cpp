@@ -143,6 +143,9 @@ void MalPage::showList() {
         list_->selectItem(kept == shown_.end() ? 0 : static_cast<long>(kept - shown_.begin()));
     }
     for (auto* button : {openButton_, editButton_, removeButton_}) {
+        if (shown_.empty() && FindFocus() == button) {
+            list_->SetFocus();
+        }
         button->Show(!shown_.empty());
     }
     Layout();
