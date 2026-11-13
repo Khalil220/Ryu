@@ -304,6 +304,35 @@ TEST_CASE("MalAccess renews and retries once when MAL rejects a token that looke
     CHECK_THROWS_AS(access.call<int>([](MalClient&) -> int { throw MalLoginExpired(); }), MalLoginExpired);
 }
 
+TEST_CASE("MalAccess answers for its tokens while a renewal is waiting on MAL, and a logout meanwhile sticks") {
+    class HeldRenewal : public FakeHttpClient {
+    public:
+        std::promise<void> entered;
+        std::promise<void> release;
+
+        HttpResponse post(const std::string& url, const std::string& body, const Headers& headers) override {
+            entered.set_value();
+            release.get_future().wait();
+            return FakeHttpClient::post(url, body, headers);
+        }
+    };
+    HeldRenewal http;
+    http.serve(tokenUrl, R"({"token_type":"Bearer","expires_in":3600,"access_token":"access-2","refresh_token":"refresh-2"})");
+    MalAccess access(http, {}, {"access-1", "refresh-1", 5000}, [] { return std::int64_t{4950}; });
+    auto entered = http.entered.get_future();
+
+    auto call = std::async(std::launch::async, [&] { return access.call<int>([](MalClient&) { return 7; }); });
+    REQUIRE(entered.wait_for(std::chrono::seconds(5)) == std::future_status::ready);
+    auto read = std::async(std::launch::async, [&] { return access.tokens(); });
+    CHECK(read.wait_for(std::chrono::seconds(2)) == std::future_status::ready);
+    access.setTokens({});
+    http.release.set_value();
+
+    CHECK(call.get() == 7);
+    CHECK(read.get() == MalTokens{"access-1", "refresh-1", 5000});
+    CHECK(access.tokens() == MalTokens{});
+}
+
 TEST_CASE("MalAccess forgets a login MAL won't renew") {
     FakeHttpClient http;
     http.serve(tokenUrl, readFixture("mal/token_refused.json"), 401);

@@ -432,19 +432,28 @@ std::int64_t MalAccess::now() const {
 }
 
 std::string MalAccess::freshAccess(const std::string& rejected) {
-    std::scoped_lock lock(mutex_);
-    if (tokens_.refresh.empty()) {
+    std::scoped_lock refreshing(refreshMutex_);
+    const auto current = tokens();
+    if (current.refresh.empty()) {
         throw MalLoginExpired();
     }
-    if (!tokens_.usable(now()) || tokens_.access == rejected) {
-        try {
-            tokens_ = refreshMalTokens(http_, endpoints_, tokens_.refresh, now());
-        } catch (const MalLoginExpired&) {
-            tokens_ = {};
-            throw;
-        }
+    if (current.usable(now()) && current.access != rejected) {
+        return current.access;
     }
-    return tokens_.access;
+    const auto store = [&](MalTokens replacement) {
+        std::scoped_lock lock(mutex_);
+        if (tokens_.refresh == current.refresh) {
+            tokens_ = std::move(replacement);
+        }
+    };
+    try {
+        auto renewed = refreshMalTokens(http_, endpoints_, current.refresh, now());
+        store(renewed);
+        return renewed.access;
+    } catch (const MalLoginExpired&) {
+        store({});
+        throw;
+    }
 }
 
 namespace {

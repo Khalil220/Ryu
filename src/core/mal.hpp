@@ -164,6 +164,7 @@ private:
     HttpClient& http_;
     MalEndpoints endpoints_;
     Clock clock_;
+    std::mutex refreshMutex_;
     std::mutex mutex_;
     MalTokens tokens_;
 };
