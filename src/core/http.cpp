@@ -1,5 +1,6 @@
 #include "http.hpp"
 
+#include "hls.hpp"
 #include "log.hpp"
 
 #include <curl/curl.h>
@@ -56,11 +57,6 @@ void unlockShare(CURL*, curl_lock_data data, void* locks) {
     (*static_cast<ShareLocks*>(locks))[data].unlock();
 }
 
-std::string originOf(const std::string& url) {
-    const auto scheme = url.find("://");
-    return scheme == std::string::npos ? std::string() : url.substr(0, url.find_first_of("/?#", scheme + 3));
-}
-
 }
 
 struct CurlHttpClient::Pool {
@@ -86,13 +82,13 @@ struct CurlHttpClient::Pool {
     Pool(const Pool&) = delete;
     Pool& operator=(const Pool&) = delete;
 
-    CURL* take(const std::string& origin) {
+    CURL* take(const std::string& host) {
         CURL* handle = nullptr;
         {
             std::lock_guard lock(mutex);
             auto chosen = idle.rbegin();
             for (auto it = idle.rbegin(); it != idle.rend(); ++it) {
-                if (it->first == origin) {
+                if (it->first == host) {
                     chosen = it;
                     break;
                 }
@@ -113,11 +109,11 @@ struct CurlHttpClient::Pool {
         return handle;
     }
 
-    void give(const std::string& origin, CURL* handle) {
+    void give(const std::string& host, CURL* handle) {
         CURL* surplus = nullptr;
         {
             std::lock_guard lock(mutex);
-            idle.emplace_back(origin, handle);
+            idle.emplace_back(host, handle);
             if (idle.size() > maxIdle) {
                 surplus = idle.front().second;
                 idle.erase(idle.begin());
@@ -175,9 +171,9 @@ HttpResponse CurlHttpClient::download(const std::string& url, const Progress& pr
 
 HttpResponse CurlHttpClient::perform(Mode mode, const std::string& url, const std::string* body,
                                      const Headers& headers, const Progress* progress, const char* method) {
-    const auto origin = originOf(url);
-    const auto release = [this, &origin](CURL* used) { pool_->give(origin, used); };
-    std::unique_ptr<CURL, decltype(release)> handle(pool_->take(origin), release);
+    const auto host = hostOf(url);
+    const auto release = [this, &host](CURL* used) { pool_->give(host, used); };
+    std::unique_ptr<CURL, decltype(release)> handle(pool_->take(host), release);
     if (!handle) {
         throw HttpError("Could not create an HTTP handle");
     }
@@ -229,8 +225,7 @@ HttpResponse CurlHttpClient::perform(Mode mode, const std::string& url, const st
     }
     if (code != CURLE_OK && !stoppedEarly) {
         logLine(std::format("{} {} failed after {} ms: {}", verb, url, elapsed, curl_easy_strerror(code)));
-        const auto host = origin.empty() ? url : origin.substr(origin.find("://") + 3);
-        throw HttpError("Could not reach " + host + ": " + curl_easy_strerror(code));
+        throw HttpError("Could not reach " + (host.empty() ? url : host) + ": " + curl_easy_strerror(code));
     }
 
     curl_easy_getinfo(easy, CURLINFO_RESPONSE_CODE, &response.status);

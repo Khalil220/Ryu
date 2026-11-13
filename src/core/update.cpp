@@ -1,5 +1,7 @@
 #include "update.hpp"
 
+#include "json_fields.hpp"
+
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
@@ -32,11 +34,6 @@ namespace fs = std::filesystem;
 
 constexpr std::string_view packageSuffix = "-win64.zip";
 constexpr std::string_view replacedSuffix = ".ryu-old";
-
-std::string stringField(const json& object, const char* key) {
-    const auto it = object.find(key);
-    return it != object.end() && it->is_string() ? it->get<std::string>() : std::string();
-}
 
 std::optional<std::array<int, 3>> versionParts(std::string_view text) {
     if (text.starts_with('v') || text.starts_with('V')) {

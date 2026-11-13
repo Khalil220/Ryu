@@ -9,6 +9,7 @@ namespace ryu {
 
 std::string resolveUrl(std::string_view base, std::string_view reference);
 std::string hostOf(std::string_view url);
+std::string originOf(std::string_view url);
 std::string withHost(std::string_view url, std::string_view host);
 
 bool isMasterPlaylist(std::string_view playlist);

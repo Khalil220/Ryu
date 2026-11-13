@@ -97,6 +97,14 @@ std::string hostOf(std::string_view url) {
     return std::string(url.substr(start, end == std::string_view::npos ? std::string_view::npos : end - start));
 }
 
+std::string originOf(std::string_view url) {
+    const auto scheme = url.find("://");
+    if (scheme == std::string_view::npos) {
+        return std::string(url);
+    }
+    return std::string(url.substr(0, url.find('/', scheme + 3))) + "/";
+}
+
 std::string withHost(std::string_view url, std::string_view host) {
     const auto authority = url.find("://");
     if (authority == std::string_view::npos) {

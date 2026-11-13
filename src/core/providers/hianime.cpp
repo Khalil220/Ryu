@@ -3,6 +3,7 @@
 #include "../encoding.hpp"
 #include "../hls.hpp"
 #include "../html.hpp"
+#include "../json_fields.hpp"
 #include "../log.hpp"
 
 #include <nlohmann/json.hpp>
@@ -38,25 +39,6 @@ std::string trailingId(std::string_view url) {
         return {};
     }
     return std::string(id);
-}
-
-std::string originOf(std::string_view url) {
-    const auto scheme = url.find("://");
-    if (scheme == std::string_view::npos) {
-        return std::string(url);
-    }
-    const auto path = url.find('/', scheme + 3);
-    return std::string(url.substr(0, path)) + "/";
-}
-
-std::string stringField(const nlohmann::json& object, const char* key) {
-    const auto it = object.find(key);
-    return it != object.end() && it->is_string() ? it->get<std::string>() : std::string();
-}
-
-bool boolField(const nlohmann::json& object, const char* key) {
-    const auto it = object.find(key);
-    return it != object.end() && it->is_boolean() && it->get<bool>();
 }
 
 std::string trimTrailingSlash(std::string url) {

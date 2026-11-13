@@ -2,6 +2,7 @@
 
 #include "../encoding.hpp"
 #include "../html.hpp"
+#include "../json_fields.hpp"
 #include "../language.hpp"
 #include "../log.hpp"
 
@@ -22,21 +23,6 @@ using nlohmann::json;
 constexpr std::string_view itemsMarker = "items: JSON.parse('";
 constexpr std::string_view playerMarker = "vidstackPlayer(JSON.parse('";
 constexpr std::string_view titlesMarker = "epsTitles: JSON.parse('";
-
-std::string stringField(const json& object, const char* key) {
-    const auto it = object.find(key);
-    return it != object.end() && it->is_string() ? it->get<std::string>() : std::string();
-}
-
-int intField(const json& object, const char* key) {
-    const auto it = object.find(key);
-    return it != object.end() && it->is_number_integer() ? it->get<int>() : 0;
-}
-
-bool flagField(const json& object, const char* key) {
-    const auto it = object.find(key);
-    return it != object.end() && it->is_boolean() && it->get<bool>();
-}
 
 void appendUtf8(std::string& output, uint32_t code) {
     if (code < 0x80) {
@@ -412,7 +398,7 @@ std::vector<Stream> AniZoneProvider::streams(std::string_view episodeId, Audio a
             const auto title = stringField(track, "title");
             Subtitle subtitle{stringField(track, "file"), language, subtitleLabel(title, language), false};
             if (!subtitle.url.empty()) {
-                subtitle.isDefault = audio == Audio::Sub && flagField(track, "default");
+                subtitle.isDefault = audio == Audio::Sub && boolField(track, "default");
                 stream.subtitles.push_back(std::move(subtitle));
             }
         }

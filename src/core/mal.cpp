@@ -1,6 +1,7 @@
 #include "mal.hpp"
 
 #include "encoding.hpp"
+#include "json_fields.hpp"
 #include "stream_finder.hpp"
 
 #include <nlohmann/json.hpp>
@@ -34,21 +35,6 @@ constexpr std::array<std::pair<MalStatus, std::string_view>, 5> statusCodes{{
     {MalStatus::Dropped, "dropped"},
     {MalStatus::PlanToWatch, "plan_to_watch"},
 }};
-
-std::string stringField(const json& object, const char* key) {
-    const auto it = object.find(key);
-    return it != object.end() && it->is_string() ? it->get<std::string>() : std::string();
-}
-
-int intField(const json& object, const char* key) {
-    const auto it = object.find(key);
-    return it != object.end() && it->is_number_integer() ? it->get<int>() : 0;
-}
-
-bool boolField(const json& object, const char* key) {
-    const auto it = object.find(key);
-    return it != object.end() && it->is_boolean() && it->get<bool>();
-}
 
 const json* objectField(const json& object, const char* key) {
     const auto it = object.find(key);

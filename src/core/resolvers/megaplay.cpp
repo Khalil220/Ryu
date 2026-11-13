@@ -3,6 +3,7 @@
 #include "../encoding.hpp"
 #include "../hls.hpp"
 #include "../html.hpp"
+#include "../json_fields.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -16,14 +17,6 @@ namespace {
 
 constexpr std::string_view host = "https://megaplay.buzz/";
 constexpr std::string_view literalMarker = ".encode(\"";
-
-std::string originOf(std::string_view url) {
-    const auto scheme = url.find("://");
-    if (scheme == std::string_view::npos) {
-        return std::string(url);
-    }
-    return std::string(url.substr(0, url.find('/', scheme + 3))) + "/";
-}
 
 std::optional<std::string> literalAt(std::string_view script, size_t marker) {
     if (marker == std::string_view::npos) {
@@ -74,11 +67,6 @@ std::optional<std::string> pickedDefault(std::string_view script, std::string_vi
         return std::nullopt;
     }
     return value;
-}
-
-std::string stringField(const nlohmann::json& object, const char* key) {
-    const auto it = object.find(key);
-    return it != object.end() && it->is_string() ? it->get<std::string>() : std::string();
 }
 
 

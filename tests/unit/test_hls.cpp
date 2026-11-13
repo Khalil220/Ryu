@@ -32,6 +32,11 @@ TEST_CASE("hostOf and withHost work on the authority only") {
     CHECK(withHost("https://dead.example", "live.example") == "https://live.example");
 }
 
+TEST_CASE("originOf keeps the scheme and host with a closing slash") {
+    CHECK(originOf("https://megaplay.buzz/stream/s-2/107257/sub") == "https://megaplay.buzz/");
+    CHECK(originOf("https://megaplay.buzz") == "https://megaplay.buzz/");
+}
+
 TEST_CASE("mediaPlaylistUris lists variants and renditions but not I-frame playlists") {
     CHECK(isMasterPlaylist(master));
     const auto uris = mediaPlaylistUris(master, "https://cdn.example/m/master.m3u8");
