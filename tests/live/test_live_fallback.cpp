@@ -1,7 +1,7 @@
 #include "http.hpp"
 #include "playlist_server.hpp"
+#include "providers/anizone.hpp"
 #include "providers/hianime.hpp"
-#include "providers/miruro.hpp"
 #include "stream_finder.hpp"
 
 #include <doctest/doctest.h>
@@ -19,11 +19,11 @@ public:
 
 }
 
-TEST_CASE("live: a HiAnime episode that the primary cannot play is found on Miruro") {
+TEST_CASE("live: a HiAnime episode that the primary cannot play is found on AniZone") {
     CurlHttpClient http;
     PlaylistServer server;
     HiAnimeProvider hianime(http);
-    MiruroProvider miruro(http);
+    AniZoneProvider anizone(http);
     EmptyProvider nothing;
 
     const auto shows = hianime.search("frieren");
@@ -32,11 +32,11 @@ TEST_CASE("live: a HiAnime episode that the primary cannot play is found on Miru
     const auto episodes = hianime.episodes(show);
     REQUIRE(episodes.size() > 1);
 
-    const auto found = findStream(http, server, {{"Nothing", &nothing}, {"Miruro", &miruro}}, show, episodes[1],
+    const auto found = findStream(http, server, {{"Nothing", &nothing}, {"AniZone", &anizone}}, show, episodes[1],
                                   Audio::Dub);
 
-    CHECK(found.providerName == "Miruro");
+    CHECK(found.providerName == "AniZone");
     CHECK(found.fromFallback);
-    CHECK(found.stream.audioLanguage == "eng,en,English");
+    CHECK(found.stream.audioLanguage == "eng,en");
     MESSAGE("Fallback stream: " << found.stream.server << " " << found.stream.url);
 }

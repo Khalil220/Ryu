@@ -9,9 +9,8 @@ using namespace ryu;
 
 namespace {
 
-std::string spoken(std::string_view subText, std::vector<std::string> noise = {}) {
+std::string spoken(std::string_view subText) {
     SubtitleReader reader;
-    reader.setNoise(std::move(noise));
     return reader.next(subText);
 }
 
@@ -26,14 +25,10 @@ std::vector<std::string> spokenInTurn(const std::vector<std::string>& subTexts) 
 
 }
 
-TEST_CASE("subtitle lines are joined, tidied and stripped of watermark lines") {
+TEST_CASE("subtitle lines are joined and tidied") {
     CHECK(spoken("At the northernmost end\nof the continent,") == "At the northernmost end of the continent,");
     CHECK(spoken("  Frieren.  \r\n ") == "Frieren.");
-    CHECK(spoken("KAA.lt", {"kaa.lt"}).empty());
-    CHECK(spoken("Visit kaa.lt later", {"kaa.lt"}) == "Visit kaa.lt later");
     CHECK(spoken("\n").empty());
-    CHECK(spoken("KAA.lt\nHello there.", {"kaa.lt"}) == "Hello there.");
-    CHECK(spoken("kaa.lt", {"KAA.lt"}).empty());
 }
 
 TEST_CASE("karaoke layers and syllables are skipped but dialogue is kept") {

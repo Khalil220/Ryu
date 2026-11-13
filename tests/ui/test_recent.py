@@ -134,9 +134,9 @@ def run(exe, root):
         send_keys("^p", vk_packet=False)
         preferences = main.child_window(title="Preferences", control_type="Window")
         if wait_for(preferences.exists, 10) is not None:
-            preferences.child_window(title="Provider", control_type="ComboBox").select("Miruro")
+            preferences.child_window(title="Provider", control_type="ComboBox").select("AniZone")
             preferences.child_window(title="OK", control_type="Button").invoke()
-        wait_for(lambda: main.window_text() == "Ryu - Miruro", 10)
+        wait_for(lambda: main.window_text() == "Ryu - AniZone", 10)
         entries = recent_menu(main)
         send_keys("1", vk_packet=False)
         check(wait_for(lambda: re.match(r"Episode 3\b.* - Frieren: Beyond Journey's End - Ryu$", main.window_text()), 90)

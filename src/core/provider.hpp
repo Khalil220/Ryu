@@ -60,7 +60,6 @@ struct Stream {
     std::vector<std::string> alternateHosts;
     std::string audioLanguage;
     std::optional<TimeRange> intro;
-    std::vector<std::string> subtitleNoise;
 };
 
 class ProviderError : public std::runtime_error {

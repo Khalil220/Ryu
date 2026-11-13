@@ -141,9 +141,9 @@ TEST_CASE("rememberWatched keeps one entry per show, newest first") {
     CHECK(recentLabel(recent[0]) == "One Piece episode 751");
     CHECK(recentLabel(recent[1]) == "Naruto episode 25");
 
-    rememberWatched(recent, watched("miruro", "100", "Bleach", "3"));
+    rememberWatched(recent, watched("anizone", "100", "Bleach", "3"));
     CHECK(recent.size() == 3);
-    CHECK(recent[0].providerId == "miruro");
+    CHECK(recent[0].providerId == "anizone");
 }
 
 TEST_CASE("rememberWatched treats the same anime on another provider as the same entry") {
@@ -159,14 +159,14 @@ TEST_CASE("rememberWatched treats the same anime on another provider as the same
     CHECK(recent[0].episode == "4");
     CHECK(recent[1].show.title == "Naruto");
 
-    auto byId = watched("miruro", "abc", "A different spelling", "5");
+    auto byId = watched("hianime", "abc", "A different spelling", "5");
     byId.show.malId = 52991;
     recent[0].show.malId = 52991;
     rememberWatched(recent, byId);
     REQUIRE(recent.size() == 2);
-    CHECK(recent[0].providerId == "miruro");
+    CHECK(recent[0].providerId == "hianime");
 
-    rememberWatched(recent, watched("miruro", "def", "Frieren: Beyond Journey's End Season 2", "1"));
+    rememberWatched(recent, watched("anizone", "def", "Frieren: Beyond Journey's End Season 2", "1"));
     CHECK(recent.size() == 3);
 }
 

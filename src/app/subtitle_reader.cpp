@@ -24,11 +24,6 @@ std::string collapse(std::string_view line) {
     return text;
 }
 
-std::string lower(std::string value) {
-    std::ranges::transform(value, value.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    return value;
-}
-
 std::ptrdiff_t characters(const std::string& line) {
     return std::ranges::count_if(line, [](unsigned char c) { return (c & 0xC0) != 0x80; });
 }
@@ -51,13 +46,6 @@ std::vector<std::string> linesOf(std::string_view raw) {
 
 }
 
-void SubtitleReader::setNoise(std::vector<std::string> noise) {
-    noise_.clear();
-    for (auto& entry : noise) {
-        noise_.push_back(lower(std::move(entry)));
-    }
-}
-
 void SubtitleReader::clear() {
     onScreen_.clear();
 }
@@ -74,8 +62,7 @@ std::string SubtitleReader::next(std::string_view subText) {
     std::string text;
     for (const auto& line : distinct) {
         if (std::ranges::find(onScreen_, line) != onScreen_.end() || characters(line) == 1 ||
-            std::ranges::count(lines, line) >= 3 || (karaoke && isShort(line)) ||
-            std::ranges::find(noise_, lower(line)) != noise_.end()) {
+            std::ranges::count(lines, line) >= 3 || (karaoke && isShort(line))) {
             continue;
         }
         text += (text.empty() ? "" : " ") + line;

@@ -393,7 +393,6 @@ void PlayerPanel::play(const Stream& stream, const std::string& heading, bool re
     pendingSubtitles_ = stream.subtitles;
     subtitlePreference_ = subtitles;
     heading_ = heading;
-    subtitleReader_.setNoise(stream.subtitleNoise);
     intro_ = stream.intro;
     readSubtitles_ = readSubtitles;
     readCheck_->SetValue(readSubtitles);

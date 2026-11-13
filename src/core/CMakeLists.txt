@@ -12,7 +12,6 @@ add_library(ryu_core STATIC
     registry.cpp
     providers/anizone.cpp
     providers/hianime.cpp
-    providers/miruro.cpp
     resolvers/megaplay.cpp
     secret.cpp
     stream_finder.cpp
