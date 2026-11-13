@@ -243,8 +243,12 @@ std::optional<TimeRange> introFromChapters(std::string_view vtt) {
         }
         auto first = lines[i].substr(0, arrow);
         auto second = lines[i].substr(arrow + 3);
+        const auto from = second.find_first_not_of(' ');
+        if (from == std::string_view::npos) {
+            continue;
+        }
         first = first.substr(0, first.find_last_not_of(' ') + 1);
-        second = second.substr(second.find_first_not_of(' '));
+        second = second.substr(from);
         second = second.substr(0, second.find(' '));
         const auto start = clockSeconds(first);
         const auto end = clockSeconds(second);

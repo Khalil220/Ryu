@@ -222,6 +222,19 @@ TEST_CASE("AniZone offers no intro when the chapters don't mark one") {
     CHECK_FALSE(introFor("anizone/chapters_sakamoto_1.vtt").has_value());
 }
 
+TEST_CASE("AniZone skips a chapter line with no end time and still finds the opening") {
+    FakeHttpClient http;
+    http.serve("https://anizone.to/anime/x/1", playerPage("", "", chaptersUrl));
+    http.serve(chaptersUrl, "WEBVTT\n\n00:00:00.000 -->\nPrologue\n\n00:00:31.398 --> 00:01:51.044\nOpening 01\n");
+    AniZoneProvider provider(http);
+
+    const auto streams = provider.streams("x/1", Audio::Sub);
+
+    REQUIRE(streams.size() == 1);
+    REQUIRE(streams[0].intro.has_value());
+    CHECK(streams[0].intro->start == doctest::Approx(31.398));
+}
+
 TEST_CASE("AniZone still plays an episode whose chapters can't be read") {
     CHECK_FALSE(introFor(nullptr).has_value());
 }

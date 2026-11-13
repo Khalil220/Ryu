@@ -7,6 +7,7 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <charconv>
 #include <optional>
 
 namespace ryu {
@@ -57,7 +58,13 @@ std::optional<std::string> pickedDefault(std::string_view script, std::string_vi
             } else if (ch == 't') {
                 ch = '\t';
             } else if (ch == 'x' && at + 2 <= script.size()) {
-                ch = static_cast<char>(std::stoi(std::string(script.substr(at, 2)), nullptr, 16));
+                const auto digits = script.substr(at, 2);
+                int code = 0;
+                if (std::from_chars(digits.data(), digits.data() + digits.size(), code, 16).ptr !=
+                    digits.data() + digits.size()) {
+                    return std::nullopt;
+                }
+                ch = static_cast<char>(code);
                 at += 2;
             }
         }
@@ -151,8 +158,12 @@ Stream MegaplayResolver::resolve(const std::string& embedUrl, Audio audio, const
     stream.headers = {{"Referer", originOf(embedUrl)}};
     stream.disguisedSegments = true;
     if (const auto intro = sources.find("intro"); intro != sources.end() && intro->is_object()) {
-        const auto start = intro->value("start", 0.0);
-        const auto end = intro->value("end", 0.0);
+        const auto seconds = [&](const char* key) {
+            const auto it = intro->find(key);
+            return it != intro->end() && it->is_number() ? it->get<double>() : 0.0;
+        };
+        const auto start = seconds("start");
+        const auto end = seconds("end");
         if (end > start) {
             stream.intro = TimeRange{start, end};
         }

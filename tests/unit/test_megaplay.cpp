@@ -63,6 +63,22 @@ TEST_CASE("resolve decrypts the stream address with the key from megaplay's own 
     CHECK(http.header(0, "Referer") == "https://hianime.at/");
 }
 
+TEST_CASE("intro times that aren't numbers leave the stream playable without skip intro") {
+    FakeHttpClient http;
+    serveEpisode(http);
+    auto sources = readFixture("megaplay/get_sources_13461.json");
+    const std::string intro = R"("intro":{"start":0,"end":89})";
+    REQUIRE(sources.find(intro) != std::string::npos);
+    sources.replace(sources.find(intro), intro.size(), R"("intro":{"start":null,"end":"89"})");
+    http.serve(sourcesUrl, sources);
+    MegaplayResolver resolver(http);
+
+    const auto stream = resolver.resolve(embedUrl, Audio::Sub, "https://hianime.at/");
+
+    CHECK(stream.url == masterUrl);
+    CHECK_FALSE(stream.intro.has_value());
+}
+
 TEST_CASE("resolve asks for sources the way megaplay's player does") {
     FakeHttpClient http;
     serveEpisode(http);
