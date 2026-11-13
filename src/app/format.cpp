@@ -168,6 +168,15 @@ double seekTarget(double wanted, double duration) {
     return std::clamp(wanted, 0.0, std::max(0.0, last));
 }
 
+std::optional<size_t> steppedRow(const std::vector<size_t>& visible, size_t current, int delta) {
+    if (delta > 0) {
+        const auto next = std::ranges::upper_bound(visible, current);
+        return next == visible.end() ? std::nullopt : std::optional(static_cast<size_t>(next - visible.begin()));
+    }
+    const auto at = std::ranges::lower_bound(visible, current);
+    return at == visible.begin() ? std::nullopt : std::optional(static_cast<size_t>(at - visible.begin()) - 1);
+}
+
 std::string malTitle(const MalAnime& anime) {
     return anime.englishTitle.empty() ? anime.title : anime.englishTitle;
 }

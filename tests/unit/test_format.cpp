@@ -59,6 +59,24 @@ TEST_CASE("formatClock switches to hours only when needed") {
     CHECK(formatClock(std::numeric_limits<double>::quiet_NaN()) == "0:00");
 }
 
+TEST_CASE("steppedRow moves to the neighbouring listed episode") {
+    const std::vector<size_t> visible{0, 2, 3, 7};
+    CHECK(steppedRow(visible, 2, 1) == 2);
+    CHECK(steppedRow(visible, 2, -1) == 0);
+    CHECK(steppedRow(visible, 7, 1) == std::nullopt);
+    CHECK(steppedRow(visible, 0, -1) == std::nullopt);
+}
+
+TEST_CASE("steppedRow finds the nearest listed episode when the current one isn't listed") {
+    const std::vector<size_t> visible{0, 2, 3, 7};
+    CHECK(steppedRow(visible, 5, 1) == 3);
+    CHECK(steppedRow(visible, 5, -1) == 2);
+    CHECK(steppedRow(visible, 1, -1) == 0);
+    CHECK(steppedRow(visible, 9, 1) == std::nullopt);
+    CHECK(steppedRow({}, 0, 1) == std::nullopt);
+    CHECK(steppedRow({}, 0, -1) == std::nullopt);
+}
+
 TEST_CASE("timeLabel includes the duration once it is known") {
     CHECK(timeLabel(201, 1450) == "3:21 of 24:10");
     CHECK(timeLabel(201, 0) == "3:21");

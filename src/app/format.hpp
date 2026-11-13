@@ -4,6 +4,7 @@
 #include "provider.hpp"
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -29,6 +30,7 @@ std::vector<TrackEntry> distinctTracks(const std::vector<TrackEntry>& tracks);
 std::vector<TrackEntry> inRequestedOrder(std::vector<TrackEntry> tracks, const std::vector<std::string>& requested);
 bool countsAsWatched(double position, double duration);
 double seekTarget(double wanted, double duration);
+std::optional<size_t> steppedRow(const std::vector<size_t>& visible, size_t current, int delta);
 std::string malTitle(const MalAnime& anime);
 std::string malStatusLabel(MalStatus status);
 std::string malEntryLabel(const MalAnime& anime);

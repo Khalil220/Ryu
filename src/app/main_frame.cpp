@@ -309,13 +309,19 @@ void MainFrame::createControls() {
     audioChoice_->Bind(wxEVT_CHOICE, [this](wxCommandEvent&) {
         settings_.audio = selectedAudio();
         store_.save(settings_);
-        if (episodes_.empty()) {
-            return;
-        }
-        const size_t row = episodeList_->selectedIndex();
-        showEpisodes(row < visibleEpisodes_.size() ? visibleEpisodes_[row] : 0);
-        setStatus(episodeCountLabel(true) + " of " + wxString::FromUTF8(currentShow_.title));
+        refilterEpisodes();
     });
+}
+
+void MainFrame::refilterEpisodes() {
+    if (episodes_.empty()) {
+        return;
+    }
+    const size_t row = episodeList_->selectedIndex();
+    showEpisodes(row < visibleEpisodes_.size() ? visibleEpisodes_[row] : 0);
+    if (browsing()) {
+        setStatus(episodeCountLabel(true) + " of " + wxString::FromUTF8(currentShow_.title));
+    }
 }
 
 void MainFrame::applySettings() {
@@ -651,20 +657,12 @@ void MainFrame::stepEpisode(int delta) {
     if (browsing()) {
         return;
     }
-    const auto current = std::ranges::find(visibleEpisodes_, pendingEpisode_.value_or(currentEpisode_));
-    if (current == visibleEpisodes_.end()) {
+    const auto row = steppedRow(visibleEpisodes_, pendingEpisode_.value_or(currentEpisode_), delta);
+    if (!row) {
+        announce(delta > 0 ? "This is the last episode" : "This is the first episode");
         return;
     }
-    const auto target = (current - visibleEpisodes_.begin()) + delta;
-    if (target < 0) {
-        announce("This is the first episode");
-        return;
-    }
-    if (static_cast<size_t>(target) >= visibleEpisodes_.size()) {
-        announce("This is the last episode");
-        return;
-    }
-    playEpisode(static_cast<size_t>(target), true);
+    playEpisode(*row, true);
 }
 
 void MainFrame::showPlayer(const wxString& title) {
@@ -1016,6 +1014,7 @@ void MainFrame::showPreferences() {
     }
     const auto& chosen = dialog.settings();
     const bool providerChanged = chosen.providerId != settings_.providerId || chosen.baseUrl() != settings_.baseUrl();
+    const bool audioChanged = chosen.audio != settings_.audio;
     if (providerChanged && !browsing()) {
         showBrowser();
     }
@@ -1026,6 +1025,8 @@ void MainFrame::showPreferences() {
         ++searchGeneration_;
         clearBrowse();
         setStatus("Using " + wxString::FromUTF8(settings_.provider().name));
+    } else if (audioChanged) {
+        refilterEpisodes();
     }
 }
 
