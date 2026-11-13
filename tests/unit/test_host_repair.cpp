@@ -1,8 +1,12 @@
 #include "fake_http.hpp"
 #include "host_repair.hpp"
+#include "loopback.hpp"
 #include "playlist_server.hpp"
 
 #include <doctest/doctest.h>
+
+#include <chrono>
+#include <string_view>
 
 using namespace ryu;
 using ryu::test::FakeHttpClient;
@@ -50,6 +54,29 @@ TEST_CASE("the playlist server serves published files over loopback and forgets 
         server.publish({{"master.m3u8", "#EXTM3U\nlater\n"}});
     }
     CHECK(http.get(first + "master.m3u8").status == 404);
+}
+
+TEST_CASE("a connection that never sends a request doesn't hold up the playlist server") {
+    PlaylistServer server;
+    const auto base = server.publish({{"master.m3u8", "#EXTM3U\nidle\n"}});
+    constexpr std::string_view loopbackPrefix = "http://127.0.0.1:";
+    const auto port = std::stoi(base.substr(loopbackPrefix.size()));
+    REQUIRE(startNetworking());
+    const SocketHandle idle = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    sockaddr_in address{};
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    address.sin_port = htons(static_cast<unsigned short>(port));
+    REQUIRE(::connect(idle, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == 0);
+
+    CurlHttpClient http;
+    const auto started = std::chrono::steady_clock::now();
+    const auto response = http.get(base + "master.m3u8");
+
+    CHECK(response.body == "#EXTM3U\nidle\n");
+    CHECK(std::chrono::steady_clock::now() - started < std::chrono::seconds(5));
+    closeSocket(idle);
+    stopNetworking();
 }
 
 TEST_CASE("a stream whose hosts are all alive is served from loopback with its hosts unchanged") {

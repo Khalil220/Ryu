@@ -6,6 +6,7 @@ add_library(ryu_core STATIC
     http.cpp
     language.cpp
     log.cpp
+    loopback.cpp
     mal.cpp
     mal_login.cpp
     playlist_server.cpp
