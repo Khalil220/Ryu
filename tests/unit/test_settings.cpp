@@ -303,17 +303,25 @@ TEST_CASE("chosen MyAnimeList matches and unsent progress survive a restart") {
     progress.show.format = "TV";
     progress.show.year = 2023;
     progress.show.synopsis = "Not saved.";
-    settings.malPending = {progress, unsent("One Piece", "1101")};
+    auto hunter = unsent("Hunter x Hunter", "40");
+    hunter.show.id = "2";
+    hunter.show.format = "TV";
+    hunter.show.subEpisodes = 148;
+    hunter.show.dubEpisodes = 148;
+    settings.malPending = {progress, unsent("One Piece", "1101"), hunter};
     saveSettings(config, settings);
 
     const auto loaded = loadSettings(config);
     CHECK(loaded.malMatches == settings.malMatches);
-    REQUIRE(loaded.malPending.size() == 2);
+    REQUIRE(loaded.malPending.size() == 3);
     CHECK(loaded.malPending[0].show.title == "Frieren: Beyond Journey's End");
     CHECK(loaded.malPending[0].show.altTitle == "Sousou no Frieren");
     CHECK(loaded.malPending[0].show.format == "TV");
     CHECK(loaded.malPending[0].show.year == 2023);
     CHECK(loaded.malPending[0].show.malId == 52991);
+    CHECK(loaded.malPending[2].show.id == "2");
+    CHECK(loaded.malPending[2].show.subEpisodes == 148);
+    CHECK(loaded.malPending[2].show.dubEpisodes == 148);
     CHECK(loaded.malPending[0].show.synopsis.empty());
     CHECK(loaded.malPending[0].episode == "7");
     CHECK(loaded.malPending[0].date == "2026-10-02");

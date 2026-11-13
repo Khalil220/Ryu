@@ -39,6 +39,50 @@ void writeSubtitlePreference(wxConfigBase& config, const wxString& audio, const 
     config.Write("/Subtitles/" + audio + "Language", wxString::FromUTF8(preference.language));
 }
 
+Show readShow(wxConfigBase& config, const wxString& key) {
+    const auto text = [&](const char* name) { return config.Read(key + name, wxString()).utf8_string(); };
+    const auto number = [&](const char* name) { return static_cast<int>(config.ReadLong(key + name, 0)); };
+    Show show;
+    show.id = text("Id");
+    show.title = text("Title");
+    show.altTitle = text("AltTitle");
+    show.format = text("Format");
+    show.year = number("Year");
+    show.subEpisodes = number("Sub");
+    show.dubEpisodes = number("Dub");
+    show.episodeCount = number("Episodes");
+    show.malId = number("MalId");
+    show.pageUrl = text("Page");
+    show.posterUrl = text("Poster");
+    return show;
+}
+
+void writeText(wxConfigBase& config, const wxString& key, const char* name, const std::string& value) {
+    if (!value.empty()) {
+        config.Write(key + name, wxString::FromUTF8(value));
+    }
+}
+
+void writeNumber(wxConfigBase& config, const wxString& key, const char* name, int value) {
+    if (value != 0) {
+        config.Write(key + name, static_cast<long>(value));
+    }
+}
+
+void writeShow(wxConfigBase& config, const wxString& key, const Show& show) {
+    writeText(config, key, "Id", show.id);
+    writeText(config, key, "Title", show.title);
+    writeText(config, key, "AltTitle", show.altTitle);
+    writeText(config, key, "Format", show.format);
+    writeNumber(config, key, "Year", show.year);
+    writeNumber(config, key, "Sub", show.subEpisodes);
+    writeNumber(config, key, "Dub", show.dubEpisodes);
+    writeNumber(config, key, "Episodes", show.episodeCount);
+    writeNumber(config, key, "MalId", show.malId);
+    writeText(config, key, "Page", show.pageUrl);
+    writeText(config, key, "Poster", show.posterUrl);
+}
+
 wxString baseUrlKey(const std::string& providerId) {
     return "/BaseUrls/" + wxString::FromUTF8(providerId);
 }
@@ -186,24 +230,13 @@ Settings loadSettings(wxConfigBase& config) {
     for (size_t i = 1; i <= recentLimit; ++i) {
         const auto key = wxString::Format("/Recent/%zu/", i);
         const auto text = [&](const char* name) { return config.Read(key + name, wxString()).utf8_string(); };
-        const auto number = [&](const char* name) { return static_cast<int>(config.ReadLong(key + name, 0)); };
         RecentEntry entry;
         entry.providerId = text("Provider");
-        entry.show.id = text("Id");
-        entry.show.title = text("Title");
+        entry.show = readShow(config, key);
         entry.episode = text("Episode");
         if (entry.providerId.empty() || entry.show.id.empty() || entry.show.title.empty() || entry.episode.empty()) {
             break;
         }
-        entry.show.altTitle = text("AltTitle");
-        entry.show.format = text("Format");
-        entry.show.year = number("Year");
-        entry.show.subEpisodes = number("Sub");
-        entry.show.dubEpisodes = number("Dub");
-        entry.show.episodeCount = number("Episodes");
-        entry.show.malId = number("MalId");
-        entry.show.pageUrl = text("Page");
-        entry.show.posterUrl = text("Poster");
         entry.audio = text("Audio") == "dub" ? Audio::Dub : Audio::Sub;
         settings.recent.push_back(std::move(entry));
     }
@@ -219,16 +252,12 @@ Settings loadSettings(wxConfigBase& config) {
     for (size_t i = 1; i <= savedListLimit; ++i) {
         const auto key = wxString::Format("/MalPending/%zu/", i);
         PendingProgress progress;
-        progress.show.title = config.Read(key + "Title", wxString()).utf8_string();
+        progress.show = readShow(config, key);
         progress.episode = config.Read(key + "Episode", wxString()).utf8_string();
         progress.date = config.Read(key + "Date", wxString()).utf8_string();
         if (progress.show.title.empty() || progress.episode.empty()) {
             break;
         }
-        progress.show.altTitle = config.Read(key + "AltTitle", wxString()).utf8_string();
-        progress.show.format = config.Read(key + "Format", wxString()).utf8_string();
-        progress.show.year = static_cast<int>(config.ReadLong(key + "Year", 0));
-        progress.show.malId = static_cast<int>(config.ReadLong(key + "MalId", 0));
         settings.malPending.push_back(std::move(progress));
     }
     return settings;
@@ -284,30 +313,10 @@ void saveSettings(wxConfigBase& config, const Settings& settings) {
     for (size_t i = 0; i < settings.recent.size() && i < recentLimit; ++i) {
         const auto& entry = settings.recent[i];
         const auto key = wxString::Format("/Recent/%zu/", i + 1);
-        const auto text = [&](const char* name, const std::string& value) {
-            if (!value.empty()) {
-                config.Write(key + name, wxString::FromUTF8(value));
-            }
-        };
-        const auto number = [&](const char* name, int value) {
-            if (value != 0) {
-                config.Write(key + name, static_cast<long>(value));
-            }
-        };
-        text("Provider", entry.providerId);
-        text("Id", entry.show.id);
-        text("Title", entry.show.title);
-        text("Episode", entry.episode);
-        text("AltTitle", entry.show.altTitle);
-        text("Format", entry.show.format);
-        number("Year", entry.show.year);
-        number("Sub", entry.show.subEpisodes);
-        number("Dub", entry.show.dubEpisodes);
-        number("Episodes", entry.show.episodeCount);
-        number("MalId", entry.show.malId);
-        text("Page", entry.show.pageUrl);
-        text("Poster", entry.show.posterUrl);
-        text("Audio", entry.audio == Audio::Dub ? "dub" : "sub");
+        writeText(config, key, "Provider", entry.providerId);
+        writeShow(config, key, entry.show);
+        writeText(config, key, "Episode", entry.episode);
+        writeText(config, key, "Audio", entry.audio == Audio::Dub ? "dub" : "sub");
     }
     config.DeleteGroup("/MalMatches");
     size_t position = 0;
@@ -323,13 +332,9 @@ void saveSettings(wxConfigBase& config, const Settings& settings) {
     for (size_t i = 0; i < settings.malPending.size() && i < savedListLimit; ++i) {
         const auto& progress = settings.malPending[i];
         const auto key = wxString::Format("/MalPending/%zu/", i + 1);
-        config.Write(key + "Title", wxString::FromUTF8(progress.show.title));
-        config.Write(key + "Episode", wxString::FromUTF8(progress.episode));
-        config.Write(key + "Date", wxString::FromUTF8(progress.date));
-        config.Write(key + "AltTitle", wxString::FromUTF8(progress.show.altTitle));
-        config.Write(key + "Format", wxString::FromUTF8(progress.show.format));
-        config.Write(key + "Year", static_cast<long>(progress.show.year));
-        config.Write(key + "MalId", static_cast<long>(progress.show.malId));
+        writeShow(config, key, progress.show);
+        writeText(config, key, "Episode", progress.episode);
+        writeText(config, key, "Date", progress.date);
     }
 }
 
