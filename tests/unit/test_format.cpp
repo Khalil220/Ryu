@@ -94,6 +94,14 @@ TEST_CASE("rowAtOrBefore selects the listed episode at or just before the one wa
     CHECK(rowAtOrBefore({}, 4) == 0);
 }
 
+TEST_CASE("shortNotes tidies each line of the release notes and stops at the limit") {
+    CHECK(shortNotes("- Episodes start faster.\r\n  - Fewer repeats.  \r\n\r\n", 15) ==
+          "- Episodes start faster.\n- Fewer repeats.");
+    CHECK(shortNotes("one\ntwo\nthree\nfour", 2) == "one\ntwo\nAnd more on the release page.");
+    CHECK(shortNotes("only line", 1) == "only line");
+    CHECK(shortNotes("", 15).empty());
+}
+
 TEST_CASE("timeLabel includes the duration once it is known") {
     CHECK(timeLabel(201, 1450) == "3:21 of 24:10");
     CHECK(timeLabel(201, 0) == "3:21");

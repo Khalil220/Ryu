@@ -191,6 +191,26 @@ size_t rowAtOrBefore(const std::vector<size_t>& visible, size_t episode) {
     return after == visible.begin() ? 0 : static_cast<size_t>(after - visible.begin()) - 1;
 }
 
+std::string shortNotes(std::string_view notes, int lineLimit) {
+    constexpr std::string_view spaces = " \t\r";
+    std::string text;
+    int lines = 0;
+    for (size_t start = 0; start <= notes.size();) {
+        const auto end = std::min(notes.find('\n', start), notes.size());
+        if (++lines > lineLimit) {
+            text += "And more on the release page.";
+            break;
+        }
+        auto line = notes.substr(start, end - start);
+        line.remove_prefix(std::min(line.find_first_not_of(spaces), line.size()));
+        line.remove_suffix(line.size() - std::min(line.find_last_not_of(spaces) + 1, line.size()));
+        text.append(line).push_back('\n');
+        start = end + 1;
+    }
+    text.erase(std::min(text.find_last_not_of(" \t\r\n") + 1, text.size()));
+    return text;
+}
+
 std::string malTitle(const MalAnime& anime) {
     return anime.englishTitle.empty() ? anime.title : anime.englishTitle;
 }

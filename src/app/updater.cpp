@@ -1,6 +1,7 @@
 #include "updater.hpp"
 
 #include "background.hpp"
+#include "format.hpp"
 #include "log.hpp"
 
 #include <wx/msgdlg.h>
@@ -39,19 +40,6 @@ fs::path appFolder() {
 std::string feedUrl() {
     wxString feed;
     return wxGetEnv("RYU_UPDATE_FEED", &feed) ? feed.utf8_string() : std::string(releaseFeedUrl);
-}
-
-wxString shortNotes(const std::string& notes) {
-    wxString text;
-    int lines = 0;
-    for (const auto& line : wxSplit(wxString::FromUTF8(notes), '\n')) {
-        if (++lines > notesLineLimit) {
-            text += "And more on the release page.";
-            break;
-        }
-        text += line.Strip(wxString::both) + "\n";
-    }
-    return text.Trim();
 }
 
 }
@@ -134,7 +122,7 @@ void Updater::offer(const Release& release) {
                            "Ryu " + version + " is available. You have " RYU_VERSION ".\nDownload and install it now?",
                            "Update available", wxYES_NO | wxYES_DEFAULT | wxICON_INFORMATION);
     if (!release.notes.empty()) {
-        dialog.SetExtendedMessage(shortNotes(release.notes));
+        dialog.SetExtendedMessage(wxString::FromUTF8(shortNotes(release.notes, notesLineLimit)));
     }
     if (dialog.ShowModal() == wxID_YES) {
         install(release);

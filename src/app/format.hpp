@@ -33,6 +33,7 @@ double seekTarget(double wanted, double duration);
 std::optional<size_t> steppedRow(const std::vector<size_t>& visible, size_t current, int delta);
 std::optional<size_t> episodeNumbered(const std::vector<Episode>& episodes, std::string_view number);
 size_t rowAtOrBefore(const std::vector<size_t>& visible, size_t episode);
+std::string shortNotes(std::string_view notes, int lineLimit);
 std::string malTitle(const MalAnime& anime);
 std::string malStatusLabel(MalStatus status);
 std::string malEntryLabel(const MalAnime& anime);
