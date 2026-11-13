@@ -198,15 +198,16 @@ TEST_CASE("streams picks the dub embed when dub audio is requested") {
     CHECK(http.requests.at(1).url == dubEmbedUrl);
 }
 
-TEST_CASE("streams skips servers it cannot resolve") {
+TEST_CASE("streams says so when the episode's servers use a player it can't read") {
     FakeHttpClient http;
     http.serve(serversUrl,
                serversJson(R"(<div class="item server-item" data-type="sub" data-server-name="HD-1" )"
                            R"(data-hash="aHR0cHM6Ly9leGFtcGxlLmNvbQ=="></div>)"));
     HiAnimeProvider provider(http);
 
-    CHECK(provider.streams("9227", Audio::Sub).empty());
+    CHECK_THROWS_WITH_AS(provider.streams("9227", Audio::Sub), doctest::Contains("can't read"), ProviderError);
     CHECK(http.requests.size() == 1);
+    CHECK(provider.streams("9227", Audio::Dub).empty());
 }
 
 TEST_CASE("streams reports an embed page without a player config") {

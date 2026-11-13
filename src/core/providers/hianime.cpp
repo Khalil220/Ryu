@@ -192,10 +192,12 @@ std::vector<Stream> HiAnimeProvider::streams(std::string_view episodeId, Audio a
     auto candidates = servers.select(".server-item");
     std::ranges::stable_partition(
         candidates, [](const HtmlNode& server) { return server.attr("data-server-name") != zokoServer; });
+    bool offered = false;
     for (const auto& server : candidates) {
         if (server.attr("data-type") != type) {
             continue;
         }
+        offered = true;
         const auto name = server.attr("data-server-name");
         std::string embedUrl;
         try {
@@ -222,6 +224,9 @@ std::vector<Stream> HiAnimeProvider::streams(std::string_view episodeId, Audio a
     }
     if (result.empty() && !lastError.empty()) {
         throw ProviderError(lastError);
+    }
+    if (result.empty() && offered) {
+        throw ProviderError("HiAnime's servers for this episode use a player Ryu can't read");
     }
     return result;
 }
