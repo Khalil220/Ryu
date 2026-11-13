@@ -76,6 +76,34 @@ TEST_CASE("saved settings load back unchanged") {
     CHECK(loaded.audioLanguageFor(Audio::Dub) == "de");
 }
 
+TEST_CASE("takePreferences applies what Preferences edits and keeps what changed while it was open") {
+    Settings live;
+    live.recent.push_back({"hianime", {"481", "Frieren"}, "4", Audio::Sub});
+    live.malPending.push_back({{"481", "Frieren"}, "4", "2026-11-13"});
+    live.mal.userName = "someone";
+    live.readSubtitlesDubbed = true;
+    Settings chosen;
+    chosen.providerId = "anizone";
+    chosen.theme = Theme::Light;
+    chosen.baseUrlOverrides["hianime"] = "https://mirror.example";
+    chosen.audio = Audio::Dub;
+    chosen.useFallback = false;
+    chosen.checkForUpdates = false;
+
+    takePreferences(live, chosen);
+
+    CHECK(live.providerId == "anizone");
+    CHECK(live.theme == Theme::Light);
+    CHECK(live.baseUrlOverrides.at("hianime") == "https://mirror.example");
+    CHECK(live.audio == Audio::Dub);
+    CHECK_FALSE(live.useFallback);
+    CHECK_FALSE(live.checkForUpdates);
+    CHECK(live.recent.size() == 1);
+    CHECK(live.malPending.size() == 1);
+    CHECK(live.mal.userName == "someone");
+    CHECK(live.readSubtitlesDubbed);
+}
+
 TEST_CASE("an override equal to the default is not stored") {
     wxInitializer init;
     auto config = configFrom("");

@@ -1014,13 +1014,12 @@ void MainFrame::showPreferences() {
     if (dialog.ShowModal() != wxID_OK) {
         return;
     }
-    const bool providerChanged =
-        dialog.settings().providerId != settings_.providerId || dialog.settings().baseUrl() != settings_.baseUrl();
+    const auto& chosen = dialog.settings();
+    const bool providerChanged = chosen.providerId != settings_.providerId || chosen.baseUrl() != settings_.baseUrl();
     if (providerChanged && !browsing()) {
         showBrowser();
     }
-    settings_ = dialog.settings();
-    settings_.mal = mal_->account();
+    takePreferences(settings_, chosen);
     store_.save(settings_);
     applySettings();
     if (providerChanged) {

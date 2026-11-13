@@ -107,6 +107,7 @@ struct Settings {
 
 Settings loadSettings(wxConfigBase& config);
 void saveSettings(wxConfigBase& config, const Settings& settings);
+void takePreferences(Settings& settings, const Settings& chosen);
 
 class SettingsStore {
 public:

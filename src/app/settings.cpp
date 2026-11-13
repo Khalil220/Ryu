@@ -234,6 +234,15 @@ Settings loadSettings(wxConfigBase& config) {
     return settings;
 }
 
+void takePreferences(Settings& settings, const Settings& chosen) {
+    settings.providerId = chosen.providerId;
+    settings.theme = chosen.theme;
+    settings.baseUrlOverrides = chosen.baseUrlOverrides;
+    settings.audio = chosen.audio;
+    settings.useFallback = chosen.useFallback;
+    settings.checkForUpdates = chosen.checkForUpdates;
+}
+
 void saveSettings(wxConfigBase& config, const Settings& settings) {
     config.Write("/Provider", wxString::FromUTF8(settings.providerId));
     config.Write("/Audio", settings.audio == Audio::Dub ? "dub" : "sub");
