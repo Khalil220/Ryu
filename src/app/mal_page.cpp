@@ -78,16 +78,7 @@ MalPage::MalPage(wxWindow* parent, Actions actions) : wxPanel(parent), actions_(
             menu.AppendSeparator();
         }
         menu.Append(refreshId, "Re&fresh\tF5");
-        auto position = event.GetPosition();
-        if (position == wxDefaultPosition) {
-            wxRect item;
-            const long row = list_->GetFirstSelected();
-            if (row >= 0) {
-                list_->GetItemRect(row, item);
-            }
-            position = list_->ClientToScreen(item.GetBottomLeft());
-        }
-        list_->PopupMenu(&menu, list_->ScreenToClient(position));
+        list_->popupMenuAt(menu, event.GetPosition());
     });
     list_->Bind(wxEVT_MENU, [this](wxCommandEvent&) { act(actions_.open); }, openId);
     list_->Bind(wxEVT_MENU, [this](wxCommandEvent&) { act(actions_.edit); }, editId);

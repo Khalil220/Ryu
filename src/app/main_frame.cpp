@@ -293,13 +293,7 @@ void MainFrame::createControls() {
         if (mal_->loggedIn()) {
             menu.Append(malEditId, "&MyAnimeList...\tCtrl+M");
         }
-        auto position = event.GetPosition();
-        if (position == wxDefaultPosition) {
-            wxRect item;
-            results_->GetItemRect(row, item);
-            position = results_->ClientToScreen(item.GetBottomLeft());
-        }
-        results_->PopupMenu(&menu, results_->ScreenToClient(position));
+        results_->popupMenuAt(menu, event.GetPosition());
     });
     results_->Bind(wxEVT_MENU, [this](wxCommandEvent&) { speakSynopsis(); }, speakSynopsisId);
     results_->Bind(wxEVT_MENU, [this](wxCommandEvent&) { editShowOnMal(); }, malEditId);

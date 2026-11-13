@@ -12,6 +12,7 @@ public:
 
     void setItems(std::vector<wxString> items);
     void selectItem(long index);
+    void popupMenuAt(wxMenu& menu, wxPoint position);
     size_t selectedIndex() const;
 
 protected:

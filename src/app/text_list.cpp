@@ -22,6 +22,17 @@ void TextList::setItems(std::vector<wxString> items) {
     Refresh();
 }
 
+void TextList::popupMenuAt(wxMenu& menu, wxPoint position) {
+    if (position == wxDefaultPosition) {
+        wxRect item;
+        if (const long row = GetFirstSelected(); row >= 0) {
+            GetItemRect(row, item);
+        }
+        position = ClientToScreen(item.GetBottomLeft());
+    }
+    PopupMenu(&menu, ScreenToClient(position));
+}
+
 void TextList::selectItem(long index) {
     if (index < 0 || index >= GetItemCount()) {
         return;
