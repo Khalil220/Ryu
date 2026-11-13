@@ -401,6 +401,7 @@ void PlayerPanel::play(const Stream& stream, const std::string& heading, bool re
     logLine("Loading " + stream.server + " stream " + stream.url);
     command({"loadfile", stream.url, "replace"});
     mpv_set_property_string(mpv_, "pause", "no");
+    paused_ = 0;
     commandAsync({"show-text", "Loading " + heading, "60000"});
     stallTimer_.Start(1000);
 }
