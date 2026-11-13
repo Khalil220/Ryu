@@ -1,8 +1,9 @@
 include(FetchContent)
 
 FetchContent_Declare(libmpv
-    URL https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/20260925/mpv-dev-x86_64-20260925-git-2a4eb8067c.7z
-    URL_HASH SHA256=bae4b8275f4db6ec5a6bb0c0e5d497c305a2aa9fb065097a0d86bb7b86895c7d
+    URL https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20260927-git-a1bf4b6559.7z/download
+    URL_HASH SHA256=3a80c48d271a8aa77f7b6617cd7f182a87370361cd23635562927c9eac74ac5c
+    DOWNLOAD_NAME mpv-dev-x86_64-20260927-git-a1bf4b6559.7z
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 FetchContent_MakeAvailable(libmpv)
