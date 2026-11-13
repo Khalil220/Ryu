@@ -95,6 +95,32 @@ std::string text(const mpv_node* node) {
     return node && node->format == MPV_FORMAT_STRING ? node->u.string : "";
 }
 
+std::vector<TrackEntry> tracksOf(const mpv_node& tracks, std::string_view type) {
+    std::vector<TrackEntry> found;
+    for (int i = 0; i < tracks.u.list->num; ++i) {
+        const auto& track = tracks.u.list->values[i];
+        const auto* id = field(track, "id");
+        if (text(field(track, "type")) != type || !id || id->format != MPV_FORMAT_INT64) {
+            continue;
+        }
+        const auto language = text(field(track, "lang"));
+        const auto* isSelected = field(track, "selected");
+        found.push_back({id->u.int64, trackLabel(text(field(track, "title")), language, id->u.int64), language,
+                         isSelected && isSelected->format == MPV_FORMAT_FLAG && isSelected->u.flag,
+                         text(field(track, "external-filename"))});
+    }
+    return found;
+}
+
+std::vector<const char*> argumentsOf(std::initializer_list<std::string> args) {
+    std::vector<const char*> argv;
+    for (const auto& arg : args) {
+        argv.push_back(arg.c_str());
+    }
+    argv.push_back(nullptr);
+    return argv;
+}
+
 std::string endReason(const mpv_event_end_file& end) {
     switch (end.reason) {
     case MPV_END_FILE_REASON_EOF:
@@ -577,24 +603,11 @@ void PlayerPanel::refreshSubtitles(const mpv_node& tracks) {
     if (tracks.format != MPV_FORMAT_NODE_ARRAY) {
         return;
     }
-    std::vector<TrackEntry> found;
-    for (int i = 0; i < tracks.u.list->num; ++i) {
-        const auto& track = tracks.u.list->values[i];
-        const auto* id = field(track, "id");
-        if (text(field(track, "type")) != "sub" || !id || id->format != MPV_FORMAT_INT64) {
-            continue;
-        }
-        const auto language = text(field(track, "lang"));
-        const auto* isSelected = field(track, "selected");
-        found.push_back({id->u.int64, trackLabel(text(field(track, "title")), language, id->u.int64), language,
-                         isSelected && isSelected->format == MPV_FORMAT_FLAG && isSelected->u.flag,
-                         text(field(track, "external-filename"))});
-    }
     std::vector<int64_t> ids;
     std::vector<std::string> languages;
     wxArrayString labels;
     int selected = 0;
-    for (const auto& track : inRequestedOrder(std::move(found), subtitleOrder_)) {
+    for (const auto& track : inRequestedOrder(tracksOf(tracks, "sub"), subtitleOrder_)) {
         ids.push_back(track.id);
         languages.push_back(track.language);
         labels.Add(wxString::FromUTF8(track.label));
@@ -617,23 +630,11 @@ void PlayerPanel::refreshAudio(const mpv_node& tracks) {
     if (tracks.format != MPV_FORMAT_NODE_ARRAY) {
         return;
     }
-    std::vector<TrackEntry> found;
-    for (int i = 0; i < tracks.u.list->num; ++i) {
-        const auto& track = tracks.u.list->values[i];
-        const auto* id = field(track, "id");
-        if (text(field(track, "type")) != "audio" || !id || id->format != MPV_FORMAT_INT64) {
-            continue;
-        }
-        const auto language = text(field(track, "lang"));
-        const auto* isSelected = field(track, "selected");
-        found.push_back({id->u.int64, trackLabel(text(field(track, "title")), language, id->u.int64), language,
-                         isSelected && isSelected->format == MPV_FORMAT_FLAG && isSelected->u.flag});
-    }
     std::vector<int64_t> ids;
     std::vector<std::string> languages;
     wxArrayString labels;
     int selected = wxNOT_FOUND;
-    for (const auto& track : distinctTracks(found)) {
+    for (const auto& track : distinctTracks(tracksOf(tracks, "audio"))) {
         if (track.selected) {
             selected = static_cast<int>(ids.size());
         }
@@ -734,11 +735,7 @@ void PlayerPanel::command(std::initializer_list<std::string> args) {
     if (!mpv_) {
         return;
     }
-    std::vector<const char*> argv;
-    for (const auto& arg : args) {
-        argv.push_back(arg.c_str());
-    }
-    argv.push_back(nullptr);
+    auto argv = argumentsOf(args);
     mpv_command(mpv_, argv.data());
 }
 
@@ -746,11 +743,7 @@ void PlayerPanel::commandAsync(std::initializer_list<std::string> args) {
     if (!mpv_) {
         return;
     }
-    std::vector<const char*> argv;
-    for (const auto& arg : args) {
-        argv.push_back(arg.c_str());
-    }
-    argv.push_back(nullptr);
+    auto argv = argumentsOf(args);
     mpv_command_async(mpv_, 0, argv.data());
 }
 
