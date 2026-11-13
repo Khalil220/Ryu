@@ -8,6 +8,7 @@
 #include <wx/frame.h>
 #include <wx/timer.h>
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <set>
@@ -58,7 +59,8 @@ private:
     void editOnMal(std::vector<MalAnime> candidates, size_t selected, const std::string& showId);
     void removeFromMal(const MalAnime& anime, bool confirm);
     void trackProgress();
-    void applyProgress(const PendingProgress& progress);
+    using ProgressFinished = std::function<void(bool delivered)>;
+    void applyProgress(const PendingProgress& progress, ProgressFinished finished);
     void keepProgress(const PendingProgress& progress);
     void sendPendingProgress();
     void applySavedMatches();
@@ -102,6 +104,7 @@ private:
     unsigned searchGeneration_ = 0;
     unsigned episodeGeneration_ = 0;
     unsigned streamGeneration_ = 0;
+    size_t pendingSends_ = 0;
     unsigned posterGeneration_ = 0;
     LruCache<std::string, wxBitmapBundle> posterCache_{posterCacheSize};
     wxTimer detailsTimer_;

@@ -173,6 +173,12 @@ void rememberPending(std::vector<PendingProgress>& pending, PendingProgress prog
     }
 }
 
+void forgetPending(std::vector<PendingProgress>& pending, const PendingProgress& done) {
+    std::erase_if(pending, [&](const PendingProgress& other) {
+        return sameAnime(other.show, done.show) && episodeValue(other.episode) <= episodeValue(done.episode);
+    });
+}
+
 std::string malMatchKey(const std::string& providerId, const std::string& showId) {
     return providerId + " " + showId;
 }

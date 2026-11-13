@@ -66,6 +66,7 @@ inline constexpr size_t recentLimit = 50;
 inline constexpr size_t savedListLimit = 500;
 
 void rememberPending(std::vector<PendingProgress>& pending, PendingProgress progress);
+void forgetPending(std::vector<PendingProgress>& pending, const PendingProgress& done);
 std::string malMatchKey(const std::string& providerId, const std::string& showId);
 
 void rememberWatched(std::vector<RecentEntry>& recent, RecentEntry entry);

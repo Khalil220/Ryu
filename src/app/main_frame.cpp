@@ -931,22 +931,28 @@ void MainFrame::trackProgress() {
     }
     const PendingProgress progress{currentShow_, episodes_[currentEpisode_].number,
                                    wxDateTime::Now().FormatISODate().utf8_string()};
+    const auto keepIfFailed = [this, progress](bool delivered) {
+        if (!delivered) {
+            keepProgress(progress);
+        }
+    };
     if (mal_->entriesLoaded()) {
-        applyProgress(progress);
+        applyProgress(progress, keepIfFailed);
         return;
     }
-    mal_->refresh([this, progress](const std::string& error) {
+    mal_->refresh([this, progress, keepIfFailed](const std::string& error) {
         if (error.empty()) {
-            applyProgress(progress);
+            applyProgress(progress, keepIfFailed);
         } else {
             keepProgress(progress);
         }
     });
 }
 
-void MainFrame::applyProgress(const PendingProgress& progress) {
+void MainFrame::applyProgress(const PendingProgress& progress, ProgressFinished finished) {
     if (progress.show.malId == 0) {
         if (!matchMalAnime(progress.show, mal_->entries())) {
+            finished(true);
             return;
         }
         mal_->run<int>(
@@ -955,9 +961,10 @@ void MainFrame::applyProgress(const PendingProgress& progress) {
                 const auto match = matchMalAnime(show, candidates);
                 return match ? candidates[*match].id : 0;
             },
-            [this, progress](int id) {
+            [this, progress, finished](int id) {
                 if (id == 0) {
                     logLine("Not tracking " + progress.show.title + ": it isn't clear which MyAnimeList entry it is");
+                    finished(true);
                     return;
                 }
                 auto known = progress;
@@ -966,28 +973,31 @@ void MainFrame::applyProgress(const PendingProgress& progress) {
                     sessionMatches_[malMatchKey(settings_.provider().id, known.show.id)] = id;
                     applySavedMatches();
                 }
-                applyProgress(known);
+                applyProgress(known, finished);
             },
-            [this, progress](const std::string&) { keepProgress(progress); });
+            [finished](const std::string&) { finished(false); });
         return;
     }
     const auto match = matchMalAnime(progress.show, mal_->entries());
     if (!match) {
+        finished(true);
         return;
     }
     const auto anime = mal_->entries()[*match];
     const auto changes = malProgress(anime, progress.episode, progress.date);
     if (!changes) {
+        finished(true);
         return;
     }
     logLine("Marking episode " + progress.episode + " of " + malTitle(anime) + " as watched on MyAnimeList");
-    mal_->save(anime, *changes, [this, anime, changes, progress](const std::string& error) {
+    mal_->save(anime, *changes, [this, anime, changes, finished](const std::string& error) {
         if (error.empty()) {
             setStatus(wxString::FromUTF8(malProgressMessage(anime, *changes)));
+            finished(true);
             return;
         }
         setStatus("Could not update MyAnimeList");
-        keepProgress(progress);
+        finished(false);
     });
 }
 
@@ -998,14 +1008,19 @@ void MainFrame::keepProgress(const PendingProgress& progress) {
 }
 
 void MainFrame::sendPendingProgress() {
-    if (settings_.malPending.empty() || !mal_->loggedIn() || !mal_->entriesLoaded()) {
+    if (pendingSends_ > 0 || settings_.malPending.empty() || !mal_->loggedIn() || !mal_->entriesLoaded()) {
         return;
     }
-    const auto pending = std::move(settings_.malPending);
-    settings_.malPending.clear();
-    store_.save(settings_);
+    const auto pending = settings_.malPending;
+    pendingSends_ = pending.size();
     for (const auto& progress : pending) {
-        applyProgress(progress);
+        applyProgress(progress, [this, progress](bool delivered) {
+            --pendingSends_;
+            if (delivered) {
+                forgetPending(settings_.malPending, progress);
+                store_.save(settings_);
+            }
+        });
     }
 }
 

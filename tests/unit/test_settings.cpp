@@ -289,6 +289,19 @@ TEST_CASE("rememberPending keeps one unsent update per anime, the furthest episo
     CHECK(pending[1].show.title == "A different title for it");
 }
 
+TEST_CASE("forgetPending drops a delivered update but keeps a later one for the same anime") {
+    std::vector<PendingProgress> pending{unsent("Frieren: Beyond Journey's End", "7"), unsent("One Piece", "1101", 21)};
+
+    forgetPending(pending, unsent("One Piece", "1101", 21));
+    REQUIRE(pending.size() == 1);
+    CHECK(pending[0].show.title == "Frieren: Beyond Journey's End");
+
+    forgetPending(pending, unsent("Frieren: Beyond Journey's End", "6"));
+    CHECK(pending.size() == 1);
+    forgetPending(pending, unsent("Frieren: Beyond Journey's End", "7"));
+    CHECK(pending.empty());
+}
+
 TEST_CASE("chosen MyAnimeList matches and unsent progress survive a restart") {
     wxInitializer init;
     auto config = configFrom("");
