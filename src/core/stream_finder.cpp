@@ -99,8 +99,12 @@ bool sameEpisodeNumber(std::string_view left, std::string_view right) {
 
 FoundStream findStream(HttpClient& http, PlaylistServer& server, const std::vector<ProviderHandle>& providers,
                        const Show& show, const Episode& episode, Audio audio) {
-    std::string lastError;
-    bool anyFailure = false;
+    std::string firstError;
+    const auto failed = [&](const std::string& name, const std::string& message) {
+        if (firstError.empty()) {
+            firstError = message.starts_with(name) ? message : name + ": " + message;
+        }
+    };
     const auto started = std::chrono::steady_clock::now();
     const auto elapsed = [&] {
         return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count();
@@ -141,23 +145,21 @@ FoundStream findStream(HttpClient& http, PlaylistServer& server, const std::vect
                                         report.stream.url));
                     return {std::move(report.stream), handle.name, i > 0};
                 } catch (const std::exception& error) {
-                    anyFailure = true;
-                    lastError = handle.name + ": " + error.what();
+                    failed(handle.name, error.what());
                     logLine("Stream from " + handle.name + " " + stream.server + " failed: " + error.what());
                 }
             }
         } catch (const std::exception& error) {
-            anyFailure = true;
-            lastError = handle.name + ": " + error.what();
-            logLine(lastError);
+            failed(handle.name, error.what());
+            logLine(handle.name + ": " + error.what());
         }
     }
     logLine(std::format("No stream found after {} ms", elapsed()));
-    if (!anyFailure) {
+    if (firstError.empty()) {
         throw ProviderError(audio == Audio::Dub ? "No dubbed stream is available for this episode."
                                                 : "No subbed stream is available for this episode.");
     }
-    throw ProviderError(lastError);
+    throw ProviderError(firstError);
 }
 
 }

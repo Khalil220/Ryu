@@ -166,3 +166,20 @@ TEST_CASE("when nobody has the episode the error says what is missing, or why it
         findStream(http, server, {{"HiAnime", &broken}, {"Backup", &backup}}, frieren, episodeTwo, Audio::Sub),
         "HiAnime: site is down", ProviderError);
 }
+
+TEST_CASE("when every site fails the chosen site's error is reported, without repeating its name") {
+    FakeHttpClient http;
+    PlaylistServer server;
+    ScriptedProvider primary;
+    primary.onStreams = [](std::string_view, Audio) -> std::vector<Stream> {
+        throw ProviderError("HiAnime returned HTTP 503");
+    };
+    ScriptedProvider backup;
+    backup.searchResults["Frieren: Beyond Journey's End"] = {frieren};
+    backup.episodeLists["481"] = {episodeTwo};
+    backup.onStreams = [](std::string_view, Audio) -> std::vector<Stream> { throw ProviderError("site is down"); };
+
+    CHECK_THROWS_WITH_AS(
+        findStream(http, server, {{"HiAnime", &primary}, {"Backup", &backup}}, frieren, episodeTwo, Audio::Sub),
+        "HiAnime returned HTTP 503", ProviderError);
+}

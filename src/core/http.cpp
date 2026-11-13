@@ -229,7 +229,8 @@ HttpResponse CurlHttpClient::perform(Mode mode, const std::string& url, const st
     }
     if (code != CURLE_OK && !stoppedEarly) {
         logLine(std::format("{} {} failed after {} ms: {}", verb, url, elapsed, curl_easy_strerror(code)));
-        throw HttpError("Request to " + url + " failed: " + curl_easy_strerror(code));
+        const auto host = origin.empty() ? url : origin.substr(origin.find("://") + 3);
+        throw HttpError("Could not reach " + host + ": " + curl_easy_strerror(code));
     }
 
     curl_easy_getinfo(easy, CURLINFO_RESPONSE_CODE, &response.status);

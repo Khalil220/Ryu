@@ -229,10 +229,10 @@ std::vector<Stream> HiAnimeProvider::streams(std::string_view episodeId, Audio a
 std::string HiAnimeProvider::fetch(const std::string& url, const Headers& headers) {
     auto response = http_.get(url, headers);
     if (response.body.find("<title>Just a moment") != std::string::npos) {
-        throw ProviderError("HiAnime is showing a Cloudflare challenge for " + url);
+        throw ProviderError("HiAnime is showing a Cloudflare challenge");
     }
     if (response.status < 200 || response.status >= 300) {
-        throw ProviderError("HiAnime returned HTTP " + std::to_string(response.status) + " for " + url);
+        throw ProviderError("HiAnime returned HTTP " + std::to_string(response.status));
     }
     return std::move(response.body);
 }
@@ -240,10 +240,10 @@ std::string HiAnimeProvider::fetch(const std::string& url, const Headers& header
 std::string HiAnimeProvider::fetchHtmlFragment(const std::string& url) {
     const auto json = nlohmann::json::parse(fetch(url), nullptr, false);
     if (json.is_discarded() || !json.is_object()) {
-        throw ProviderError("HiAnime sent something other than JSON for " + url);
+        throw ProviderError("HiAnime sent something other than JSON");
     }
     if (!boolField(json, "status")) {
-        throw ProviderError("HiAnime reported a failure for " + url);
+        throw ProviderError("HiAnime reported a failure");
     }
     return stringField(json, "html");
 }

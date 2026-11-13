@@ -204,7 +204,7 @@ std::string MegaplayResolver::fetch(const std::string& url, const Headers& heade
         throw ProviderError("Megaplay has no stream for this episode");
     }
     if (response.status < 200 || response.status >= 300) {
-        throw ProviderError("Megaplay returned HTTP " + std::to_string(response.status) + " for " + url);
+        throw ProviderError("Megaplay returned HTTP " + std::to_string(response.status));
     }
     return std::move(response.body);
 }

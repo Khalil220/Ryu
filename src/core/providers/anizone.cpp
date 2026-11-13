@@ -265,9 +265,9 @@ std::optional<TimeRange> introFromChapters(std::string_view vtt) {
     return opening ? opening : intro;
 }
 
-void requireSuccess(const HttpResponse& response, const std::string& url) {
+void requireSuccess(const HttpResponse& response) {
     if (response.status < 200 || response.status >= 300) {
-        throw ProviderError("AniZone returned HTTP " + std::to_string(response.status) + " for " + url);
+        throw ProviderError("AniZone returned HTTP " + std::to_string(response.status));
     }
 }
 
@@ -282,7 +282,7 @@ AniZoneProvider::AniZoneProvider(HttpClient& http, std::string baseUrl) : http_(
 std::vector<Show> AniZoneProvider::search(std::string_view query) {
     const auto url = baseUrl_ + "/anime?search=" + urlEncode(siteQuery(query));
     const auto response = fetch(url);
-    requireSuccess(response, url);
+    requireSuccess(response);
     std::vector<Show> shows;
     const auto items = embeddedJson(response.body, itemsMarker);
     if (!items || !items->is_array()) {
@@ -319,7 +319,7 @@ Show AniZoneProvider::describe(const Show& show) {
         return show;
     }
     const auto response = fetch(show.pageUrl);
-    requireSuccess(response, show.pageUrl);
+    requireSuccess(response);
     Show described = show;
     const auto& body = response.body;
     const auto heading = body.find(">Synopsis</h3>");
@@ -346,7 +346,7 @@ std::vector<Episode> AniZoneProvider::episodes(const Show& show) {
     if (response.status == 404) {
         const auto showUrl = baseUrl_ + "/anime/" + show.id;
         const auto showPage = fetch(showUrl);
-        requireSuccess(showPage, showUrl);
+        requireSuccess(showPage);
         const auto items = embeddedJson(showPage.body, itemsMarker);
         if (!items || !items->is_array() || items->empty()) {
             return {};
@@ -354,7 +354,7 @@ std::vector<Episode> AniZoneProvider::episodes(const Show& show) {
         url = baseUrl_ + "/anime/" + show.id + "/" + stringField(items->front(), "slug");
         response = fetch(url);
     }
-    requireSuccess(response, url);
+    requireSuccess(response);
 
     const HtmlDocument page(response.body);
     std::vector<Episode> result;
@@ -391,7 +391,7 @@ std::vector<Episode> AniZoneProvider::episodes(const Show& show) {
 std::vector<Stream> AniZoneProvider::streams(std::string_view episodeId, Audio audio) {
     const auto url = baseUrl_ + "/anime/" + std::string(episodeId);
     const auto response = fetch(url);
-    requireSuccess(response, url);
+    requireSuccess(response);
     const auto player = embeddedJson(response.body, playerMarker);
     if (!player || !player->is_object() || stringField(*player, "src").empty()) {
         throw ProviderError("The AniZone episode page had no video");
