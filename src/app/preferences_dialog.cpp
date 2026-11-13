@@ -161,13 +161,17 @@ void PreferencesDialog::logInToMal() {
 
     const auto wait = std::make_shared<LoginWait>();
     wait->dialog = &waiting;
-    mal_.logIn([wait](bool, const std::string& error) {
+    const bool started = mal_.logIn([wait](bool, const std::string& error) {
         wait->finished = true;
         wait->error = error;
         if (wait->dialog) {
             wait->dialog->EndModal(wxID_OK);
         }
     });
+    if (!started) {
+        wxBell();
+        return;
+    }
     waiting.ShowModal();
     wait->dialog = nullptr;
     if (!wait->finished) {

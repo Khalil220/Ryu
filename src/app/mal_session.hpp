@@ -22,7 +22,7 @@ public:
 
     const MalAccount& account() const { return account_; }
     bool loggedIn() const { return account_.loggedIn(); }
-    void logIn(LoginDone done);
+    bool logIn(LoginDone done);
     void cancelLogin();
     void logOut();
 

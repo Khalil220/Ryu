@@ -47,9 +47,9 @@ MalSession::MalSession(const MalAccount& account, std::weak_ptr<void> alive,
       account_(account),
       shared_(std::make_shared<Shared>(endpoints(), account.tokens)) {}
 
-void MalSession::logIn(LoginDone done) {
+bool MalSession::logIn(LoginDone done) {
     if (loggingIn_) {
-        return;
+        return false;
     }
     loggingIn_ = true;
     shared_->cancelLogin = false;
@@ -80,7 +80,7 @@ void MalSession::logIn(LoginDone done) {
         },
         [this, done](LoginOutcome outcome) {
             loggingIn_ = false;
-            if (outcome.cancelled) {
+            if (outcome.cancelled || shared_->cancelLogin) {
                 done(false, {});
                 return;
             }
@@ -97,6 +97,7 @@ void MalSession::logIn(LoginDone done) {
             done(false, message);
         });
     openInBrowser(malAuthorizationUrl(shared_->access.endpoints(), verifier, state));
+    return true;
 }
 
 void MalSession::cancelLogin() {
